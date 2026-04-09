@@ -1,0 +1,42 @@
+import axios from 'axios'
+
+const apiClient = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+})
+
+// Attach JWT Bearer token from memory (set by authStore)
+apiClient.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Redirect to login on 401
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear token and redirect; the router guard will handle the rest
+      setToken(null)
+      const isPlatform = window.location.pathname.startsWith('/platform')
+      window.location.href = isPlatform ? '/platform/login' : '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+// In-memory token storage (avoids XSS via localStorage)
+let _token: string | null = null
+
+export function getToken(): string | null {
+  return _token
+}
+
+export function setToken(token: string | null): void {
+  _token = token
+}
+
+export default apiClient
