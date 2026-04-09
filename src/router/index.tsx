@@ -3,12 +3,18 @@ import { useAuthStore } from '@/store/authStore'
 
 // Layouts
 import PlatformLayout from '@/layouts/PlatformLayout'
+import TenantLayout from '@/layouts/TenantLayout'
 
 // Platform pages
 import PlatformLoginPage from '@/pages/platform/LoginPage'
 import TenantsPage from '@/pages/platform/TenantsPage'
 import TenantDetailPage from '@/pages/platform/TenantDetailPage'
 import PlatformDashboardPage from '@/pages/platform/DashboardPage'
+
+// Tenant pages
+import TenantLoginPage from '@/pages/tenant/LoginPage'
+import TenantDashboardPage from '@/pages/tenant/DashboardPage'
+import SettingsPage from '@/pages/tenant/settings/SettingsPage'
 
 // Guards
 function PlatformProtectedRoute() {
@@ -46,18 +52,28 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // Tenant routes (placeholder — Phase 8 will fill these)
+
+  // Tenant routes
   {
     path: '/login',
-    element: <div className="p-8 text-center text-muted-foreground">Tenant login — Phase 8</div>,
+    element: <TenantLoginPage />,
   },
   {
     path: '/',
     element: <TenantProtectedRoute />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
+      {
+        element: <TenantLayout />,
+        children: [
+          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { path: 'dashboard', element: <TenantDashboardPage /> },
+          { path: 'settings', element: <SettingsPage /> },
+          // Accounts, Sales, Inventory pages added in Phases 9–11
+        ],
+      },
     ],
   },
+
   // Fallback
   { path: '*', element: <Navigate to="/platform/login" replace /> },
 ])
