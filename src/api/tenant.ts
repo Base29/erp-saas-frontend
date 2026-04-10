@@ -269,3 +269,230 @@ export interface Customer {
 
 export const fetchCustomers = (params?: Record<string, string | number>) =>
   apiClient.get<{ data: Customer[] }>('/v1/sales/customers', { params })
+
+// ── Inventory — Master Data ───────────────────────────────────────────────────
+export interface UnitOfMeasure {
+  id: number
+  name: string
+  abbreviation: string
+  is_active: boolean
+}
+
+export interface ItemCategory {
+  id: number
+  name: string
+  parent_category_id: number | null
+  description: string | null
+}
+
+export interface ItemVariant {
+  id?: number
+  variant_name: string
+  variant_attributes: Record<string, string> | null
+  item_code_suffix: string | null
+  is_active: boolean
+}
+
+export interface ItemBundleComponent {
+  id?: number
+  component_item_id: number
+  component_quantity: number
+  component_item?: Item
+}
+
+export interface Item {
+  id: number
+  item_code: string
+  item_name: string
+  item_type: 'stock' | 'service' | 'bundle'
+  category_id: number | null
+  base_unit_of_measure_id: number
+  reorder_level: number
+  is_batch_tracked: boolean
+  is_serial_tracked: boolean
+  is_expiry_tracked: boolean
+  is_active: boolean
+  category?: ItemCategory
+  base_uom?: UnitOfMeasure
+  variants?: ItemVariant[]
+  bundle_components?: ItemBundleComponent[]
+}
+
+export interface Warehouse {
+  id: number
+  warehouse_code: string
+  warehouse_name: string
+  location_description: string | null
+  is_active: boolean
+}
+
+export const fetchUoms = () =>
+  apiClient.get<{ data: UnitOfMeasure[] }>('/v1/inventory/uoms')
+
+export const fetchItemCategories = () =>
+  apiClient.get<{ data: ItemCategory[] }>('/v1/inventory/item-categories')
+
+export const fetchItems = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Item>>('/v1/inventory/items', { params })
+
+export const fetchItem = (id: number) =>
+  apiClient.get<{ data: Item }>(`/v1/inventory/items/${id}`)
+
+export const createItem = (payload: Omit<Item, 'id' | 'category' | 'base_uom' | 'variants' | 'bundle_components'> & { variants?: ItemVariant[]; bundle_components?: ItemBundleComponent[] }) =>
+  apiClient.post<{ data: Item }>('/v1/inventory/items', payload)
+
+export const updateItem = (id: number, payload: Partial<Parameters<typeof createItem>[0]>) =>
+  apiClient.patch<{ data: Item }>(`/v1/inventory/items/${id}`, payload)
+
+export const fetchWarehouses = (params?: Record<string, string | number>) =>
+  apiClient.get<{ data: Warehouse[] }>('/v1/inventory/warehouses', { params })
+
+export const createWarehouse = (payload: Omit<Warehouse, 'id'>) =>
+  apiClient.post<{ data: Warehouse }>('/v1/inventory/warehouses', payload)
+
+export const updateWarehouse = (id: number, payload: Partial<Omit<Warehouse, 'id'>>) =>
+  apiClient.patch<{ data: Warehouse }>(`/v1/inventory/warehouses/${id}`, payload)
+
+// ── Inventory — Stock Transactions ───────────────────────────────────────────
+export interface GoodsReceiptLine {
+  id?: number
+  item_id: number
+  quantity: number
+  unit_cost: number
+  batch_id?: number | null
+  item?: Item
+}
+
+export interface GoodsReceipt {
+  id: number
+  grn_number: string
+  warehouse_id: number
+  receipt_date: string
+  reference: string | null
+  approval_status: string
+  posting_status: string
+  created_by: number
+  created_at: string
+  warehouse?: Warehouse
+  lines?: GoodsReceiptLine[]
+}
+
+export interface GoodsIssueLine {
+  id?: number
+  item_id: number
+  quantity: number
+  batch_id?: number | null
+  serial_number_id?: number | null
+  item?: Item
+}
+
+export interface GoodsIssue {
+  id: number
+  issue_number: string
+  warehouse_id: number
+  issue_date: string
+  purpose: string | null
+  approval_status: string
+  posting_status: string
+  created_by: number
+  created_at: string
+  warehouse?: Warehouse
+  lines?: GoodsIssueLine[]
+}
+
+export interface StockTransferLine {
+  id?: number
+  item_id: number
+  quantity: number
+  batch_id?: number | null
+  serial_number_id?: number | null
+  item?: Item
+}
+
+export interface StockTransfer {
+  id: number
+  transfer_number: string
+  from_warehouse_id: number
+  to_warehouse_id: number
+  transfer_date: string
+  approval_status: string
+  posting_status: string
+  created_by: number
+  created_at: string
+  from_warehouse?: Warehouse
+  to_warehouse?: Warehouse
+  lines?: StockTransferLine[]
+}
+
+// Goods Receipts
+export const fetchGoodsReceipts = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<GoodsReceipt>>('/v1/inventory/goods-receipts', { params })
+
+export const fetchGoodsReceipt = (id: number) =>
+  apiClient.get<{ data: GoodsReceipt }>(`/v1/inventory/goods-receipts/${id}`)
+
+export const createGoodsReceipt = (payload: { warehouse_id: number; receipt_date: string; reference?: string; lines: GoodsReceiptLine[] }) =>
+  apiClient.post<{ data: GoodsReceipt }>('/v1/inventory/goods-receipts', payload)
+
+export const submitGoodsReceiptForApproval = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-receipts/${id}/submit-for-approval`, { comments })
+
+export const approveGoodsReceipt = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-receipts/${id}/approve`, { comments })
+
+export const rejectGoodsReceipt = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-receipts/${id}/reject`, { comments })
+
+export const postGoodsReceipt = (id: number) =>
+  apiClient.post(`/v1/inventory/goods-receipts/${id}/post`)
+
+// Goods Issues
+export const fetchGoodsIssues = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<GoodsIssue>>('/v1/inventory/goods-issues', { params })
+
+export const fetchGoodsIssue = (id: number) =>
+  apiClient.get<{ data: GoodsIssue }>(`/v1/inventory/goods-issues/${id}`)
+
+export const createGoodsIssue = (payload: { warehouse_id: number; issue_date: string; purpose?: string; lines: GoodsIssueLine[] }) =>
+  apiClient.post<{ data: GoodsIssue }>('/v1/inventory/goods-issues', payload)
+
+export const submitGoodsIssueForApproval = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-issues/${id}/submit-for-approval`, { comments })
+
+export const approveGoodsIssue = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-issues/${id}/approve`, { comments })
+
+export const rejectGoodsIssue = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/goods-issues/${id}/reject`, { comments })
+
+export const postGoodsIssue = (id: number) =>
+  apiClient.post(`/v1/inventory/goods-issues/${id}/post`)
+
+// Stock Transfers
+export const fetchStockTransfers = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<StockTransfer>>('/v1/inventory/transfers', { params })
+
+export const fetchStockTransfer = (id: number) =>
+  apiClient.get<{ data: StockTransfer }>(`/v1/inventory/transfers/${id}`)
+
+export const createStockTransfer = (payload: { from_warehouse_id: number; to_warehouse_id: number; transfer_date: string; lines: StockTransferLine[] }) =>
+  apiClient.post<{ data: StockTransfer }>('/v1/inventory/transfers', payload)
+
+export const submitStockTransferForApproval = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/transfers/${id}/submit-for-approval`, { comments })
+
+export const approveStockTransfer = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/transfers/${id}/approve`, { comments })
+
+export const rejectStockTransfer = (id: number, comments?: string) =>
+  apiClient.post(`/v1/inventory/transfers/${id}/reject`, { comments })
+
+export const postStockTransfer = (id: number) =>
+  apiClient.post(`/v1/inventory/transfers/${id}/post`)
+
+// ── Inventory — Reports ───────────────────────────────────────────────────────
+export const fetchStockBalance = (params?: { item_id?: number; warehouse_id?: number }) =>
+  apiClient.get('/v1/inventory/reports/stock-balance', { params })
+
+export const fetchStockLedger = (params: { item_id: number; date_from: string; date_to: string; page?: number }) =>
+  apiClient.get('/v1/inventory/reports/stock-ledger', { params })

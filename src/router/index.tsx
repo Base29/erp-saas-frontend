@@ -23,6 +23,14 @@ import JournalVoucherFormPage from '@/pages/tenant/accounts/JournalVoucherFormPa
 import JournalVoucherDetailPage from '@/pages/tenant/accounts/JournalVoucherDetailPage'
 import AccountsReportsPage from '@/pages/tenant/accounts/AccountsReportsPage'
 
+// Inventory pages
+import ItemsPage from '@/pages/tenant/inventory/ItemsPage'
+import WarehousesPage from '@/pages/tenant/inventory/WarehousesPage'
+import GoodsReceiptsPage from '@/pages/tenant/inventory/GoodsReceiptsPage'
+import GoodsIssuesPage from '@/pages/tenant/inventory/GoodsIssuesPage'
+import StockTransfersPage from '@/pages/tenant/inventory/StockTransfersPage'
+import InventoryReportsPage from '@/pages/tenant/inventory/InventoryReportsPage'
+
 // Guards
 function PlatformProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -82,7 +90,14 @@ export const router = createBrowserRouter([
           { path: 'accounts/journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
           { path: 'accounts/journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
           { path: 'accounts/reports', element: <AccountsReportsPage /> },
-          // Sales, Inventory pages added in Phases 10–11
+          // Inventory module
+          { path: 'inventory/items', element: <ItemsPage /> },
+          { path: 'inventory/warehouses', element: <WarehousesPage /> },
+          { path: 'inventory/goods-receipts', element: <GoodsReceiptsPage /> },
+          { path: 'inventory/goods-issues', element: <GoodsIssuesPage /> },
+          { path: 'inventory/transfers', element: <StockTransfersPage /> },
+          { path: 'inventory/reports', element: <InventoryReportsPage /> },
+          // Sales pages added in Phase 11
         ],
       },
     ],

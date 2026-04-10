@@ -72,6 +72,14 @@ export default function TenantLoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-muted-foreground text-xs"
+              onClick={() => navigate('/dashboard')}
+            >
+              Skip login (demo)
+            </Button>
           </form>
         </CardContent>
       </Card>
