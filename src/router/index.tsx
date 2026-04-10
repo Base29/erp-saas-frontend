@@ -16,6 +16,13 @@ import TenantLoginPage from '@/pages/tenant/LoginPage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
 
+// Accounts pages
+import ChartOfAccountsPage from '@/pages/tenant/accounts/ChartOfAccountsPage'
+import JournalVouchersPage from '@/pages/tenant/accounts/JournalVouchersPage'
+import JournalVoucherFormPage from '@/pages/tenant/accounts/JournalVoucherFormPage'
+import JournalVoucherDetailPage from '@/pages/tenant/accounts/JournalVoucherDetailPage'
+import AccountsReportsPage from '@/pages/tenant/accounts/AccountsReportsPage'
+
 // Guards
 function PlatformProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -68,7 +75,14 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          // Accounts, Sales, Inventory pages added in Phases 9–11
+          // Accounts module
+          { path: 'accounts/chart-of-accounts', element: <ChartOfAccountsPage /> },
+          { path: 'accounts/journal-vouchers', element: <JournalVouchersPage /> },
+          { path: 'accounts/journal-vouchers/new', element: <JournalVoucherFormPage /> },
+          { path: 'accounts/journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
+          { path: 'accounts/journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
+          { path: 'accounts/reports', element: <AccountsReportsPage /> },
+          // Sales, Inventory pages added in Phases 10–11
         ],
       },
     ],

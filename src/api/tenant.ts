@@ -131,3 +131,141 @@ export const fetchAttachments = (attachableType: string, attachableId: number) =
   apiClient.get<{ data: Attachment[] }>(
     `/v1/attachments?attachable_type=${attachableType}&attachable_id=${attachableId}`
   )
+
+// ── Accounts — Chart of Accounts ─────────────────────────────────────────────
+export interface AccountGroup {
+  id: number
+  name: string
+  account_types?: AccountType[]
+}
+
+export interface AccountType {
+  id: number
+  account_group_id: number
+  name: string
+  account_group?: AccountGroup
+}
+
+export interface Account {
+  id: number
+  account_code: string
+  account_name: string
+  account_type_id: number
+  is_active: boolean
+  account_type?: AccountType & { account_group?: AccountGroup }
+}
+
+export const fetchAccountGroups = () =>
+  apiClient.get<AccountGroup[]>('/v1/accounts/groups')
+
+export const fetchAccountTypes = () =>
+  apiClient.get<AccountType[]>('/v1/accounts/types')
+
+export const fetchAccounts = (params?: { is_active?: boolean }) =>
+  apiClient.get<Account[]>('/v1/accounts', { params })
+
+export const createAccount = (payload: { account_code: string; account_name: string; account_type_id: number; is_active?: boolean }) =>
+  apiClient.post<Account>('/v1/accounts', payload)
+
+export const updateAccount = (id: number, payload: Partial<Account>) =>
+  apiClient.patch<Account>(`/v1/accounts/${id}`, payload)
+
+export const deleteAccount = (id: number) =>
+  apiClient.delete(`/v1/accounts/${id}`)
+
+// ── Accounts — Journal Vouchers ───────────────────────────────────────────────
+export interface JournalVoucherLine {
+  id?: number
+  account_id: number
+  debit_amount: number
+  credit_amount: number
+  line_narration?: string
+  account?: Account
+}
+
+export interface JournalVoucher {
+  id: number
+  voucher_number: string
+  voucher_type: string
+  voucher_date: string
+  fiscal_period_id: number
+  reference?: string
+  narration?: string
+  approval_status: string
+  posting_status: string
+  is_auto_generated: boolean
+  created_by: number
+  posted_by?: number
+  posted_at?: string
+  created_at: string
+  lines?: JournalVoucherLine[]
+  fiscal_period?: { id: number; name: string }
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+}
+
+export const fetchJournalVouchers = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<JournalVoucher>>('/v1/accounts/journal-vouchers', { params })
+
+export const fetchJournalVoucher = (id: number) =>
+  apiClient.get<JournalVoucher>(`/v1/accounts/journal-vouchers/${id}`)
+
+export const createJournalVoucher = (payload: {
+  voucher_type?: string
+  voucher_date: string
+  fiscal_period_id: number
+  reference?: string
+  narration?: string
+  lines: JournalVoucherLine[]
+}) => apiClient.post<JournalVoucher>('/v1/accounts/journal-vouchers', payload)
+
+export const updateJournalVoucher = (id: number, payload: Partial<Parameters<typeof createJournalVoucher>[0]>) =>
+  apiClient.patch<JournalVoucher>(`/v1/accounts/journal-vouchers/${id}`, payload)
+
+export const deleteJournalVoucher = (id: number) =>
+  apiClient.delete(`/v1/accounts/journal-vouchers/${id}`)
+
+export const submitJournalVoucherForApproval = (id: number, comments?: string) =>
+  apiClient.post(`/v1/accounts/journal-vouchers/${id}/submit-for-approval`, { comments })
+
+export const approveJournalVoucher = (id: number, comments?: string) =>
+  apiClient.post(`/v1/accounts/journal-vouchers/${id}/approve`, { comments })
+
+export const rejectJournalVoucher = (id: number, comments?: string) =>
+  apiClient.post(`/v1/accounts/journal-vouchers/${id}/reject`, { comments })
+
+export const postJournalVoucher = (id: number) =>
+  apiClient.post(`/v1/accounts/journal-vouchers/${id}/post`)
+
+// ── Accounts — Reports ────────────────────────────────────────────────────────
+export const fetchGeneralLedger = (params: { account_id: number; date_from: string; date_to: string; page?: number }) =>
+  apiClient.get('/v1/accounts/reports/general-ledger', { params })
+
+export const fetchTrialBalance = (params: { fiscal_period_id: number }) =>
+  apiClient.get('/v1/accounts/reports/trial-balance', { params })
+
+export const fetchProfitAndLoss = (params: { date_from: string; date_to: string }) =>
+  apiClient.get('/v1/accounts/reports/profit-and-loss', { params })
+
+export const fetchBalanceSheet = (params: { as_of_date: string }) =>
+  apiClient.get('/v1/accounts/reports/balance-sheet', { params })
+
+export const fetchCustomerStatement = (params: { customer_id: number; date_from: string; date_to: string }) =>
+  apiClient.get('/v1/accounts/reports/customer-statement', { params })
+
+// ── Sales — Customers (for customer statement selector) ───────────────────────
+export interface Customer {
+  id: number
+  customer_code: string
+  name: string
+  is_active: boolean
+}
+
+export const fetchCustomers = (params?: Record<string, string | number>) =>
+  apiClient.get<{ data: Customer[] }>('/v1/sales/customers', { params })
