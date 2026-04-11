@@ -65,6 +65,24 @@ export default function PlatformLoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 text-xs"
+                onClick={() => { login('demo-platform-token', { id: 0, name: 'Superadmin', email: 'admin@demo.com', role: undefined }, true); navigate('/platform/dashboard') }}
+              >
+                Demo: Admin Dashboard
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 text-xs"
+                onClick={() => { login('demo-tenant-token', { id: 0, name: 'Demo User', email: 'user@demo.com', role: 'tenant_admin' as const }, false); navigate('/dashboard') }}
+              >
+                Demo: Tenant Dashboard
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

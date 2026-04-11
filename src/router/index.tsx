@@ -31,6 +31,17 @@ import GoodsIssuesPage from '@/pages/tenant/inventory/GoodsIssuesPage'
 import StockTransfersPage from '@/pages/tenant/inventory/StockTransfersPage'
 import InventoryReportsPage from '@/pages/tenant/inventory/InventoryReportsPage'
 
+// Sales pages
+import CustomersPage from '@/pages/tenant/sales/CustomersPage'
+import PriceListsPage from '@/pages/tenant/sales/PriceListsPage'
+import QuotationsPage from '@/pages/tenant/sales/QuotationsPage'
+import SaleOrdersPage from '@/pages/tenant/sales/SaleOrdersPage'
+import SaleInvoicesPage from '@/pages/tenant/sales/SaleInvoicesPage'
+import ReceiptsPage from '@/pages/tenant/sales/ReceiptsPage'
+import CreditNotesPage from '@/pages/tenant/sales/CreditNotesPage'
+import GatePassesPage from '@/pages/tenant/sales/GatePassesPage'
+import SalesReportsPage from '@/pages/tenant/sales/SalesReportsPage'
+
 // Guards
 function PlatformProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -97,7 +108,16 @@ export const router = createBrowserRouter([
           { path: 'inventory/goods-issues', element: <GoodsIssuesPage /> },
           { path: 'inventory/transfers', element: <StockTransfersPage /> },
           { path: 'inventory/reports', element: <InventoryReportsPage /> },
-          // Sales pages added in Phase 11
+          // Sales module
+          { path: 'sales/customers', element: <CustomersPage /> },
+          { path: 'sales/price-lists', element: <PriceListsPage /> },
+          { path: 'sales/quotations', element: <QuotationsPage /> },
+          { path: 'sales/orders', element: <SaleOrdersPage /> },
+          { path: 'sales/invoices', element: <SaleInvoicesPage /> },
+          { path: 'sales/receipts', element: <ReceiptsPage /> },
+          { path: 'sales/credit-notes', element: <CreditNotesPage /> },
+          { path: 'sales/gate-passes', element: <GatePassesPage /> },
+          { path: 'sales/reports', element: <SalesReportsPage /> },
         ],
       },
     ],
