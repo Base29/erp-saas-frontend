@@ -82,6 +82,10 @@ export default function ItemsPage() {
         ...v,
         category_id: v.category_id ? Number(v.category_id) : null,
         base_unit_of_measure_id: Number(v.base_unit_of_measure_id),
+        variants: v.variants.map((variant) => ({
+          ...variant,
+          variant_attributes: null,
+        })),
         bundle_components: v.bundle_components.map((b) => ({
           ...b,
           component_item_id: Number(b.component_item_id),
