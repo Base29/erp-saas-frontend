@@ -1,4 +1,8 @@
 import type { UserRole } from '@/store/authStore'
+import { useAuthStore } from '@/store/authStore'
+
+export const isModuleActive = (moduleKey: string): boolean =>
+  useAuthStore.getState().activeModules.includes(moduleKey)
 
 // Which roles can access each nav section
 const sectionRoles: Record<string, UserRole[]> = {

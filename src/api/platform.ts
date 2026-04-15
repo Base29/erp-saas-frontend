@@ -62,3 +62,47 @@ export const fetchProvisioningLogs = (tenantId: string) =>
 // Dashboard
 export const fetchPlatformDashboard = () =>
   apiClient.get<{ data: PlatformDashboard }>('/platform/v1/dashboard')
+
+// Module management
+export interface Module {
+  id: string
+  module_key: string
+  display_name: string
+  version: string
+  description: string | null
+  is_core: boolean
+  is_available: boolean
+}
+
+export interface TenantModule extends Module {
+  is_active: boolean
+  activated_at: string | null
+  activated_by: string | null
+  deactivated_at: string | null
+  deactivated_by: string | null
+}
+
+export interface ModuleActivationHistory {
+  id: string
+  action: 'activated' | 'deactivated'
+  performed_by: string
+  performed_at: string
+  notes: string | null
+}
+
+export const fetchModules = () =>
+  apiClient.get<{ data: Module[] }>('/platform/v1/modules')
+
+export const fetchTenantModules = (tenantId: string) =>
+  apiClient.get<{ data: TenantModule[] }>(`/platform/v1/tenants/${tenantId}/modules`)
+
+export const activateTenantModule = (tenantId: string, moduleKey: string) =>
+  apiClient.post(`/platform/v1/tenants/${tenantId}/modules/${moduleKey}/activate`)
+
+export const deactivateTenantModule = (tenantId: string, moduleKey: string) =>
+  apiClient.post(`/platform/v1/tenants/${tenantId}/modules/${moduleKey}/deactivate`)
+
+export const fetchModuleHistory = (tenantId: string, moduleKey: string) =>
+  apiClient.get<{ data: ModuleActivationHistory[] }>(
+    `/platform/v1/tenants/${tenantId}/modules/${moduleKey}/history`
+  )

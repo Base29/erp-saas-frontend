@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Puzzle } from 'lucide-react'
 import {
   fetchTenant,
   fetchProvisioningLogs,
@@ -96,6 +96,12 @@ export default function TenantDetailPage() {
               Reactivate
             </Button>
           )}
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/platform/tenants/${id}/modules`}>
+              <Puzzle className="h-4 w-4 mr-2" />
+              Modules
+            </Link>
+          </Button>
         </div>
       </div>
 

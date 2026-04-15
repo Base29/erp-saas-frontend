@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
-import { canAccessSection, ROLE_LABELS } from '@/utils/permissions'
+import { canAccessSection, isModuleActive, ROLE_LABELS } from '@/utils/permissions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import NotificationBell from '@/components/NotificationBell'
@@ -18,10 +18,12 @@ import { cn } from '@/lib/utils'
 const navSections = [
   {
     section: null, // always visible
+    moduleKey: null,
     items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
   },
   {
     section: 'accounts',
+    moduleKey: 'accounts',
     items: [
       { to: '/accounts/chart-of-accounts', label: 'Chart of Accounts', icon: BookOpen },
       { to: '/accounts/journal-vouchers', label: 'Journal Vouchers', icon: BookOpen },
@@ -31,6 +33,7 @@ const navSections = [
   },
   {
     section: 'sales',
+    moduleKey: 'sales',
     items: [
       { to: '/sales/customers', label: 'Customers', icon: ShoppingCart },
       { to: '/sales/quotations', label: 'Quotations', icon: ShoppingCart },
@@ -45,6 +48,7 @@ const navSections = [
   },
   {
     section: 'inventory',
+    moduleKey: 'inventory',
     items: [
       { to: '/inventory/items', label: 'Items', icon: Package },
       { to: '/inventory/warehouses', label: 'Warehouses', icon: Package },
@@ -57,6 +61,7 @@ const navSections = [
   },
   {
     section: 'settings',
+    moduleKey: null,
     items: [{ to: '/settings', label: 'Settings', icon: Settings }],
     groupLabel: 'Settings',
   },
@@ -90,6 +95,8 @@ export default function TenantLayout() {
         <nav className="flex-1 px-3 py-4 space-y-4">
           {navSections.map((group, gi) => {
             if (group.section && !canAccessSection(role, group.section)) return null
+            // Hide module sections when the module is not active for this tenant
+            if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
             return (
               <div key={gi}>
                 {group.groupLabel && (

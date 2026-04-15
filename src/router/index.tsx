@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { isModuleActive } from '@/utils/permissions'
 
 // Layouts
 import PlatformLayout from '@/layouts/PlatformLayout'
@@ -10,6 +11,7 @@ import PlatformLoginPage from '@/pages/platform/LoginPage'
 import TenantsPage from '@/pages/platform/TenantsPage'
 import TenantDetailPage from '@/pages/platform/TenantDetailPage'
 import PlatformDashboardPage from '@/pages/platform/DashboardPage'
+import TenantModulesPage from '@/pages/platform/TenantModulesPage'
 
 // Tenant pages
 import TenantLoginPage from '@/pages/tenant/LoginPage'
@@ -42,6 +44,8 @@ import CreditNotesPage from '@/pages/tenant/sales/CreditNotesPage'
 import GatePassesPage from '@/pages/tenant/sales/GatePassesPage'
 import SalesReportsPage from '@/pages/tenant/sales/SalesReportsPage'
 
+import ModuleNotActivePage from '@/pages/tenant/ModuleNotActivePage'
+
 // Guards
 function PlatformProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -54,6 +58,12 @@ function TenantProtectedRoute() {
   const token = useAuthStore((s) => s.token)
   const isPlatform = useAuthStore((s) => s.isPlatform)
   if (!token || isPlatform) return <Navigate to="/login" replace />
+  return <Outlet />
+}
+
+// Guard that redirects to ModuleNotActivePage if the module is inactive
+function ModuleGuard({ moduleKey }: { moduleKey: string }) {
+  if (!isModuleActive(moduleKey)) return <ModuleNotActivePage />
   return <Outlet />
 }
 
@@ -74,6 +84,7 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: <PlatformDashboardPage /> },
           { path: 'tenants', element: <TenantsPage /> },
           { path: 'tenants/:id', element: <TenantDetailPage /> },
+          { path: 'tenants/:id/modules', element: <TenantModulesPage /> },
         ],
       },
     ],
@@ -95,29 +106,47 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'settings', element: <SettingsPage /> },
           // Accounts module
-          { path: 'accounts/chart-of-accounts', element: <ChartOfAccountsPage /> },
-          { path: 'accounts/journal-vouchers', element: <JournalVouchersPage /> },
-          { path: 'accounts/journal-vouchers/new', element: <JournalVoucherFormPage /> },
-          { path: 'accounts/journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
-          { path: 'accounts/journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
-          { path: 'accounts/reports', element: <AccountsReportsPage /> },
+          {
+            path: 'accounts',
+            element: <ModuleGuard moduleKey="accounts" />,
+            children: [
+              { path: 'chart-of-accounts', element: <ChartOfAccountsPage /> },
+              { path: 'journal-vouchers', element: <JournalVouchersPage /> },
+              { path: 'journal-vouchers/new', element: <JournalVoucherFormPage /> },
+              { path: 'journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
+              { path: 'journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
+              { path: 'reports', element: <AccountsReportsPage /> },
+            ],
+          },
           // Inventory module
-          { path: 'inventory/items', element: <ItemsPage /> },
-          { path: 'inventory/warehouses', element: <WarehousesPage /> },
-          { path: 'inventory/goods-receipts', element: <GoodsReceiptsPage /> },
-          { path: 'inventory/goods-issues', element: <GoodsIssuesPage /> },
-          { path: 'inventory/transfers', element: <StockTransfersPage /> },
-          { path: 'inventory/reports', element: <InventoryReportsPage /> },
+          {
+            path: 'inventory',
+            element: <ModuleGuard moduleKey="inventory" />,
+            children: [
+              { path: 'items', element: <ItemsPage /> },
+              { path: 'warehouses', element: <WarehousesPage /> },
+              { path: 'goods-receipts', element: <GoodsReceiptsPage /> },
+              { path: 'goods-issues', element: <GoodsIssuesPage /> },
+              { path: 'transfers', element: <StockTransfersPage /> },
+              { path: 'reports', element: <InventoryReportsPage /> },
+            ],
+          },
           // Sales module
-          { path: 'sales/customers', element: <CustomersPage /> },
-          { path: 'sales/price-lists', element: <PriceListsPage /> },
-          { path: 'sales/quotations', element: <QuotationsPage /> },
-          { path: 'sales/orders', element: <SaleOrdersPage /> },
-          { path: 'sales/invoices', element: <SaleInvoicesPage /> },
-          { path: 'sales/receipts', element: <ReceiptsPage /> },
-          { path: 'sales/credit-notes', element: <CreditNotesPage /> },
-          { path: 'sales/gate-passes', element: <GatePassesPage /> },
-          { path: 'sales/reports', element: <SalesReportsPage /> },
+          {
+            path: 'sales',
+            element: <ModuleGuard moduleKey="sales" />,
+            children: [
+              { path: 'customers', element: <CustomersPage /> },
+              { path: 'price-lists', element: <PriceListsPage /> },
+              { path: 'quotations', element: <QuotationsPage /> },
+              { path: 'orders', element: <SaleOrdersPage /> },
+              { path: 'invoices', element: <SaleInvoicesPage /> },
+              { path: 'receipts', element: <ReceiptsPage /> },
+              { path: 'credit-notes', element: <CreditNotesPage /> },
+              { path: 'gate-passes', element: <GatePassesPage /> },
+              { path: 'reports', element: <SalesReportsPage /> },
+            ],
+          },
         ],
       },
     ],
