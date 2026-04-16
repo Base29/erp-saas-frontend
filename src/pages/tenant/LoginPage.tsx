@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { tenantLogin } from '@/api/tenant'
+import { tenantLogin, tenantDemoLogin } from '@/api/tenant'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,10 +17,13 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const isDemoMode = import.meta.env.VITE_APP_ENV !== 'production'
+
 export default function TenantLoginPage() {
   const navigate = useNavigate()
   const { login } = useAuthStore()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [isDemoLoading, setIsDemoLoading] = useState(false)
 
   const {
     register,
@@ -39,6 +42,23 @@ export default function TenantLoginPage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Invalid credentials'
       setServerError(msg)
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    setServerError(null)
+    setIsDemoLoading(true)
+    try {
+      const res = await tenantDemoLogin()
+      login(res.data.token, res.data.user, false)
+      navigate('/dashboard')
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Demo login failed'
+      setServerError(msg)
+    } finally {
+      setIsDemoLoading(false)
     }
   }
 
@@ -72,6 +92,17 @@ export default function TenantLoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
+            {isDemoMode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleDemoLogin}
+                disabled={isDemoLoading}
+              >
+                {isDemoLoading ? 'Loading demo…' : 'Demo: Tenant User'}
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>

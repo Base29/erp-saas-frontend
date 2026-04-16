@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { platformLogin } from '@/api/platform'
+import { platformLogin, platformDemoLogin } from '@/api/platform'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,10 +17,13 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const isDemoMode = import.meta.env.VITE_APP_ENV !== 'production'
+
 export default function PlatformLoginPage() {
   const navigate = useNavigate()
   const { login } = useAuthStore()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [isDemoLoading, setIsDemoLoading] = useState(false)
 
   const {
     register,
@@ -39,6 +42,23 @@ export default function PlatformLoginPage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Invalid credentials'
       setServerError(msg)
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    setServerError(null)
+    setIsDemoLoading(true)
+    try {
+      const res = await platformDemoLogin()
+      login(res.data.token, res.data.user, true)
+      navigate('/platform/dashboard')
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Demo login failed'
+      setServerError(msg)
+    } finally {
+      setIsDemoLoading(false)
     }
   }
 
@@ -65,24 +85,17 @@ export default function PlatformLoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
-            <div className="flex gap-2 pt-1">
+            {isDemoMode && (
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 text-xs"
-                onClick={() => { login('demo-platform-token', { id: 0, name: 'Superadmin', email: 'admin@demo.com', role: undefined }, true); navigate('/platform/dashboard') }}
+                className="w-full"
+                onClick={handleDemoLogin}
+                disabled={isDemoLoading}
               >
-                Demo: Admin Dashboard
+                {isDemoLoading ? 'Loading demo…' : 'Demo: Superadmin'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 text-xs"
-                onClick={() => { login('demo-tenant-token', { id: 0, name: 'Demo User', email: 'user@demo.com', role: 'tenant_admin' as const }, false); navigate('/dashboard') }}
-              >
-                Demo: Tenant Dashboard
-              </Button>
-            </div>
+            )}
           </form>
         </CardContent>
       </Card>
