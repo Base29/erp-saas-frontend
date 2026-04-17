@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -21,9 +21,15 @@ const isDemoMode = import.meta.env.VITE_APP_ENV !== 'production'
 
 export default function PlatformLoginPage() {
   const navigate = useNavigate()
-  const { login } = useAuthStore()
+  const { login, token, isPlatform } = useAuthStore()
   const [serverError, setServerError] = useState<string | null>(null)
   const [isDemoLoading, setIsDemoLoading] = useState(false)
+
+  useEffect(() => {
+    if (token) {
+      navigate(isPlatform ? '/platform/dashboard' : '/dashboard')
+    }
+  }, [token, isPlatform, navigate])
 
   const {
     register,

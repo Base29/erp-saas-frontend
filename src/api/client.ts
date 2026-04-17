@@ -22,11 +22,21 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    const url = error.config?.url || ''
+    if (url.includes('/auth/') || url.includes('/v1/settings/')) {
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401) {
       // Clear token and redirect; the router guard will handle the rest
       setToken(null)
+      import('@/store/authStore').then(({ useAuthStore }) => {
+        useAuthStore.getState().logout()
+      })
       const isPlatform = window.location.pathname.startsWith('/platform')
-      window.location.href = isPlatform ? '/platform/login' : '/login'
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.href = isPlatform ? '/platform/login' : '/login'
+      }
     }
     return Promise.reject(error)
   }
