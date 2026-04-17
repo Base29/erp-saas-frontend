@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { isModuleActive } from '@/utils/permissions'
+import { useEffect, useState } from 'react'
 
 // Layouts
 import PlatformLayout from '@/layouts/PlatformLayout'
@@ -47,9 +48,22 @@ import SalesReportsPage from '@/pages/tenant/sales/SalesReportsPage'
 import ModuleNotActivePage from '@/pages/tenant/ModuleNotActivePage'
 
 // Guards
+function useHydrated() {
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    // useAuthStore.persist.hasHydrated() is true once localStorage is loaded
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+    if (useAuthStore.persist.hasHydrated()) setHydrated(true)
+    return unsub
+  }, [])
+  return hydrated
+}
+
 function PlatformProtectedRoute() {
   const token = useAuthStore((s) => s.token)
   const isPlatform = useAuthStore((s) => s.isPlatform)
+  const hydrated = useHydrated()
+  if (!hydrated) return null
   if (!token || !isPlatform) return <Navigate to="/platform/login" replace />
   return <Outlet />
 }
@@ -57,6 +71,8 @@ function PlatformProtectedRoute() {
 function TenantProtectedRoute() {
   const token = useAuthStore((s) => s.token)
   const isPlatform = useAuthStore((s) => s.isPlatform)
+  const hydrated = useHydrated()
+  if (!hydrated) return null
   if (!token || isPlatform) return <Navigate to="/login" replace />
   return <Outlet />
 }

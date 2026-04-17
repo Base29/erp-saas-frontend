@@ -35,7 +35,7 @@ export default function TenantLoginPage() {
     setServerError(null)
     try {
       const res = await tenantLogin(values.email, values.password)
-      login(res.data.token, res.data.user, false)
+      await login(res.data.token, res.data.user, false)
       navigate('/dashboard')
     } catch (err: unknown) {
       const msg =
@@ -50,7 +50,7 @@ export default function TenantLoginPage() {
     setIsDemoLoading(true)
     try {
       const res = await tenantDemoLogin()
-      login(res.data.token, res.data.user, false)
+      await login(res.data.token, res.data.user, false)
       navigate('/dashboard')
     } catch (err: unknown) {
       const msg =

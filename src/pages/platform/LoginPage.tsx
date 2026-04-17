@@ -35,7 +35,7 @@ export default function PlatformLoginPage() {
     setServerError(null)
     try {
       const res = await platformLogin(values.email, values.password)
-      login(res.data.token, res.data.user, true)
+      await login(res.data.token, res.data.user, true)
       navigate('/platform/dashboard')
     } catch (err: unknown) {
       const msg =
@@ -50,7 +50,7 @@ export default function PlatformLoginPage() {
     setIsDemoLoading(true)
     try {
       const res = await platformDemoLogin()
-      login(res.data.token, res.data.user, true)
+      await login(res.data.token, res.data.user, true)
       navigate('/platform/dashboard')
     } catch (err: unknown) {
       const msg =
