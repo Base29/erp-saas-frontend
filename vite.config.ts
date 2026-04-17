@@ -15,8 +15,9 @@ export default defineConfig(({ mode }) => {
     port: 3000,
     proxy: {
       '/api': {
-        target: env.VITE_API_BASE_URL ?? 'http://backend.test',
+        target: env.VITE_API_BASE_URL ?? 'https://backend.test',
         changeOrigin: true,
+        secure: false, // allow self-signed certs from Valet
       },
     },
   },
