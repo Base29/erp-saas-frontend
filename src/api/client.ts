@@ -5,11 +5,15 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 })
 
-// Attach JWT Bearer token from memory (set by authStore)
+// Attach JWT Bearer token and tenant subdomain header
 apiClient.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  const subdomain = import.meta.env.VITE_TENANT_SUBDOMAIN
+  if (subdomain) {
+    config.headers['X-Tenant-Subdomain'] = subdomain
   }
   return config
 })
