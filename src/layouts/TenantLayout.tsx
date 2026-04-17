@@ -70,16 +70,17 @@ const navSections = [
 ]
 
 export default function TenantLayout() {
-  const { user, role, logout, setActiveModules } = useAuthStore()
+  const { user, role, logout, setActiveModules, token } = useAuthStore()
   const navigate = useNavigate()
 
   // Re-fetch active modules on mount so newly activated modules appear
   // without requiring a logout/login cycle.
   useEffect(() => {
+    if (!token) return
     apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
       .then((res) => setActiveModules(res.data.data ?? []))
       .catch(() => {/* non-fatal */})
-  }, [])
+  }, [token])
 
   const handleLogout = async () => {
     try {

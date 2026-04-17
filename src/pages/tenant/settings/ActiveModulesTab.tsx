@@ -12,10 +12,11 @@ const ALL_MODULES = [
 ]
 
 export default function ActiveModulesTab() {
-  const { activeModules, setActiveModules } = useAuthStore()
+  const { activeModules, setActiveModules, token } = useAuthStore()
 
   // Always fetch fresh data when this tab is opened
   useEffect(() => {
+    if (!token) return
     apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
       .then((res) => setActiveModules(res.data.data ?? []))
       .catch(() => {/* non-fatal */})
