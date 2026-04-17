@@ -3,6 +3,7 @@ import FiscalPeriodsTab from './FiscalPeriodsTab'
 import TaxSettingsTab from './TaxSettingsTab'
 import SequencesTab from './SequencesTab'
 import UsersTab from './UsersTab'
+import ActiveModulesTab from './ActiveModulesTab'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -10,6 +11,7 @@ const TABS = [
   { id: 'tax', label: 'Tax Settings' },
   { id: 'sequences', label: 'Sequences' },
   { id: 'users', label: 'Users' },
+  { id: 'modules', label: 'Active Modules' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -43,6 +45,7 @@ export default function SettingsPage() {
         {tab === 'tax' && <TaxSettingsTab />}
         {tab === 'sequences' && <SequencesTab />}
         {tab === 'users' && <UsersTab />}
+        {tab === 'modules' && <ActiveModulesTab />}
       </div>
     </div>
   )
