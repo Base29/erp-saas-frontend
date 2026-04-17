@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import apiClient from '@/api/client'
 
 // All known modules in display order
 const ALL_MODULES = [
@@ -10,7 +12,14 @@ const ALL_MODULES = [
 ]
 
 export default function ActiveModulesTab() {
-  const activeModules = useAuthStore((s) => s.activeModules)
+  const { activeModules, setActiveModules } = useAuthStore()
+
+  // Always fetch fresh data when this tab is opened
+  useEffect(() => {
+    apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
+      .then((res) => setActiveModules(res.data.data ?? []))
+      .catch(() => {/* non-fatal */})
+  }, [])
 
   return (
     <div className="space-y-3 max-w-2xl">
