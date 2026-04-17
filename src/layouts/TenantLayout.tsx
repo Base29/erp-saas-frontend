@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import {
   LayoutDashboard,
   BookOpen,
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import NotificationBell from '@/components/NotificationBell'
 import { cn } from '@/lib/utils'
+import apiClient from '@/api/client'
 
 const navSections = [
   {
@@ -68,8 +70,16 @@ const navSections = [
 ]
 
 export default function TenantLayout() {
-  const { user, role, logout } = useAuthStore()
+  const { user, role, logout, setActiveModules } = useAuthStore()
   const navigate = useNavigate()
+
+  // Re-fetch active modules on mount so newly activated modules appear
+  // without requiring a logout/login cycle.
+  useEffect(() => {
+    apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
+      .then((res) => setActiveModules(res.data.data ?? []))
+      .catch(() => {/* non-fatal */})
+  }, [])
 
   const handleLogout = async () => {
     try {
