@@ -60,10 +60,10 @@ export interface TaxSetting {
 }
 
 export const fetchTaxSettings = () =>
-  apiClient.get<{ data: TaxSetting[] }>('/v1/settings/tax-settings')
+  apiClient.get<{ data: TaxSetting[] }>('/v1/settings/tax')
 
 export const upsertTaxSetting = (payload: Omit<TaxSetting, 'id'>) =>
-  apiClient.post<{ data: TaxSetting }>('/v1/settings/tax-settings', payload)
+  apiClient.post<{ data: TaxSetting }>('/v1/settings/tax', payload)
 
 // ── Sequences ─────────────────────────────────────────────────────────────────
 export interface Sequence {
