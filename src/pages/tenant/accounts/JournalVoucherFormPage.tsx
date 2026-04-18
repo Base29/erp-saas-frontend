@@ -63,7 +63,7 @@ export default function JournalVoucherFormPage() {
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => fetchAccounts({ is_active: true }).then((r) => r.data),
+    queryFn: () => fetchAccounts({ is_active: true }).then((r) => r.data.data),
   })
 
   const { data: periods = [] } = useQuery({

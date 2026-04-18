@@ -56,17 +56,17 @@ export default function ChartOfAccountsPage() {
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => fetchAccounts().then((r) => r.data),
+    queryFn: () => fetchAccounts().then((r) => r.data.data),
   })
 
   const { data: groups = [] } = useQuery({
     queryKey: ['account-groups'],
-    queryFn: () => fetchAccountGroups().then((r) => r.data),
+    queryFn: () => fetchAccountGroups().then((r) => r.data.data),
   })
 
   const { data: types = [] } = useQuery({
     queryKey: ['account-types'],
-    queryFn: () => fetchAccountTypes().then((r) => r.data),
+    queryFn: () => fetchAccountTypes().then((r) => r.data.data),
   })
 
   const save = useMutation({

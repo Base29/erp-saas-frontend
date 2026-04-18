@@ -42,8 +42,8 @@ export interface FiscalPeriod {
   status: 'open' | 'closed'
 }
 
-export const fetchFiscalPeriods = () =>
-  apiClient.get<{ data: FiscalPeriod[] }>('/v1/settings/fiscal-periods')
+export const fetchFiscalPeriods = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<FiscalPeriod>>('/v1/settings/fiscal-periods', { params })
 
 export const createFiscalPeriod = (payload: Omit<FiscalPeriod, 'id' | 'status'>) =>
   apiClient.post<{ data: FiscalPeriod }>('/v1/settings/fiscal-periods', payload)
@@ -59,8 +59,8 @@ export interface TaxSetting {
   is_active: boolean
 }
 
-export const fetchTaxSettings = () =>
-  apiClient.get<{ data: TaxSetting[] }>('/v1/settings/tax')
+export const fetchTaxSettings = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<TaxSetting>>('/v1/settings/tax', { params })
 
 export const upsertTaxSetting = (payload: Omit<TaxSetting, 'id'>) =>
   apiClient.post<{ data: TaxSetting }>('/v1/settings/tax', payload)
@@ -76,8 +76,8 @@ export interface Sequence {
   reset_rule: 'never' | 'yearly' | 'monthly'
 }
 
-export const fetchSequences = () =>
-  apiClient.get<{ data: Sequence[] }>('/v1/settings/sequences')
+export const fetchSequences = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Sequence>>('/v1/settings/sequences', { params })
 
 export const updateSequence = (id: number, payload: Partial<Sequence>) =>
   apiClient.patch<{ data: Sequence }>(`/v1/settings/sequences/${id}`, payload)
@@ -92,8 +92,8 @@ export interface TenantUser {
   created_at: string
 }
 
-export const fetchUsers = () =>
-  apiClient.get<{ data: TenantUser[] }>('/v1/settings/users')
+export const fetchUsers = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<TenantUser>>('/v1/settings/users', { params })
 
 export const createUser = (payload: { name: string; email: string; password: string; role: string }) =>
   apiClient.post<{ data: TenantUser }>('/v1/settings/users', payload)
@@ -158,14 +158,14 @@ export interface Account {
   account_type?: AccountType & { account_group?: AccountGroup }
 }
 
-export const fetchAccountGroups = () =>
-  apiClient.get<AccountGroup[]>('/v1/accounts/groups')
+export const fetchAccountGroups = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<AccountGroup>>('/v1/accounts/groups', { params })
 
-export const fetchAccountTypes = () =>
-  apiClient.get<AccountType[]>('/v1/accounts/types')
+export const fetchAccountTypes = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<AccountType>>('/v1/accounts/types', { params })
 
-export const fetchAccounts = (params?: { is_active?: boolean }) =>
-  apiClient.get<Account[]>('/v1/accounts', { params })
+export const fetchAccounts = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params })
 
 export const createAccount = (payload: { account_code: string; account_name: string; account_type_id: number; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
@@ -329,11 +329,11 @@ export interface Warehouse {
   is_active: boolean
 }
 
-export const fetchUoms = () =>
-  apiClient.get<{ data: UnitOfMeasure[] }>('/v1/inventory/uoms')
+export const fetchUoms = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<UnitOfMeasure>>('/v1/inventory/uoms', { params })
 
-export const fetchItemCategories = () =>
-  apiClient.get<{ data: ItemCategory[] }>('/v1/inventory/item-categories')
+export const fetchItemCategories = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<ItemCategory>>('/v1/inventory/item-categories', { params })
 
 export const fetchItems = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Item>>('/v1/inventory/items', { params })
@@ -348,7 +348,7 @@ export const updateItem = (id: number, payload: Partial<Parameters<typeof create
   apiClient.patch<{ data: Item }>(`/v1/inventory/items/${id}`, payload)
 
 export const fetchWarehouses = (params?: Record<string, string | number>) =>
-  apiClient.get<{ data: Warehouse[] }>('/v1/inventory/warehouses', { params })
+  apiClient.get<PaginatedResponse<Warehouse>>('/v1/inventory/warehouses', { params })
 
 export const createWarehouse = (payload: Omit<Warehouse, 'id'>) =>
   apiClient.post<{ data: Warehouse }>('/v1/inventory/warehouses', payload)
@@ -494,8 +494,8 @@ export const postStockTransfer = (id: number) =>
   apiClient.post(`/v1/inventory/transfers/${id}/post`)
 
 // ── Inventory — Reports ───────────────────────────────────────────────────────
-export const fetchStockBalance = (params?: { item_id?: number; warehouse_id?: number }) =>
-  apiClient.get('/v1/inventory/reports/stock-balance', { params })
+export const fetchStockBalance = (params?: { item_id?: number; warehouse_id?: number; page?: number }) =>
+  apiClient.get<PaginatedResponse<any>>('/v1/inventory/reports/stock-balance', { params })
 
 export const fetchStockLedger = (params: { item_id: number; date_from: string; date_to: string; page?: number }) =>
   apiClient.get('/v1/inventory/reports/stock-ledger', { params })

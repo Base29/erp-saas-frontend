@@ -77,7 +77,7 @@ function GeneralLedgerReport() {
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => fetchAccounts().then((r) => r.data),
+    queryFn: () => fetchAccounts().then((r) => r.data.data),
   })
 
   const { data, isLoading } = useQuery({

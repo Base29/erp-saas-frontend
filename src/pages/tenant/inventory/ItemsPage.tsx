@@ -63,12 +63,12 @@ export default function ItemsPage() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ['item-categories'],
-    queryFn: () => fetchItemCategories().then((r) => r.data),
+    queryFn: () => fetchItemCategories().then((r) => r.data.data),
   })
 
   const { data: uoms = [] } = useQuery({
     queryKey: ['uoms'],
-    queryFn: () => fetchUoms().then((r) => r.data),
+    queryFn: () => fetchUoms().then((r) => r.data.data),
   })
 
   const { data: allItems = [] } = useQuery({
