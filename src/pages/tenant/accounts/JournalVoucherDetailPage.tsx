@@ -30,7 +30,7 @@ export default function JournalVoucherDetailPage() {
 
   const { data: jv, isLoading } = useQuery({
     queryKey: ['journal-voucher', id],
-    queryFn: () => fetchJournalVoucher(Number(id)).then((r) => r.data),
+    queryFn: () => fetchJournalVoucher(id!).then((r) => r.data.data),
     enabled: !!id,
   })
 
@@ -40,19 +40,19 @@ export default function JournalVoucherDetailPage() {
   }
 
   const submitMut = useMutation({
-    mutationFn: (comments?: string) => submitJournalVoucherForApproval(Number(id), comments),
+    mutationFn: (comments?: string) => submitJournalVoucherForApproval(id!, comments),
     onSuccess: invalidate,
   })
   const approveMut = useMutation({
-    mutationFn: (comments?: string) => approveJournalVoucher(Number(id), comments),
+    mutationFn: (comments?: string) => approveJournalVoucher(id!, comments),
     onSuccess: invalidate,
   })
   const rejectMut = useMutation({
-    mutationFn: (comments?: string) => rejectJournalVoucher(Number(id), comments),
+    mutationFn: (comments?: string) => rejectJournalVoucher(id!, comments),
     onSuccess: invalidate,
   })
   const postMut = useMutation({
-    mutationFn: () => postJournalVoucher(Number(id)),
+    mutationFn: () => postJournalVoucher(id!),
     onSuccess: invalidate,
   })
 

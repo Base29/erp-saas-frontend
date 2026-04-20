@@ -38,6 +38,7 @@ const navSections = [
     moduleKey: 'sales',
     items: [
       { to: '/sales/customers', label: 'Customers', icon: ShoppingCart },
+      { to: '/sales/price-lists', label: 'Price Lists', icon: ShoppingCart },
       { to: '/sales/quotations', label: 'Quotations', icon: ShoppingCart },
       { to: '/sales/orders', label: 'Sale Orders', icon: ShoppingCart },
       { to: '/sales/invoices', label: 'Invoices', icon: ShoppingCart },

@@ -52,7 +52,7 @@ export default function GoodsIssuesPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['goods-issues', page],
@@ -78,14 +78,14 @@ export default function GoodsIssuesPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createGoodsIssue({
-      warehouse_id: Number(v.warehouse_id),
+      warehouse_id: v.warehouse_id,
       issue_date: v.issue_date,
       purpose: v.purpose ?? undefined,
       lines: v.lines.map((l) => ({
-        item_id: Number(l.item_id),
+        item_id: l.item_id,
         quantity: l.quantity,
-        batch_id: l.batch_id ? Number(l.batch_id) : null,
-        serial_number_id: l.serial_number_id ? Number(l.serial_number_id) : null,
+        batch_id: l.batch_id,
+        serial_number_id: l.serial_number_id,
       })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['goods-issues'] }); setCreateOpen(false) },

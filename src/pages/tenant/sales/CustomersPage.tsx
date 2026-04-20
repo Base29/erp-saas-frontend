@@ -67,9 +67,9 @@ export default function CustomersPage() {
     mutationFn: (v: FormValues) => {
       const payload = {
         ...v,
-        customer_category_id: v.customer_category_id ? Number(v.customer_category_id) : null,
-        customer_group_id: v.customer_group_id ? Number(v.customer_group_id) : null,
-        assigned_salesperson_id: v.assigned_salesperson_id ? Number(v.assigned_salesperson_id) : null,
+        customer_category_id: v.customer_category_id || null,
+        customer_group_id: v.customer_group_id || null,
+        assigned_salesperson_id: v.assigned_salesperson_id || null,
       }
       return editing ? updateCustomer(editing.id, payload) : createCustomer(payload)
     },
@@ -144,20 +144,20 @@ export default function CustomersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Category</Label>
-                <Select value={watch('customer_category_id') ?? ''} onValueChange={(v) => setValue('customer_category_id', v || null)}>
+                <Select value={watch('customer_category_id') ?? 'none'} onValueChange={(v) => setValue('customer_category_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {(categories as CustomerCategory[]).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
                 <Label>Group</Label>
-                <Select value={watch('customer_group_id') ?? ''} onValueChange={(v) => setValue('customer_group_id', v || null)}>
+                <Select value={watch('customer_group_id') ?? 'none'} onValueChange={(v) => setValue('customer_group_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {(groups as CustomerGroup[]).map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -182,10 +182,10 @@ export default function CustomersPage() {
               </div>
               <div className="space-y-1">
                 <Label>Assigned Salesperson</Label>
-                <Select value={watch('assigned_salesperson_id') ?? ''} onValueChange={(v) => setValue('assigned_salesperson_id', v || null)}>
+                <Select value={watch('assigned_salesperson_id') ?? 'none'} onValueChange={(v) => setValue('assigned_salesperson_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {(users as TenantUser[]).map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

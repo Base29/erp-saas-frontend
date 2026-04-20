@@ -75,7 +75,7 @@ export default function JournalVoucherFormPage() {
     useForm<FormValues>({
       resolver: zodResolver(schema),
       defaultValues: {
-        voucher_type: 'general',
+        fiscal_period_id: '',
         lines: [{ account_id: '', debit_amount: '0', credit_amount: '0' }],
       },
     })

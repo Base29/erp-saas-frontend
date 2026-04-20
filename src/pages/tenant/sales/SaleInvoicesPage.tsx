@@ -61,7 +61,7 @@ export default function SaleInvoicesPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['sale-invoices', page],
@@ -92,7 +92,7 @@ export default function SaleInvoicesPage() {
   const create = useMutation({
     mutationFn: (v: FormValues) => createSaleInvoice({
       customer_id: Number(v.customer_id),
-      source_sale_order_id: v.source_sale_order_id ? Number(v.source_sale_order_id) : null,
+      source_sale_order_id: v.source_sale_order_id && v.source_sale_order_id !== 'none' ? Number(v.source_sale_order_id) : null,
       invoice_date: v.invoice_date, due_date: v.due_date,
       fiscal_period_id: Number(v.fiscal_period_id),
       tax_rate: v.tax_rate, discount_amount: v.discount_amount,
@@ -106,7 +106,7 @@ export default function SaleInvoicesPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sale-invoices'] }); setCreateOpen(false) },
   })
 
-  const handleDownloadPdf = async (id: number, invoiceNumber: string) => {
+  const handleDownloadPdf = async (id: string, invoiceNumber: string) => {
     const res = await downloadInvoicePdf(id)
     const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }))
     const a = document.createElement('a')
@@ -165,10 +165,10 @@ export default function SaleInvoicesPage() {
               </div>
               <div className="space-y-1">
                 <Label>Source Sale Order (optional)</Label>
-                <Select value={watch('source_sale_order_id') ?? ''} onValueChange={(v) => setValue('source_sale_order_id', v || null)}>
+                <Select value={watch('source_sale_order_id') ?? 'none'} onValueChange={(v) => setValue('source_sale_order_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {orders.map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.order_number}</SelectItem>)}
                   </SelectContent>
                 </Select>

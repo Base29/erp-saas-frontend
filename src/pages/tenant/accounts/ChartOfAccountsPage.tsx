@@ -53,20 +53,23 @@ export default function ChartOfAccountsPage() {
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
+  const [page, setPage] = useState(1)
 
-  const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => fetchAccounts().then((r) => r.data.data),
+  const { data, isLoading } = useQuery({
+    queryKey: ['accounts', page],
+    queryFn: () => fetchAccounts({ page }).then((r) => r.data),
   })
+
+  const accounts = data?.data ?? []
 
   const { data: groups = [] } = useQuery({
     queryKey: ['account-groups'],
-    queryFn: () => fetchAccountGroups().then((r) => r.data.data),
+    queryFn: () => fetchAccountGroups({ per_page: 100 }).then((r) => r.data.data),
   })
 
   const { data: types = [] } = useQuery({
     queryKey: ['account-types'],
-    queryFn: () => fetchAccountTypes().then((r) => r.data.data),
+    queryFn: () => fetchAccountTypes({ per_page: 100 }).then((r) => r.data.data),
   })
 
   const save = useMutation({
@@ -166,6 +169,8 @@ export default function ChartOfAccountsPage() {
         columns={columns}
         data={accounts}
         isLoading={isLoading}
+        pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
+        onPageChange={setPage}
         filterKey="account_code"
         filterPlaceholder="Search by code…"
       />

@@ -80,15 +80,15 @@ export default function ItemsPage() {
     mutationFn: (v: FormValues) => {
       const payload = {
         ...v,
-        category_id: v.category_id ? Number(v.category_id) : null,
-        base_unit_of_measure_id: Number(v.base_unit_of_measure_id),
+        category_id: v.category_id || null,
+        base_unit_of_measure_id: v.base_unit_of_measure_id,
         variants: v.variants.map((variant) => ({
           ...variant,
           variant_attributes: null,
         })),
         bundle_components: v.bundle_components.map((b) => ({
           ...b,
-          component_item_id: Number(b.component_item_id),
+          component_item_id: b.component_item_id,
         })),
       }
       return editing ? updateItem(editing.id, payload) : createItem(payload as Parameters<typeof createItem>[0])

@@ -52,7 +52,7 @@ export default function GoodsReceiptsPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['goods-receipts', page],
@@ -78,10 +78,10 @@ export default function GoodsReceiptsPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createGoodsReceipt({
-      warehouse_id: Number(v.warehouse_id),
+      warehouse_id: v.warehouse_id,
       receipt_date: v.receipt_date,
       reference: v.reference ?? undefined,
-      lines: v.lines.map((l) => ({ item_id: Number(l.item_id), quantity: l.quantity, unit_cost: l.unit_cost, batch_id: l.batch_id ? Number(l.batch_id) : null })),
+      lines: v.lines.map((l) => ({ item_id: l.item_id, quantity: l.quantity, unit_cost: l.unit_cost, batch_id: l.batch_id })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['goods-receipts'] }); setCreateOpen(false) },
   })

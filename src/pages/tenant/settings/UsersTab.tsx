@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import DataTable from '@/components/DataTable'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ import { ROLE_LABELS } from '@/utils/permissions'
 import type { UserRole } from '@/store/authStore'
 
 const ROLES: UserRole[] = ['tenant_admin', 'accountant', 'sales_manager', 'sales_person', 'inventory_manager', 'viewer']
+const ASSIGNABLE_ROLES = ROLES.filter((r) => r !== 'tenant_admin')
 
 const createSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -48,11 +51,14 @@ export default function UsersTab() {
   const [editUser, setEditUser] = useState<TenantUser | null>(null)
   const [roleValue, setRoleValue] = useState<string>('')
   const [editRoleValue, setEditRoleValue] = useState<string>('')
+  const [page, setPage] = useState(1)
 
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['tenant-users'],
-    queryFn: () => fetchUsers().then((r) => r.data.data),
+  const { data, isLoading } = useQuery({
+    queryKey: ['tenant-users', page],
+    queryFn: () => fetchUsers({ page }).then((r) => r.data),
   })
+
+  const users = data?.data ?? []
 
   const create = useMutation({
     mutationFn: (v: CreateValues) => createUser(v),
@@ -60,12 +66,12 @@ export default function UsersTab() {
   })
 
   const edit = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<TenantUser> }) => updateUser(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<TenantUser> }) => updateUser(id, payload),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tenant-users'] }); setEditUser(null) },
   })
 
   const deactivate = useMutation({
-    mutationFn: (id: number) => deactivateUser(id),
+    mutationFn: (id: string) => deactivateUser(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tenant-users'] }),
   })
 
@@ -73,7 +79,7 @@ export default function UsersTab() {
   const editForm = useForm<EditValues>({ resolver: zodResolver(editSchema) })
 
   const openCreate = () => {
-    createForm.reset()
+    createForm.reset({ name: '', email: '', password: '', role: '' })
     setRoleValue('')
     setCreateOpen(true)
   }
@@ -84,6 +90,46 @@ export default function UsersTab() {
     setEditUser(u)
   }
 
+  const columns: ColumnDef<TenantUser>[] = [
+    { accessorKey: 'name', header: 'Name', enableSorting: true },
+    { accessorKey: 'email', header: 'Email', enableSorting: true },
+    {
+      accessorKey: 'role',
+      header: 'Role',
+      cell: ({ row }) => (
+        <Badge variant="outline">{ROLE_LABELS[row.original.role as UserRole] ?? row.original.role}</Badge>
+      ),
+    },
+    {
+      accessorKey: 'is_active',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
+          {row.original.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex gap-1 justify-end">
+          <Button size="sm" variant="outline" onClick={() => openEdit(row.original)}>Edit</Button>
+          {row.original.is_active && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => deactivate.mutate(row.original.id)}
+              disabled={deactivate.isPending}
+            >
+              Deactivate
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -91,64 +137,22 @@ export default function UsersTab() {
         <Button size="sm" onClick={openCreate}>Add User</Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="rounded-md border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-t">
-                  <td className="px-4 py-3">{u.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline">{ROLE_LABELS[u.role as UserRole] ?? u.role}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={u.is_active ? 'success' : 'secondary'}>
-                      {u.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-end">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Edit</Button>
-                      {u.is_active && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deactivate.mutate(u.id)}
-                          disabled={deactivate.isPending}
-                        >
-                          Deactivate
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No users</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={users}
+        isLoading={isLoading}
+        pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
+        onPageChange={setPage}
+        filterKey="name"
+        filterPlaceholder="Search by name…"
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Add User</DialogTitle></DialogHeader>
           <form
-            onSubmit={createForm.handleSubmit((v) => create.mutate({ ...v, role: roleValue }))}
+            onSubmit={createForm.handleSubmit((v) => create.mutate(v))}
             className="space-y-4 py-2"
           >
             <div className="space-y-1">
@@ -168,12 +172,15 @@ export default function UsersTab() {
             </div>
             <div className="space-y-1">
               <Label>Role</Label>
-              <Select value={roleValue} onValueChange={setRoleValue}>
-                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+              <Select value={roleValue} onValueChange={(v) => { setRoleValue(v); createForm.setValue('role', v) }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                  {ASSIGNABLE_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {createForm.formState.errors.role && <p className="text-xs text-destructive">{createForm.formState.errors.role.message}</p>}
             </div>
             {create.isError && <p className="text-xs text-destructive">Failed to create user</p>}
             <DialogFooter>
@@ -189,7 +196,7 @@ export default function UsersTab() {
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Edit User</DialogTitle></DialogHeader>
           <form
-            onSubmit={editForm.handleSubmit((v) => editUser && edit.mutate({ id: editUser.id, payload: { ...v, role: editRoleValue } }))}
+            onSubmit={editForm.handleSubmit((v) => editUser && edit.mutate({ id: editUser.id, payload: v }))}
             className="space-y-4 py-2"
           >
             <div className="space-y-1">
@@ -199,12 +206,15 @@ export default function UsersTab() {
             </div>
             <div className="space-y-1">
               <Label>Role</Label>
-              <Select value={editRoleValue} onValueChange={setEditRoleValue}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={editRoleValue} onValueChange={(v) => { setEditRoleValue(v); editForm.setValue('role', v) }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                  {ASSIGNABLE_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {editForm.formState.errors.role && <p className="text-xs text-destructive">{editForm.formState.errors.role.message}</p>}
             </div>
             {edit.isError && <p className="text-xs text-destructive">Failed to update user</p>}
             <DialogFooter>

@@ -20,7 +20,7 @@ function StockBalanceTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock-balance', itemId, warehouseId],
-    queryFn: () => fetchStockBalance({ item_id: itemId ? Number(itemId) : undefined, warehouse_id: warehouseId ? Number(warehouseId) : undefined }).then((r) => r.data),
+    queryFn: () => fetchStockBalance({ item_id: itemId && itemId !== 'all' ? Number(itemId) : undefined, warehouse_id: warehouseId && warehouseId !== 'all' ? Number(warehouseId) : undefined }).then((r) => r.data),
     enabled: submitted,
   })
 
@@ -35,7 +35,7 @@ function StockBalanceTab() {
           <Select value={itemId} onValueChange={setItemId}>
             <SelectTrigger className="w-56"><SelectValue placeholder="All items" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All items</SelectItem>
+              <SelectItem value="all">All items</SelectItem>
               {items.map((it) => <SelectItem key={it.id} value={String(it.id)}>{it.item_code} — {it.item_name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -45,7 +45,7 @@ function StockBalanceTab() {
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger className="w-48"><SelectValue placeholder="All warehouses" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All warehouses</SelectItem>
+              <SelectItem value="all">All warehouses</SelectItem>
               {warehouses.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.warehouse_name}</SelectItem>)}
             </SelectContent>
           </Select>

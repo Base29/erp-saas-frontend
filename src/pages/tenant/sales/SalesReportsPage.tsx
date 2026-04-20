@@ -51,13 +51,13 @@ export default function SalesReportsPage() {
 
   const { data: registerData, isLoading: registerLoading } = useQuery({
     queryKey: ['sales-register', dateFrom, dateTo, customerId, registerPage],
-    queryFn: () => fetchSalesRegister({ date_from: dateFrom, date_to: dateTo, ...(customerId ? { customer_id: Number(customerId) } : {}), page: registerPage }).then((r) => r.data),
+    queryFn: () => fetchSalesRegister({ date_from: dateFrom, date_to: dateTo, ...(customerId && customerId !== 'all' ? { customer_id: Number(customerId) } : {}), page: registerPage }).then((r) => r.data),
     enabled: runRegister,
   })
 
   const { data: agingData, isLoading: agingLoading } = useQuery({
     queryKey: ['receivables-aging', agingCustomerId],
-    queryFn: () => fetchReceivablesAging(agingCustomerId ? { customer_id: Number(agingCustomerId) } : {}).then((r) => r.data),
+    queryFn: () => fetchReceivablesAging(agingCustomerId && agingCustomerId !== 'all' ? { customer_id: Number(agingCustomerId) } : {}).then((r) => r.data),
     enabled: runAging,
   })
 
@@ -101,7 +101,7 @@ export default function SalesReportsPage() {
               <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="All customers" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All customers</SelectItem>
+                  <SelectItem value="all">All customers</SelectItem>
                   {customers.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -164,7 +164,7 @@ export default function SalesReportsPage() {
               <Select value={agingCustomerId} onValueChange={setAgingCustomerId}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="All customers" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All customers</SelectItem>
+                  <SelectItem value="all">All customers</SelectItem>
                   {customers.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>

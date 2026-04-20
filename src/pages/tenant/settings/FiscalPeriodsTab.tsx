@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { fetchFiscalPeriods, createFiscalPeriod, closeFiscalPeriod } from '@/api/tenant'
+import { fetchFiscalPeriods, createFiscalPeriod, closeFiscalPeriod, type FiscalPeriod } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import DataTable from '@/components/DataTable'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Dialog,
   DialogContent,
@@ -27,11 +29,14 @@ type FormValues = z.infer<typeof schema>
 export default function FiscalPeriodsTab() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [page, setPage] = useState(1)
 
-  const { data: periods = [], isLoading } = useQuery({
-    queryKey: ['fiscal-periods'],
-    queryFn: () => fetchFiscalPeriods().then((r) => r.data.data),
+  const { data, isLoading } = useQuery({
+    queryKey: ['fiscal-periods', page],
+    queryFn: () => fetchFiscalPeriods({ page }).then((r) => r.data),
   })
+
+  const periods = data?.data ?? []
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createFiscalPeriod(v),
@@ -49,6 +54,39 @@ export default function FiscalPeriodsTab() {
 
   const onSubmit = (v: FormValues) => create.mutate(v)
 
+  const columns: ColumnDef<FiscalPeriod>[] = [
+    { accessorKey: 'name', header: 'Name', enableSorting: true },
+    { accessorKey: 'start_date', header: 'Start', enableSorting: true },
+    { accessorKey: 'end_date', header: 'End', enableSorting: true },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'open' ? 'success' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="text-right">
+          {row.original.status === 'open' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => close.mutate(row.original.id)}
+              disabled={close.isPending}
+            >
+              Close
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -56,52 +94,15 @@ export default function FiscalPeriodsTab() {
         <Button size="sm" onClick={() => { reset(); setOpen(true) }}>Add Period</Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="rounded-md border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Start</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">End</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {periods.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="px-4 py-3">{p.name}</td>
-                  <td className="px-4 py-3">{p.start_date}</td>
-                  <td className="px-4 py-3">{p.end_date}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={p.status === 'open' ? 'success' : 'secondary'}>
-                      {p.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {p.status === 'open' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => close.mutate(p.id)}
-                        disabled={close.isPending}
-                      >
-                        Close
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {periods.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No fiscal periods</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={periods}
+        isLoading={isLoading}
+        pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
+        onPageChange={setPage}
+        filterKey="name"
+        filterPlaceholder="Search by name…"
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">

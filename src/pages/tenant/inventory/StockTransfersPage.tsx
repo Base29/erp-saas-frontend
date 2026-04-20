@@ -52,7 +52,7 @@ export default function StockTransfersPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock-transfers', page],
@@ -78,14 +78,14 @@ export default function StockTransfersPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createStockTransfer({
-      from_warehouse_id: Number(v.from_warehouse_id),
-      to_warehouse_id: Number(v.to_warehouse_id),
+      from_warehouse_id: v.from_warehouse_id,
+      to_warehouse_id: v.to_warehouse_id,
       transfer_date: v.transfer_date,
       lines: v.lines.map((l) => ({
-        item_id: Number(l.item_id),
+        item_id: l.item_id,
         quantity: l.quantity,
-        batch_id: l.batch_id ? Number(l.batch_id) : null,
-        serial_number_id: l.serial_number_id ? Number(l.serial_number_id) : null,
+        batch_id: l.batch_id,
+        serial_number_id: l.serial_number_id,
       })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['stock-transfers'] }); setCreateOpen(false) },

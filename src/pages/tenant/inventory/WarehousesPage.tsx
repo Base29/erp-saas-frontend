@@ -31,11 +31,14 @@ export default function WarehousesPage() {
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Warehouse | null>(null)
+  const [page, setPage] = useState(1)
 
-  const { data: warehouses = [], isLoading } = useQuery({
-    queryKey: ['warehouses'],
-    queryFn: () => fetchWarehouses().then((r) => r.data.data ?? r.data),
+  const { data, isLoading } = useQuery({
+    queryKey: ['warehouses', page],
+    queryFn: () => fetchWarehouses({ page }).then((r) => r.data),
   })
+
+  const warehouses = data?.data ?? []
 
   const save = useMutation({
     mutationFn: (v: FormValues) =>
@@ -84,7 +87,15 @@ export default function WarehousesPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Warehouse</Button>}
       </div>
 
-      <DataTable columns={columns} data={warehouses as Warehouse[]} isLoading={isLoading} filterKey="warehouse_code" filterPlaceholder="Search by code…" />
+      <DataTable
+        columns={columns}
+        data={warehouses}
+        isLoading={isLoading}
+        pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
+        onPageChange={setPage}
+        filterKey="warehouse_code"
+        filterPlaceholder="Search by code…"
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">

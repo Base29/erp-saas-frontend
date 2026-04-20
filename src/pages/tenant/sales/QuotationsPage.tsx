@@ -59,7 +59,7 @@ export default function QuotationsPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['quotations', page],
@@ -89,7 +89,7 @@ export default function QuotationsPage() {
       customer_id: Number(v.customer_id),
       quotation_date: v.quotation_date,
       valid_until: v.valid_until,
-      price_list_id: v.price_list_id ? Number(v.price_list_id) : null,
+      price_list_id: v.price_list_id && v.price_list_id !== 'none' ? Number(v.price_list_id) : null,
       salesperson_id: v.salesperson_id ? Number(v.salesperson_id) : null,
       terms: v.terms,
       lines: v.lines.map((l) => ({
@@ -103,7 +103,7 @@ export default function QuotationsPage() {
   })
 
   const convertToOrder = useMutation({
-    mutationFn: (id: number) => convertQuotationToOrder(id),
+    mutationFn: (id: string) => convertQuotationToOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['quotations'] }); setDetailId(null) },
   })
 
@@ -166,10 +166,10 @@ export default function QuotationsPage() {
               </div>
               <div className="space-y-1">
                 <Label>Price List</Label>
-                <Select value={watch('price_list_id') ?? ''} onValueChange={(v) => setValue('price_list_id', v || null)}>
+                <Select value={watch('price_list_id') ?? 'none'} onValueChange={(v) => setValue('price_list_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {priceLists.map((pl) => <SelectItem key={pl.id} value={String(pl.id)}>{pl.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
