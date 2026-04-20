@@ -335,6 +335,18 @@ export const fetchUoms = (params?: Record<string, string | number>) =>
 export const fetchItemCategories = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<ItemCategory>>('/v1/inventory/item-categories', { params })
 
+export const fetchProductCategories = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<ItemCategory>>('/v1/settings/product-categories', { params })
+
+export const createItemCategory = (payload: Omit<ItemCategory, 'id'>) =>
+  apiClient.post<{ data: ItemCategory }>('/v1/settings/product-categories', payload)
+
+export const updateItemCategory = (id: string, payload: Partial<ItemCategory>) =>
+  apiClient.patch<{ data: ItemCategory }>(`/v1/settings/product-categories/${id}`, payload)
+
+export const deleteItemCategory = (id: string) =>
+  apiClient.delete(`/v1/settings/product-categories/${id}`)
+
 export const fetchItems = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Item>>('/v1/inventory/items', { params })
 
@@ -502,7 +514,7 @@ export const fetchStockLedger = (params: { item_id: number; date_from: string; d
 
 // ── Sales — Full Customer type ────────────────────────────────────────────────
 export interface CustomerCategory {
-  id: number
+  id: string
   name: string
 }
 
@@ -527,8 +539,17 @@ export interface CustomerFull {
   assigned_salesperson?: TenantUser
 }
 
-export const fetchCustomerCategories = () =>
-  apiClient.get<{ data: CustomerCategory[] }>('/v1/sales/customer-categories')
+export const fetchCustomerCategories = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<CustomerCategory>>('/v1/settings/customer-categories', { params })
+
+export const createCustomerCategory = (payload: Omit<CustomerCategory, 'id'>) =>
+  apiClient.post<{ data: CustomerCategory }>('/v1/settings/customer-categories', payload)
+
+export const updateCustomerCategory = (id: string, payload: Partial<CustomerCategory>) =>
+  apiClient.patch<{ data: CustomerCategory }>(`/v1/settings/customer-categories/${id}`, payload)
+
+export const deleteCustomerCategory = (id: string) =>
+  apiClient.delete(`/v1/settings/customer-categories/${id}`)
 
 export const fetchCustomerGroups = () =>
   apiClient.get<{ data: CustomerGroup[] }>('/v1/sales/customer-groups')

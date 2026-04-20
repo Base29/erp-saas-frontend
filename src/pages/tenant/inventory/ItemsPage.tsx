@@ -201,10 +201,10 @@ export default function ItemsPage() {
               </div>
               <div className="space-y-1">
                 <Label>Category</Label>
-                <Select value={watch('category_id') ?? ''} onValueChange={(v) => setValue('category_id', v || null)}>
+                <Select value={watch('category_id') ?? 'none'} onValueChange={(v) => setValue('category_id', v === 'none' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {(categories as ItemCategory[]).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
