@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { formatDate } from '@/utils/format'
 
 // ── Stock Balance ─────────────────────────────────────────────────────────────
 function StockBalanceTab() {
@@ -146,7 +147,7 @@ function StockLedgerTab() {
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No movements found</td></tr>
               ) : rows.map((row, i) => (
                 <tr key={i} className="border-t">
-                  <td className="px-4 py-3">{row.movement_date}</td>
+                  <td className="px-4 py-3">{formatDate(row.movement_date)}</td>
                   <td className="px-4 py-3">{row.movement_type}</td>
                   <td className="px-4 py-3">{row.source_document_type} #{row.source_document_id}</td>
                   <td className={`px-4 py-3 text-right font-mono ${row.quantity < 0 ? 'text-destructive' : 'text-green-600'}`}>{row.quantity > 0 ? '+' : ''}{row.quantity}</td>

@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const schema = z.object({
@@ -87,7 +88,7 @@ export default function CreditNotesPage() {
   const columns: ColumnDef<CreditNote>[] = [
     { accessorKey: 'credit_note_number', header: 'Credit Note #', enableSorting: true },
     { id: 'customer', header: 'Customer', cell: ({ row }) => row.original.customer?.name ?? '—' },
-    { accessorKey: 'credit_date', header: 'Date' },
+    { accessorKey: 'credit_date', header: 'Date', cell: ({ row }) => formatDate(row.original.credit_date) },
     { accessorKey: 'total_amount', header: 'Amount', cell: ({ row }) => `PKR ${Number(row.original.total_amount).toLocaleString()}` },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
@@ -166,7 +167,7 @@ export default function CreditNotesPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Customer:</span> {detail.customer?.name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.credit_date}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.credit_date)}</div>
                 <div><span className="text-muted-foreground">Source Invoice:</span> {detail.source_invoice?.invoice_number ?? `#${detail.source_invoice_id}`}</div>
                 <div><span className="text-muted-foreground">Amount:</span> PKR {Number(detail.total_amount).toLocaleString()}</div>
                 {detail.reason && <div className="col-span-2"><span className="text-muted-foreground">Reason:</span> {detail.reason}</div>}

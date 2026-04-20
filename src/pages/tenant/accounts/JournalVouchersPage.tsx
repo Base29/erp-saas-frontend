@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const APPROVAL_VARIANTS: Record<string, 'default' | 'secondary' | 'success' | 'destructive'> = {
@@ -41,7 +42,7 @@ export default function JournalVouchersPage() {
 
   const columns: ColumnDef<JournalVoucher>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #', enableSorting: true },
-    { accessorKey: 'voucher_date', header: 'Date', enableSorting: true },
+    { accessorKey: 'voucher_date', header: 'Date', enableSorting: true, cell: ({ row }) => formatDate(row.original.voucher_date) },
     {
       accessorKey: 'voucher_type',
       header: 'Type',

@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -105,7 +106,7 @@ export default function StockTransfersPage() {
     { accessorKey: 'transfer_number', header: 'Transfer #', enableSorting: true },
     { id: 'from', header: 'From', cell: ({ row }) => row.original.from_warehouse?.warehouse_name ?? '—' },
     { id: 'to', header: 'To', cell: ({ row }) => row.original.to_warehouse?.warehouse_name ?? '—' },
-    { accessorKey: 'transfer_date', header: 'Date' },
+    { accessorKey: 'transfer_date', header: 'Date', cell: ({ row }) => formatDate(row.original.transfer_date) },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
     { id: 'actions', header: '', cell: ({ row }) => <Button size="sm" variant="ghost" onClick={() => setDetailId(row.original.id)}><Eye className="h-3.5 w-3.5" /></Button> },
@@ -200,7 +201,7 @@ export default function StockTransfersPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">From:</span> {detail.from_warehouse?.warehouse_name}</div>
                 <div><span className="text-muted-foreground">To:</span> {detail.to_warehouse?.warehouse_name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.transfer_date}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.transfer_date)}</div>
                 <div><span className="text-muted-foreground">Posting:</span> <Badge variant={detail.posting_status === 'posted' ? 'success' : 'secondary'}>{detail.posting_status}</Badge></div>
               </div>
 

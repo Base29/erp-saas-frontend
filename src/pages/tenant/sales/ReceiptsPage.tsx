@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const allocationSchema = z.object({
@@ -98,7 +99,7 @@ export default function ReceiptsPage() {
   const columns: ColumnDef<SaleReceipt>[] = [
     { accessorKey: 'receipt_number', header: 'Receipt #', enableSorting: true },
     { id: 'customer', header: 'Customer', cell: ({ row }) => row.original.customer?.name ?? '—' },
-    { accessorKey: 'receipt_date', header: 'Date' },
+    { accessorKey: 'receipt_date', header: 'Date', cell: ({ row }) => formatDate(row.original.receipt_date) },
     { accessorKey: 'amount_received', header: 'Amount', cell: ({ row }) => `PKR ${Number(row.original.amount_received).toLocaleString()}` },
     { accessorKey: 'payment_method', header: 'Method' },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
@@ -202,7 +203,7 @@ export default function ReceiptsPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Customer:</span> {detail.customer?.name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.receipt_date}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.receipt_date)}</div>
                 <div><span className="text-muted-foreground">Amount:</span> PKR {Number(detail.amount_received).toLocaleString()}</div>
                 <div><span className="text-muted-foreground">Method:</span> {detail.payment_method}</div>
                 <div><span className="text-muted-foreground">Reference:</span> {detail.reference ?? '—'}</div>

@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { formatDate } from '@/utils/format'
 
 type Tab = 'gl' | 'tb' | 'pl' | 'bs' | 'cs'
 
@@ -147,7 +148,7 @@ function GeneralLedgerReport() {
               {rows.map((row, i) => (
                 <tr key={i} className="border-t">
                   <td className="px-4 py-2 font-mono text-xs">{row.voucher_number}</td>
-                  <td className="px-4 py-2">{row.voucher_date}</td>
+                  <td className="px-4 py-2">{formatDate(row.voucher_date)}</td>
                   <td className="px-4 py-2 text-muted-foreground">{row.narration ?? '—'}</td>
                   <td className="px-4 py-2 text-right font-mono">
                     {row.debit > 0 ? fmt(row.debit) : '—'}
@@ -481,7 +482,7 @@ function CustomerStatementReport() {
                 <tr key={i} className="border-t">
                   <td className="px-4 py-2 capitalize">{row.type.replace(/_/g, ' ')}</td>
                   <td className="px-4 py-2 font-mono text-xs">{row.reference}</td>
-                  <td className="px-4 py-2">{row.date}</td>
+                  <td className="px-4 py-2">{formatDate(row.date)}</td>
                   <td className="px-4 py-2 text-right font-mono">{row.debit > 0 ? fmt(row.debit) : '—'}</td>
                   <td className="px-4 py-2 text-right font-mono">{row.credit > 0 ? fmt(row.credit) : '—'}</td>
                   <td className={`px-4 py-2 text-right font-mono font-medium ${row.balance < 0 ? 'text-destructive' : ''}`}>

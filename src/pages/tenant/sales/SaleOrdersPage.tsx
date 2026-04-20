@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -113,8 +114,8 @@ export default function SaleOrdersPage() {
   const columns: ColumnDef<SaleOrder>[] = [
     { accessorKey: 'order_number', header: 'Order #', enableSorting: true },
     { id: 'customer', header: 'Customer', cell: ({ row }) => row.original.customer?.name ?? '—' },
-    { accessorKey: 'order_date', header: 'Date' },
-    { accessorKey: 'delivery_date', header: 'Delivery', cell: ({ row }) => row.original.delivery_date ?? '—' },
+    { accessorKey: 'order_date', header: 'Date', cell: ({ row }) => formatDate(row.original.order_date) },
+    { accessorKey: 'delivery_date', header: 'Delivery', cell: ({ row }) => formatDate(row.original.delivery_date) },
     { id: 'approval', header: 'Approval', cell: ({ row }) => approvalBadge(row.original.approval_status) },
     { id: 'fulfillment', header: 'Fulfillment', cell: ({ row }) => fulfillmentBadge(row.original.fulfillment_status) },
     { id: 'actions', header: '', cell: ({ row }) => <Button size="sm" variant="ghost" onClick={() => setDetailId(row.original.id)}><Eye className="h-3.5 w-3.5" /></Button> },
@@ -202,8 +203,8 @@ export default function SaleOrdersPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Customer:</span> {detail.customer?.name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.order_date}</div>
-                <div><span className="text-muted-foreground">Delivery:</span> {detail.delivery_date ?? '—'}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.order_date)}</div>
+                <div><span className="text-muted-foreground">Delivery:</span> {formatDate(detail.delivery_date)}</div>
                 <div className="flex items-center gap-2"><span className="text-muted-foreground">Fulfillment:</span> {fulfillmentBadge(detail.fulfillment_status)}</div>
               </div>
 

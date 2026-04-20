@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -130,7 +131,7 @@ export default function GatePassesPage() {
     { accessorKey: 'gate_pass_number', header: 'Gate Pass #', enableSorting: true },
     { id: 'invoice', header: 'Invoice', cell: ({ row }) => row.original.source_invoice?.invoice_number ?? '—' },
     { id: 'warehouse', header: 'Warehouse', cell: ({ row }) => row.original.warehouse?.warehouse_name ?? '—' },
-    { accessorKey: 'dispatch_date', header: 'Dispatch Date' },
+    { accessorKey: 'dispatch_date', header: 'Dispatch Date', cell: ({ row }) => formatDate(row.original.dispatch_date) },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'status', header: 'Status', cell: ({ row }) => <Badge variant={row.original.status === 'dispatched' ? 'success' : 'secondary'}>{row.original.status}</Badge> },
     { id: 'actions', header: '', cell: ({ row }) => <Button size="sm" variant="ghost" onClick={() => setDetailId(row.original.id)}><Eye className="h-3.5 w-3.5" /></Button> },
@@ -231,7 +232,7 @@ export default function GatePassesPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Invoice:</span> {detail.source_invoice?.invoice_number ?? `#${detail.source_invoice_id}`}</div>
                 <div><span className="text-muted-foreground">Warehouse:</span> {detail.warehouse?.warehouse_name}</div>
-                <div><span className="text-muted-foreground">Dispatch Date:</span> {detail.dispatch_date}</div>
+                <div><span className="text-muted-foreground">Dispatch Date:</span> {formatDate(detail.dispatch_date)}</div>
                 <div><span className="text-muted-foreground">Vehicle:</span> {detail.vehicle_number ?? '—'}</div>
                 <div><span className="text-muted-foreground">Driver:</span> {detail.driver_name ?? '—'}</div>
                 <div><span className="text-muted-foreground">Status:</span> <Badge variant={detail.status === 'dispatched' ? 'success' : 'secondary'}>{detail.status}</Badge></div>

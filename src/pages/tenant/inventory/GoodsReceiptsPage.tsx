@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -99,7 +100,7 @@ export default function GoodsReceiptsPage() {
   const columns: ColumnDef<GoodsReceipt>[] = [
     { accessorKey: 'grn_number', header: 'GRN #', enableSorting: true },
     { id: 'warehouse', header: 'Warehouse', cell: ({ row }) => row.original.warehouse?.warehouse_name ?? '—' },
-    { accessorKey: 'receipt_date', header: 'Date' },
+    { accessorKey: 'receipt_date', header: 'Date', cell: ({ row }) => formatDate(row.original.receipt_date) },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
     { id: 'actions', header: '', cell: ({ row }) => <Button size="sm" variant="ghost" onClick={() => setDetailId(row.original.id)}><Eye className="h-3.5 w-3.5" /></Button> },
@@ -191,7 +192,7 @@ export default function GoodsReceiptsPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Warehouse:</span> {detail.warehouse?.warehouse_name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.receipt_date}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.receipt_date)}</div>
                 <div><span className="text-muted-foreground">Reference:</span> {detail.reference ?? '—'}</div>
                 <div><span className="text-muted-foreground">Posting:</span> <Badge variant={detail.posting_status === 'posted' ? 'success' : 'secondary'}>{detail.posting_status}</Badge></div>
               </div>

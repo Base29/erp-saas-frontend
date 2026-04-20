@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate, formatDateTime } from '@/utils/format'
 
 const APPROVAL_VARIANTS: Record<string, 'default' | 'secondary' | 'success' | 'destructive'> = {
   draft: 'secondary',
@@ -83,7 +84,7 @@ export default function JournalVoucherDetailPage() {
         <div className="flex-1">
           <h1 className="text-xl font-semibold">{jv.voucher_number}</h1>
           <p className="text-sm text-muted-foreground capitalize">
-            {jv.voucher_type.replace(/_/g, ' ')} · {jv.voucher_date}
+            {jv.voucher_type.replace(/_/g, ' ')} · {formatDate(jv.voucher_date)}
           </p>
         </div>
         {canEditDoc && (
@@ -140,7 +141,7 @@ export default function JournalVoucherDetailPage() {
         {jv.posted_at && (
           <div>
             <p className="text-muted-foreground">Posted At</p>
-            <p className="font-medium">{new Date(jv.posted_at).toLocaleString()}</p>
+            <p className="font-medium">{formatDateTime(jv.posted_at)}</p>
           </div>
         )}
       </div>

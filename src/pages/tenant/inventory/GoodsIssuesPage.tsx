@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -104,7 +105,7 @@ export default function GoodsIssuesPage() {
   const columns: ColumnDef<GoodsIssue>[] = [
     { accessorKey: 'issue_number', header: 'Issue #', enableSorting: true },
     { id: 'warehouse', header: 'Warehouse', cell: ({ row }) => row.original.warehouse?.warehouse_name ?? '—' },
-    { accessorKey: 'issue_date', header: 'Date' },
+    { accessorKey: 'issue_date', header: 'Date', cell: ({ row }) => formatDate(row.original.issue_date) },
     { accessorKey: 'purpose', header: 'Purpose', cell: ({ row }) => row.original.purpose ?? '—' },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
@@ -193,7 +194,7 @@ export default function GoodsIssuesPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Warehouse:</span> {detail.warehouse?.warehouse_name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.issue_date}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.issue_date)}</div>
                 <div><span className="text-muted-foreground">Purpose:</span> {detail.purpose ?? '—'}</div>
                 <div><span className="text-muted-foreground">Posting:</span> <Badge variant={detail.posting_status === 'posted' ? 'success' : 'secondary'}>{detail.posting_status}</Badge></div>
               </div>

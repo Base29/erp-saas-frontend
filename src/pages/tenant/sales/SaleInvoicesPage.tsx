@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
@@ -127,8 +128,8 @@ export default function SaleInvoicesPage() {
   const columns: ColumnDef<SaleInvoice>[] = [
     { accessorKey: 'invoice_number', header: 'Invoice #', enableSorting: true },
     { id: 'customer', header: 'Customer', cell: ({ row }) => row.original.customer?.name ?? '—' },
-    { accessorKey: 'invoice_date', header: 'Date' },
-    { accessorKey: 'due_date', header: 'Due', cell: ({ row }) => row.original.due_date ?? '—' },
+    { accessorKey: 'invoice_date', header: 'Date', cell: ({ row }) => formatDate(row.original.invoice_date) },
+    { accessorKey: 'due_date', header: 'Due', cell: ({ row }) => formatDate(row.original.due_date) },
     { accessorKey: 'total_amount', header: 'Total', cell: ({ row }) => `PKR ${Number(row.original.total_amount).toLocaleString()}` },
     { id: 'approval', header: 'Approval', cell: ({ row }) => statusBadge(row.original.approval_status) },
     { id: 'posting', header: 'Posting', cell: ({ row }) => <Badge variant={row.original.posting_status === 'posted' ? 'success' : 'secondary'}>{row.original.posting_status}</Badge> },
@@ -256,8 +257,8 @@ export default function SaleInvoicesPage() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Customer:</span> {detail.customer?.name}</div>
-                <div><span className="text-muted-foreground">Date:</span> {detail.invoice_date}</div>
-                <div><span className="text-muted-foreground">Due:</span> {detail.due_date ?? '—'}</div>
+                <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.invoice_date)}</div>
+                <div><span className="text-muted-foreground">Due:</span> {formatDate(detail.due_date)}</div>
                 <div><span className="text-muted-foreground">Period:</span> {detail.fiscal_period?.name}</div>
                 <div><span className="text-muted-foreground">Subtotal:</span> PKR {Number(detail.subtotal).toLocaleString()}</div>
                 <div><span className="text-muted-foreground">Tax:</span> PKR {Number(detail.tax_amount).toLocaleString()}</div>

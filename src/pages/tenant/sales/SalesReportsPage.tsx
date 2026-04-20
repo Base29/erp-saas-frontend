@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { formatDate } from '@/utils/format'
 
 type ReportTab = 'sales-register' | 'receivables-aging'
 
@@ -128,7 +129,7 @@ export default function SalesReportsPage() {
                   {registerRows.map((row, i) => (
                     <tr key={i} className="border-t">
                       <td className="px-3 py-2 font-mono text-xs">{row.invoice_number}</td>
-                      <td className="px-3 py-2">{row.invoice_date}</td>
+                      <td className="px-3 py-2">{formatDate(row.invoice_date)}</td>
                       <td className="px-3 py-2">{row.customer_name}</td>
                       <td className="px-3 py-2 text-right">PKR {Number(row.subtotal).toLocaleString()}</td>
                       <td className="px-3 py-2 text-right">PKR {Number(row.tax_amount).toLocaleString()}</td>

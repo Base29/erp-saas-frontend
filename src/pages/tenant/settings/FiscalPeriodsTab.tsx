@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import DataTable from '@/components/DataTable'
+import { formatDate } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   Dialog,
@@ -56,8 +57,8 @@ export default function FiscalPeriodsTab() {
 
   const columns: ColumnDef<FiscalPeriod>[] = [
     { accessorKey: 'name', header: 'Name', enableSorting: true },
-    { accessorKey: 'start_date', header: 'Start', enableSorting: true },
-    { accessorKey: 'end_date', header: 'End', enableSorting: true },
+    { accessorKey: 'start_date', header: 'Start', enableSorting: true, cell: ({ row }) => formatDate(row.original.start_date) },
+    { accessorKey: 'end_date', header: 'End', enableSorting: true, cell: ({ row }) => formatDate(row.original.end_date) },
     {
       accessorKey: 'status',
       header: 'Status',
