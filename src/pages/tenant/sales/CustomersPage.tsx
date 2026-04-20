@@ -59,9 +59,10 @@ export default function CustomersPage() {
   })
 
   const { data: users = [] } = useQuery({
-    queryKey: ['tenant-users'],
-    queryFn: () => fetchUsers().then((r) => r.data.data ?? r.data),
+    queryKey: ['tenant-users', 'sales_person'],
+    queryFn: () => fetchUsers({ role: 'sales_person', is_active: 1, per_page: 500 }).then((r) => r.data.data ?? r.data),
   })
+
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
