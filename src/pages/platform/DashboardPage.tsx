@@ -1,19 +1,32 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, CheckCircle2, Activity } from 'lucide-react'
+import { Building2, CheckCircle2, Activity, Plus } from 'lucide-react'
 import { fetchPlatformDashboard } from '@/api/platform'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ProvisioningTerminal } from '@/components/platform/ProvisioningTerminal'
+import { CreateTenantDialog } from '@/components/platform/CreateTenantDialog'
 
 export default function PlatformDashboardPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { data, isLoading } = useQuery({
     queryKey: ['platform', 'dashboard'],
     queryFn: () => fetchPlatformDashboard().then((r) => r.data.data),
-    refetchInterval: 30_000,
+    refetchInterval: (data) => {
+      // Refetch every 5s if any log is 'running', otherwise every 30s
+      return data?.recent_provisioning_events?.some(l => l.status === 'running') ? 5000 : 30000
+    },
   })
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Tenant
+        </Button>
+      </div>
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading…</p>
@@ -47,50 +60,20 @@ export default function PlatformDashboardPage() {
           </div>
 
           {/* Recent provisioning events */}
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2 pb-3">
+          <div className="mt-8">
+            <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <Activity className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base">Recent Provisioning Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data?.recent_provisioning_events?.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No recent events</p>
-              ) : (
-                <div className="space-y-3">
-                  {data?.recent_provisioning_events?.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={
-                            event.status === 'completed'
-                              ? 'success'
-                              : event.status === 'failed'
-                              ? 'destructive'
-                              : event.status === 'running'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                        >
-                          {event.status}
-                        </Badge>
-                        <span className="font-medium">{event.step}</span>
-                        {event.message && (
-                          <span className="text-muted-foreground truncate max-w-xs">
-                            {event.message}
-                          </span>
-                        )}
-                      </div>
-                      <time className="text-xs text-muted-foreground shrink-0 ml-4">
-                        {new Date(event.created_at).toLocaleString()}
-                      </time>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              Recent Provisioning Activities
+            </h2>
+            <ProvisioningTerminal 
+              logs={data?.recent_provisioning_events ?? []} 
+              className="max-w-4xl"
+            />
+          </div>
         </>
       )}
+
+      <CreateTenantDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   )
 }

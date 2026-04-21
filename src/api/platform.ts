@@ -12,12 +12,17 @@ export interface Tenant {
 }
 
 export interface ProvisioningLog {
-  id: number
+  id: string // ULID
   tenant_id: string
   step: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   message: string | null
   created_at: string
+  tenant?: {
+    id: string
+    name: string
+    subdomain: string
+  }
 }
 
 export interface PlatformDashboard {

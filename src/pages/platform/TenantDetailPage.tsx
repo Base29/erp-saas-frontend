@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Puzzle } from 'lucide-react'
@@ -36,7 +37,35 @@ export default function TenantDetailPage() {
     queryKey: ['platform', 'tenants', id, 'logs'],
     queryFn: () => fetchProvisioningLogs(id!).then((r) => r.data.data),
     enabled: !!id,
+    refetchInterval: (data) => {
+      // Refetch more frequently if any log is 'running'
+      return data?.data?.some(l => l.status === 'running') ? 5000 : 30000
+    }
   })
+
+  const refinedLogs = useMemo(() => {
+    if (!logs) return []
+    // Group by step and keep only the latest log for each step
+    const latestMap = new Map<string, ProvisioningLog>()
+    
+    // Sort oldest first to ensure latest overwrites
+    const sorted = [...logs].sort((a, b) => {
+      const timeDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      if (timeDiff !== 0) return timeDiff
+      return a.id - b.id // Oldest ID first
+    })
+
+    sorted.forEach(log => {
+      latestMap.set(log.step, log)
+    })
+
+    // Return newest first for the timeline
+    return Array.from(latestMap.values()).sort((a, b) => {
+      const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (timeDiff !== 0) return timeDiff
+      return b.id - a.id
+    })
+  }, [logs])
 
   const suspendMutation = useMutation({
     mutationFn: () => suspendTenant(id!),
@@ -132,7 +161,7 @@ export default function TenantDetailPage() {
             <p className="text-muted-foreground text-sm">No provisioning events</p>
           ) : (
             <ol className="relative border-l border-border ml-2 space-y-4">
-              {logs?.map((log) => (
+              {refinedLogs.map((log) => (
                 <li key={log.id} className="ml-6">
                   <span className="absolute -left-[11px] flex items-center justify-center w-5 h-5 bg-background rounded-full ring-2 ring-border">
                     {stepIcon(log.status)}
