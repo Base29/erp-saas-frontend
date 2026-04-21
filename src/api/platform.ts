@@ -30,6 +30,9 @@ export interface CreateTenantPayload {
   name: string
   subdomain: string
   plan_name?: string
+  admin_name: string
+  admin_email: string
+  admin_password: string
 }
 
 // Auth

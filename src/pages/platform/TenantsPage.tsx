@@ -19,12 +19,15 @@ import {
 } from '@/components/ui/dialog'
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Company Name is required'),
   subdomain: z
     .string()
     .min(1, 'Subdomain is required')
     .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens'),
   plan_name: z.string().optional(),
+  admin_name: z.string().min(1, 'Admin Name is required'),
+  admin_email: z.string().email('Invalid email address'),
+  admin_password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -158,6 +161,43 @@ export default function TenantsPage() {
             <div className="space-y-1">
               <Label htmlFor="plan_name">Plan (optional)</Label>
               <Input id="plan_name" {...register('plan_name')} placeholder="starter" />
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-medium mb-3">Admin Credentials</h3>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="admin_name">Admin Name</Label>
+                  <Input id="admin_name" {...register('admin_name')} placeholder="John Doe" />
+                  {errors.admin_name && (
+                    <p className="text-xs text-destructive">{errors.admin_name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="admin_email">Admin Email</Label>
+                  <Input
+                    id="admin_email"
+                    type="email"
+                    {...register('admin_email')}
+                    placeholder="admin@example.com"
+                  />
+                  {errors.admin_email && (
+                    <p className="text-xs text-destructive">{errors.admin_email.message}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="admin_password">Admin Password</Label>
+                  <Input
+                    id="admin_password"
+                    type="password"
+                    {...register('admin_password')}
+                    placeholder="••••••••"
+                  />
+                  {errors.admin_password && (
+                    <p className="text-xs text-destructive">{errors.admin_password.message}</p>
+                  )}
+                </div>
+              </div>
             </div>
             {serverError && <p className="text-sm text-destructive">{serverError}</p>}
             <DialogFooter>
