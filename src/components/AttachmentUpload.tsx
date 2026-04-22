@@ -16,7 +16,7 @@ function formatBytes(bytes: number) {
 
 interface AttachmentUploadProps {
   attachableType: string
-  attachableId: number
+  attachableId: string
   readonly?: boolean
 }
 
@@ -31,7 +31,7 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
   const { data: attachments = [] } = useQuery({
     queryKey,
     queryFn: () => fetchAttachments(attachableType, attachableId).then((r) => r.data.data),
-    enabled: attachableId > 0,
+    enabled: !!attachableId,
   })
 
   const upload = useMutation({
@@ -40,7 +40,7 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
   })
 
   const remove = useMutation({
-    mutationFn: (id: number) => deleteAttachment(id),
+    mutationFn: (id: string) => deleteAttachment(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   })
 

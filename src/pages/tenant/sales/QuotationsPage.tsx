@@ -73,29 +73,29 @@ export default function QuotationsPage() {
     enabled: !!detailId,
   })
 
-  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data.data) })
-  const customers: CustomerFull[] = customersData ?? []
+  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data) })
+  const customers: CustomerFull[] = customersData?.data ?? []
 
-  const { data: priceListsData } = useQuery({ queryKey: ['price-lists-all'], queryFn: () => fetchPriceLists({ per_page: 500 }).then((r) => r.data.data) })
-  const priceLists: PriceList[] = priceListsData ?? []
+  const { data: priceListsData } = useQuery({ queryKey: ['price-lists-all'], queryFn: () => fetchPriceLists({ per_page: 500 }).then((r) => r.data) })
+  const priceLists: PriceList[] = priceListsData?.data ?? []
 
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data.data) })
-  const allItems: Item[] = itemsData ?? []
+  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data) })
+  const allItems: Item[] = itemsData?.data ?? []
 
-  const { data: uomsData } = useQuery({ queryKey: ['uoms'], queryFn: () => fetchUoms().then((r) => r.data.data ?? r.data) })
-  const uoms: UnitOfMeasure[] = uomsData ?? []
+  const { data: uomsData } = useQuery({ queryKey: ['uoms'], queryFn: () => fetchUoms().then((r) => r.data) })
+  const uoms: UnitOfMeasure[] = uomsData?.data ?? []
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createQuotation({
-      customer_id: Number(v.customer_id),
+      customer_id: v.customer_id,
       quotation_date: v.quotation_date,
       valid_until: v.valid_until,
-      price_list_id: v.price_list_id && v.price_list_id !== 'none' ? Number(v.price_list_id) : null,
-      salesperson_id: v.salesperson_id ? Number(v.salesperson_id) : null,
+      price_list_id: v.price_list_id && v.price_list_id !== 'none' ? v.price_list_id : null,
+      salesperson_id: v.salesperson_id,
       terms: v.terms,
       lines: v.lines.map((l) => ({
-        item_id: Number(l.item_id), description: l.description,
-        quantity: l.quantity, unit_of_measure_id: Number(l.unit_of_measure_id),
+        item_id: l.item_id, description: l.description,
+        quantity: l.quantity, unit_of_measure_id: l.unit_of_measure_id,
         unit_price: l.unit_price, discount_percentage: l.discount_percentage,
         tax_amount: l.tax_amount, line_total: l.line_total,
       })),

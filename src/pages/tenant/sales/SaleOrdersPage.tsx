@@ -88,12 +88,12 @@ export default function SaleOrdersPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createSaleOrder({
-      customer_id: Number(v.customer_id),
+      customer_id: v.customer_id,
       order_date: v.order_date,
       delivery_date: v.delivery_date,
       lines: v.lines.map((l) => ({
-        item_id: Number(l.item_id), description: l.description,
-        quantity: l.quantity, unit_of_measure_id: Number(l.unit_of_measure_id),
+        item_id: l.item_id, description: l.description,
+        quantity: l.quantity, unit_of_measure_id: l.unit_of_measure_id,
         unit_price: l.unit_price, discount_percentage: l.discount_percentage,
         tax_amount: l.tax_amount, line_total: l.line_total,
       })),

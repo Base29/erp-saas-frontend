@@ -45,7 +45,7 @@ export default function PriceListsPage() {
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<PriceList | null>(null)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['price-lists', page],
@@ -60,15 +60,15 @@ export default function PriceListsPage() {
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
-    queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data.data),
+    queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data),
   })
-  const allItems: Item[] = itemsData ?? []
+  const allItems: Item[] = itemsData?.data ?? []
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
       const payload = {
         ...v,
-        items: v.items.map((i) => ({ item_id: Number(i.item_id), unit_price: i.unit_price, discount_percentage: i.discount_percentage })),
+        items: v.items.map((i) => ({ item_id: i.item_id, unit_price: i.unit_price, discount_percentage: i.discount_percentage })),
       }
       return editing ? updatePriceList(editing.id, payload) : createPriceList(payload)
     },

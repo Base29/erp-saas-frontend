@@ -47,18 +47,18 @@ export default function SalesReportsPage() {
   const [agingCustomerId, setAgingCustomerId] = useState<string>('')
   const [runAging, setRunAging] = useState(false)
 
-  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data.data) })
-  const customers: CustomerFull[] = customersData ?? []
+  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data) })
+  const customers: CustomerFull[] = customersData?.data ?? []
 
   const { data: registerData, isLoading: registerLoading } = useQuery({
     queryKey: ['sales-register', dateFrom, dateTo, customerId, registerPage],
-    queryFn: () => fetchSalesRegister({ date_from: dateFrom, date_to: dateTo, ...(customerId && customerId !== 'all' ? { customer_id: Number(customerId) } : {}), page: registerPage }).then((r) => r.data),
+    queryFn: () => fetchSalesRegister({ date_from: dateFrom, date_to: dateTo, ...(customerId && customerId !== 'all' ? { customer_id: customerId } : {}), page: registerPage }).then((r) => r.data),
     enabled: runRegister,
   })
 
   const { data: agingData, isLoading: agingLoading } = useQuery({
     queryKey: ['receivables-aging', agingCustomerId],
-    queryFn: () => fetchReceivablesAging(agingCustomerId && agingCustomerId !== 'all' ? { customer_id: Number(agingCustomerId) } : {}).then((r) => r.data),
+    queryFn: () => fetchReceivablesAging(agingCustomerId && agingCustomerId !== 'all' ? { customer_id: agingCustomerId } : {}).then((r) => r.data),
     enabled: runAging,
   })
 

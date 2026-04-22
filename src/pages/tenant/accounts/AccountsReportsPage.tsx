@@ -85,7 +85,7 @@ function GeneralLedgerReport() {
     queryKey: ['report-gl', params],
     queryFn: () =>
       fetchGeneralLedger({
-        account_id: Number(params.account_id),
+        account_id: params.account_id,
         date_from: params.date_from,
         date_to: params.date_to,
         page: params.page,
@@ -182,11 +182,11 @@ function TrialBalanceReport() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['report-tb', periodId],
-    queryFn: () => fetchTrialBalance({ fiscal_period_id: Number(periodId) }).then((r) => r.data),
+    queryFn: () => fetchTrialBalance({ fiscal_period_id: periodId }).then((r) => r.data),
     enabled: submitted && !!periodId,
   })
 
-  type TBRow = { account_id: number; account_code: string; account_name: string; total_debit: number; total_credit: number }
+  type TBRow = { account_id: string; account_code: string; account_name: string; total_debit: number; total_credit: number }
   const rows: TBRow[] = (data as { rows?: TBRow[] })?.rows ?? []
   const grandDebit: number = (data as { grand_debit?: number })?.grand_debit ?? 0
   const grandCredit: number = (data as { grand_credit?: number })?.grand_credit ?? 0
@@ -417,7 +417,7 @@ function CustomerStatementReport() {
     queryKey: ['report-cs', params],
     queryFn: () =>
       fetchCustomerStatement({
-        customer_id: Number(params.customer_id),
+        customer_id: params.customer_id,
         date_from: params.date_from,
         date_to: params.date_to,
       }).then((r) => r.data),

@@ -47,7 +47,7 @@ export default function CreditNotesPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['credit-notes', page],
@@ -60,16 +60,16 @@ export default function CreditNotesPage() {
     enabled: !!detailId,
   })
 
-  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data.data) })
-  const customers: CustomerFull[] = customersData ?? []
+  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data) })
+  const customers: CustomerFull[] = customersData?.data ?? []
 
-  const { data: invoicesData } = useQuery({ queryKey: ['sale-invoices-all'], queryFn: () => fetchSaleInvoices({ per_page: 500, posting_status: 'posted' }).then((r) => r.data.data) })
-  const invoices: SaleInvoice[] = invoicesData ?? []
+  const { data: invoicesData } = useQuery({ queryKey: ['sale-invoices-all'], queryFn: () => fetchSaleInvoices({ per_page: 500, posting_status: 'posted' }).then((r) => r.data) })
+  const invoices: SaleInvoice[] = invoicesData?.data ?? []
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createCreditNote({
-      source_invoice_id: Number(v.source_invoice_id),
-      customer_id: Number(v.customer_id),
+      source_invoice_id: v.source_invoice_id,
+      customer_id: v.customer_id,
       credit_date: v.credit_date,
       reason: v.reason,
       total_amount: v.total_amount,

@@ -19,7 +19,7 @@ export interface Notification {
   title: string
   body: string | null
   related_model_type: string | null
-  related_model_id: number | null
+  related_model_id: string | null
   is_read: boolean
   created_at: string
 }
@@ -30,7 +30,7 @@ export const fetchUnreadCount = () =>
 export const fetchNotifications = () =>
   apiClient.get<{ data: Notification[] }>('/v1/notifications')
 
-export const markNotificationRead = (id: number) =>
+export const markNotificationRead = (id: string) =>
   apiClient.post(`/v1/notifications/${id}/read`)
 
 // ── Fiscal Periods ────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ export const fetchFiscalPeriods = (params?: Record<string, string | number>) =>
 export const createFiscalPeriod = (payload: Omit<FiscalPeriod, 'id' | 'status'>) =>
   apiClient.post<{ data: FiscalPeriod }>('/v1/settings/fiscal-periods', payload)
 
-export const closeFiscalPeriod = (id: number) =>
+export const closeFiscalPeriod = (id: string) =>
   apiClient.post<{ data: FiscalPeriod }>(`/v1/settings/fiscal-periods/${id}/close`)
 
 // ── Tax Settings ──────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ export interface Sequence {
 export const fetchSequences = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Sequence>>('/v1/settings/sequences', { params })
 
-export const updateSequence = (id: number, payload: Partial<Sequence>) =>
+export const updateSequence = (id: string, payload: Partial<Sequence>) =>
   apiClient.patch<{ data: Sequence }>(`/v1/settings/sequences/${id}`, payload)
 
 // ── Users ─────────────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ export interface Attachment {
 
 export const uploadAttachment = (
   attachableType: string,
-  attachableId: number,
+  attachableId: string,
   file: File
 ) => {
   const form = new FormData()
@@ -127,24 +127,24 @@ export const uploadAttachment = (
   })
 }
 
-export const deleteAttachment = (id: number) =>
+export const deleteAttachment = (id: string) =>
   apiClient.delete(`/v1/attachments/${id}`)
 
-export const fetchAttachments = (attachableType: string, attachableId: number) =>
+export const fetchAttachments = (attachableType: string, attachableId: string) =>
   apiClient.get<{ data: Attachment[] }>(
     `/v1/attachments?attachable_type=${attachableType}&attachable_id=${attachableId}`
   )
 
 // ── Accounts — Chart of Accounts ─────────────────────────────────────────────
 export interface AccountGroup {
-  id: number
+  id: string
   name: string
   account_types?: AccountType[]
 }
 
 export interface AccountType {
   id: string
-  account_group_id: number
+  account_group_id: string
   name: string
   account_group?: AccountGroup
 }
@@ -153,7 +153,7 @@ export interface Account {
   id: string
   account_code: string
   account_name: string
-  account_type_id: number
+  account_type_id: string
   is_active: boolean
   account_type?: AccountType & { account_group?: AccountGroup }
 }
@@ -167,19 +167,19 @@ export const fetchAccountTypes = (params?: Record<string, string | number>) =>
 export const fetchAccounts = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params })
 
-export const createAccount = (payload: { account_code: string; account_name: string; account_type_id: number; is_active?: boolean }) =>
+export const createAccount = (payload: { account_code: string; account_name: string; account_type_id: string; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
 
-export const updateAccount = (id: number, payload: Partial<Account>) =>
+export const updateAccount = (id: string, payload: Partial<Account>) =>
   apiClient.patch<Account>(`/v1/accounts/${id}`, payload)
 
-export const deleteAccount = (id: number) =>
+export const deleteAccount = (id: string) =>
   apiClient.delete(`/v1/accounts/${id}`)
 
 // ── Accounts — Journal Vouchers ───────────────────────────────────────────────
 export interface JournalVoucherLine {
   id?: string
-  account_id: number
+  account_id: string
   debit_amount: number
   credit_amount: number
   line_narration?: string
@@ -191,18 +191,18 @@ export interface JournalVoucher {
   voucher_number: string
   voucher_type: string
   voucher_date: string
-  fiscal_period_id: number
+  fiscal_period_id: string
   reference?: string
   narration?: string
   approval_status: string
   posting_status: string
   is_auto_generated: boolean
-  created_by: number
-  posted_by?: number
+  created_by: string
+  posted_by?: string
   posted_at?: string
   created_at: string
   lines?: JournalVoucherLine[]
-  fiscal_period?: { id: number; name: string }
+  fiscal_period?: { id: string; name: string }
 }
 
 export interface PaginatedResponse<T> {
@@ -217,40 +217,40 @@ export const fetchJournalVouchers = (params?: Record<string, string | number>) =
   apiClient.get<PaginatedResponse<JournalVoucher>>('/v1/accounts/journal-vouchers', { params })
 
 export const fetchJournalVoucher = (id: string) =>
-  apiClient.get<JournalVoucher>(`/v1/accounts/journal-vouchers/${id}`)
+  apiClient.get<{ data: JournalVoucher }>(`/v1/accounts/journal-vouchers/${id}`)
 
 export const createJournalVoucher = (payload: {
   voucher_type?: string
   voucher_date: string
-  fiscal_period_id: number
+  fiscal_period_id: string
   reference?: string
   narration?: string
   lines: JournalVoucherLine[]
-}) => apiClient.post<JournalVoucher>('/v1/accounts/journal-vouchers', payload)
+}) => apiClient.post<{ data: JournalVoucher }>('/v1/accounts/journal-vouchers', payload)
 
-export const updateJournalVoucher = (id: number, payload: Partial<Parameters<typeof createJournalVoucher>[0]>) =>
-  apiClient.patch<JournalVoucher>(`/v1/accounts/journal-vouchers/${id}`, payload)
+export const updateJournalVoucher = (id: string, payload: Partial<Parameters<typeof createJournalVoucher>[0]>) =>
+  apiClient.patch<{ data: JournalVoucher }>(`/v1/accounts/journal-vouchers/${id}`, payload)
 
-export const deleteJournalVoucher = (id: number) =>
+export const deleteJournalVoucher = (id: string) =>
   apiClient.delete(`/v1/accounts/journal-vouchers/${id}`)
 
-export const submitJournalVoucherForApproval = (id: number, comments?: string) =>
+export const submitJournalVoucherForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/submit-for-approval`, { comments })
 
-export const approveJournalVoucher = (id: number, comments?: string) =>
+export const approveJournalVoucher = (id: string, comments?: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/approve`, { comments })
 
-export const rejectJournalVoucher = (id: number, comments?: string) =>
+export const rejectJournalVoucher = (id: string, comments?: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/reject`, { comments })
 
-export const postJournalVoucher = (id: number) =>
+export const postJournalVoucher = (id: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/post`)
 
 // ── Accounts — Reports ────────────────────────────────────────────────────────
-export const fetchGeneralLedger = (params: { account_id: number; date_from: string; date_to: string; page?: number }) =>
+export const fetchGeneralLedger = (params: { account_id: string; date_from: string; date_to: string; page?: number }) =>
   apiClient.get('/v1/accounts/reports/general-ledger', { params })
 
-export const fetchTrialBalance = (params: { fiscal_period_id: number }) =>
+export const fetchTrialBalance = (params: { fiscal_period_id: string }) =>
   apiClient.get('/v1/accounts/reports/trial-balance', { params })
 
 export const fetchProfitAndLoss = (params: { date_from: string; date_to: string }) =>
@@ -259,7 +259,7 @@ export const fetchProfitAndLoss = (params: { date_from: string; date_to: string 
 export const fetchBalanceSheet = (params: { as_of_date: string }) =>
   apiClient.get('/v1/accounts/reports/balance-sheet', { params })
 
-export const fetchCustomerStatement = (params: { customer_id: number; date_from: string; date_to: string }) =>
+export const fetchCustomerStatement = (params: { customer_id: string; date_from: string; date_to: string }) =>
   apiClient.get('/v1/accounts/reports/customer-statement', { params })
 
 // ── Sales — Customers (for customer statement selector) ───────────────────────
@@ -284,12 +284,12 @@ export interface UnitOfMeasure {
 export interface ItemCategory {
   id: string
   name: string
-  parent_category_id: number | null
+  parent_category_id: string | null
   description: string | null
 }
 
 export interface ItemVariant {
-  id?: number
+  id?: string
   variant_name: string
   variant_attributes: Record<string, string> | null
   item_code_suffix: string | null
@@ -297,19 +297,19 @@ export interface ItemVariant {
 }
 
 export interface ItemBundleComponent {
-  id?: number
-  component_item_id: number
+  id?: string
+  component_item_id: string
   component_quantity: number
   component_item?: Item
 }
 
 export interface Item {
-  id: number
+  id: string
   item_code: string
   item_name: string
   item_type: 'stock' | 'service' | 'bundle'
-  category_id: number | null
-  base_unit_of_measure_id: number
+  category_id: string | null
+  base_unit_of_measure_id: string
   reorder_level: number
   is_batch_tracked: boolean
   is_serial_tracked: boolean
@@ -356,7 +356,7 @@ export const fetchItem = (id: string) =>
 export const createItem = (payload: Omit<Item, 'id' | 'category' | 'base_uom' | 'variants' | 'bundle_components'> & { variants?: ItemVariant[]; bundle_components?: ItemBundleComponent[] }) =>
   apiClient.post<{ data: Item }>('/v1/inventory/items', payload)
 
-export const updateItem = (id: number, payload: Partial<Parameters<typeof createItem>[0]>) =>
+export const updateItem = (id: string, payload: Partial<Parameters<typeof createItem>[0]>) =>
   apiClient.patch<{ data: Item }>(`/v1/inventory/items/${id}`, payload)
 
 export const fetchWarehouses = (params?: Record<string, string | number>) =>
@@ -365,74 +365,74 @@ export const fetchWarehouses = (params?: Record<string, string | number>) =>
 export const createWarehouse = (payload: Omit<Warehouse, 'id'>) =>
   apiClient.post<{ data: Warehouse }>('/v1/inventory/warehouses', payload)
 
-export const updateWarehouse = (id: number, payload: Partial<Omit<Warehouse, 'id'>>) =>
+export const updateWarehouse = (id: string, payload: Partial<Omit<Warehouse, 'id'>>) =>
   apiClient.patch<{ data: Warehouse }>(`/v1/inventory/warehouses/${id}`, payload)
 
 // ── Inventory — Stock Transactions ───────────────────────────────────────────
 export interface GoodsReceiptLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   quantity: number
   unit_cost: number
-  batch_id?: number | null
+  batch_id?: string | null
   item?: Item
 }
 
 export interface GoodsReceipt {
   id: string
   grn_number: string
-  warehouse_id: number
+  warehouse_id: string
   receipt_date: string
   reference: string | null
   approval_status: string
   posting_status: string
-  created_by: number
+  created_by: string
   created_at: string
   warehouse?: Warehouse
   lines?: GoodsReceiptLine[]
 }
 
 export interface GoodsIssueLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   quantity: number
-  batch_id?: number | null
-  serial_number_id?: number | null
+  batch_id?: string | null
+  serial_number_id?: string | null
   item?: Item
 }
 
 export interface GoodsIssue {
   id: string
   issue_number: string
-  warehouse_id: number
+  warehouse_id: string
   issue_date: string
   purpose: string | null
   approval_status: string
   posting_status: string
-  created_by: number
+  created_by: string
   created_at: string
   warehouse?: Warehouse
   lines?: GoodsIssueLine[]
 }
 
 export interface StockTransferLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   quantity: number
-  batch_id?: number | null
-  serial_number_id?: number | null
+  batch_id?: string | null
+  serial_number_id?: string | null
   item?: Item
 }
 
 export interface StockTransfer {
   id: string
   transfer_number: string
-  from_warehouse_id: number
-  to_warehouse_id: number
+  from_warehouse_id: string
+  to_warehouse_id: string
   transfer_date: string
   approval_status: string
   posting_status: string
-  created_by: number
+  created_by: string
   created_at: string
   from_warehouse?: Warehouse
   to_warehouse?: Warehouse
@@ -446,19 +446,19 @@ export const fetchGoodsReceipts = (params?: Record<string, string | number>) =>
 export const fetchGoodsReceipt = (id: string) =>
   apiClient.get<{ data: GoodsReceipt }>(`/v1/inventory/goods-receipts/${id}`)
 
-export const createGoodsReceipt = (payload: { warehouse_id: number; receipt_date: string; reference?: string; lines: GoodsReceiptLine[] }) =>
+export const createGoodsReceipt = (payload: { warehouse_id: string; receipt_date: string; reference?: string; lines: GoodsReceiptLine[] }) =>
   apiClient.post<{ data: GoodsReceipt }>('/v1/inventory/goods-receipts', payload)
 
-export const submitGoodsReceiptForApproval = (id: number, comments?: string) =>
+export const submitGoodsReceiptForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-receipts/${id}/submit-for-approval`, { comments })
 
-export const approveGoodsReceipt = (id: number, comments?: string) =>
+export const approveGoodsReceipt = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-receipts/${id}/approve`, { comments })
 
-export const rejectGoodsReceipt = (id: number, comments?: string) =>
+export const rejectGoodsReceipt = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-receipts/${id}/reject`, { comments })
 
-export const postGoodsReceipt = (id: number) =>
+export const postGoodsReceipt = (id: string) =>
   apiClient.post(`/v1/inventory/goods-receipts/${id}/post`)
 
 // Goods Issues
@@ -468,19 +468,19 @@ export const fetchGoodsIssues = (params?: Record<string, string | number>) =>
 export const fetchGoodsIssue = (id: string) =>
   apiClient.get<{ data: GoodsIssue }>(`/v1/inventory/goods-issues/${id}`)
 
-export const createGoodsIssue = (payload: { warehouse_id: number; issue_date: string; purpose?: string; lines: GoodsIssueLine[] }) =>
+export const createGoodsIssue = (payload: { warehouse_id: string; issue_date: string; purpose?: string; lines: GoodsIssueLine[] }) =>
   apiClient.post<{ data: GoodsIssue }>('/v1/inventory/goods-issues', payload)
 
-export const submitGoodsIssueForApproval = (id: number, comments?: string) =>
+export const submitGoodsIssueForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-issues/${id}/submit-for-approval`, { comments })
 
-export const approveGoodsIssue = (id: number, comments?: string) =>
+export const approveGoodsIssue = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-issues/${id}/approve`, { comments })
 
-export const rejectGoodsIssue = (id: number, comments?: string) =>
+export const rejectGoodsIssue = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/goods-issues/${id}/reject`, { comments })
 
-export const postGoodsIssue = (id: number) =>
+export const postGoodsIssue = (id: string) =>
   apiClient.post(`/v1/inventory/goods-issues/${id}/post`)
 
 // Stock Transfers
@@ -490,26 +490,26 @@ export const fetchStockTransfers = (params?: Record<string, string | number>) =>
 export const fetchStockTransfer = (id: string) =>
   apiClient.get<{ data: StockTransfer }>(`/v1/inventory/transfers/${id}`)
 
-export const createStockTransfer = (payload: { from_warehouse_id: number; to_warehouse_id: number; transfer_date: string; lines: StockTransferLine[] }) =>
+export const createStockTransfer = (payload: { from_warehouse_id: string; to_warehouse_id: string; transfer_date: string; lines: StockTransferLine[] }) =>
   apiClient.post<{ data: StockTransfer }>('/v1/inventory/transfers', payload)
 
-export const submitStockTransferForApproval = (id: number, comments?: string) =>
+export const submitStockTransferForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/transfers/${id}/submit-for-approval`, { comments })
 
-export const approveStockTransfer = (id: number, comments?: string) =>
+export const approveStockTransfer = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/transfers/${id}/approve`, { comments })
 
-export const rejectStockTransfer = (id: number, comments?: string) =>
+export const rejectStockTransfer = (id: string, comments?: string) =>
   apiClient.post(`/v1/inventory/transfers/${id}/reject`, { comments })
 
-export const postStockTransfer = (id: number) =>
+export const postStockTransfer = (id: string) =>
   apiClient.post(`/v1/inventory/transfers/${id}/post`)
 
 // ── Inventory — Reports ───────────────────────────────────────────────────────
-export const fetchStockBalance = (params?: { item_id?: number; warehouse_id?: number; page?: number }) =>
+export const fetchStockBalance = (params?: { item_id?: string; warehouse_id?: string; page?: number }) =>
   apiClient.get<PaginatedResponse<any>>('/v1/inventory/reports/stock-balance', { params })
 
-export const fetchStockLedger = (params: { item_id: number; date_from: string; date_to: string; page?: number }) =>
+export const fetchStockLedger = (params: { item_id: string; date_from: string; date_to: string; page?: number }) =>
   apiClient.get('/v1/inventory/reports/stock-ledger', { params })
 
 // ── Sales — Full Customer type ────────────────────────────────────────────────
@@ -519,7 +519,7 @@ export interface CustomerCategory {
 }
 
 export interface CustomerGroup {
-  id: number
+  id: string
   name: string
 }
 
@@ -527,12 +527,12 @@ export interface CustomerFull {
   id: string
   customer_code: string
   name: string
-  customer_category_id: number | null
-  customer_group_id: number | null
+  customer_category_id: string | null
+  customer_group_id: string | null
   tax_number: string | null
   credit_limit: number
   payment_terms_days: number
-  assigned_salesperson_id: number | null
+  assigned_salesperson_id: string | null
   is_active: boolean
   customer_category?: CustomerCategory
   customer_group?: CustomerGroup
@@ -557,20 +557,20 @@ export const fetchCustomerGroups = () =>
 export const fetchCustomersFull = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<CustomerFull>>('/v1/sales/customers', { params })
 
-export const fetchCustomerFull = (id: number) =>
+export const fetchCustomerFull = (id: string) =>
   apiClient.get<{ data: CustomerFull }>(`/v1/sales/customers/${id}`)
 
 export const createCustomer = (payload: Omit<CustomerFull, 'id' | 'customer_category' | 'customer_group' | 'assigned_salesperson'>) =>
   apiClient.post<{ data: CustomerFull }>('/v1/sales/customers', payload)
 
-export const updateCustomer = (id: number, payload: Partial<Omit<CustomerFull, 'id' | 'customer_category' | 'customer_group' | 'assigned_salesperson'>>) =>
+export const updateCustomer = (id: string, payload: Partial<Omit<CustomerFull, 'id' | 'customer_category' | 'customer_group' | 'assigned_salesperson'>>) =>
   apiClient.patch<{ data: CustomerFull }>(`/v1/sales/customers/${id}`, payload)
 
 // ── Sales — Price Lists ───────────────────────────────────────────────────────
 export interface PriceListItem {
-  id?: number
-  price_list_id?: number
-  item_id: number
+  id?: string
+  price_list_id?: string
+  item_id: string
   unit_price: number
   discount_percentage: number
   item?: Item
@@ -595,16 +595,16 @@ export const fetchPriceList = (id: string) =>
 export const createPriceList = (payload: Omit<PriceList, 'id' | 'items'> & { items?: Omit<PriceListItem, 'id' | 'price_list_id' | 'item'>[] }) =>
   apiClient.post<{ data: PriceList }>('/v1/sales/price-lists', payload)
 
-export const updatePriceList = (id: number, payload: Partial<Parameters<typeof createPriceList>[0]>) =>
+export const updatePriceList = (id: string, payload: Partial<Parameters<typeof createPriceList>[0]>) =>
   apiClient.patch<{ data: PriceList }>(`/v1/sales/price-lists/${id}`, payload)
 
 // ── Sales — Quotations ────────────────────────────────────────────────────────
 export interface QuotationLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   description: string | null
   quantity: number
-  unit_of_measure_id: number
+  unit_of_measure_id: string
   unit_price: number
   discount_percentage: number
   tax_amount: number
@@ -615,15 +615,15 @@ export interface QuotationLine {
 export interface Quotation {
   id: string
   quotation_number: string
-  customer_id: number
+  customer_id: string
   quotation_date: string
   valid_until: string | null
-  price_list_id: number | null
-  salesperson_id: number | null
+  price_list_id: string | null
+  salesperson_id: string | null
   terms: string | null
   approval_status: string
   status: string
-  created_by: number
+  created_by: string
   created_at: string
   customer?: CustomerFull
   lines?: QuotationLine[]
@@ -636,33 +636,33 @@ export const fetchQuotation = (id: string) =>
   apiClient.get<{ data: Quotation }>(`/v1/sales/quotations/${id}`)
 
 export const createQuotation = (payload: {
-  customer_id: number; quotation_date: string; valid_until?: string | null
-  price_list_id?: number | null; salesperson_id?: number | null; terms?: string | null
+  customer_id: string; quotation_date: string; valid_until?: string | null
+  price_list_id?: string | null; salesperson_id?: string | null; terms?: string | null
   lines: Omit<QuotationLine, 'id' | 'item'>[]
 }) => apiClient.post<{ data: Quotation }>('/v1/sales/quotations', payload)
 
-export const updateQuotation = (id: number, payload: Partial<Parameters<typeof createQuotation>[0]>) =>
+export const updateQuotation = (id: string, payload: Partial<Parameters<typeof createQuotation>[0]>) =>
   apiClient.patch<{ data: Quotation }>(`/v1/sales/quotations/${id}`, payload)
 
-export const submitQuotationForApproval = (id: number, comments?: string) =>
+export const submitQuotationForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/quotations/${id}/submit-for-approval`, { comments })
 
-export const approveQuotation = (id: number, comments?: string) =>
+export const approveQuotation = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/quotations/${id}/approve`, { comments })
 
-export const rejectQuotation = (id: number, comments?: string) =>
+export const rejectQuotation = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/quotations/${id}/reject`, { comments })
 
-export const convertQuotationToOrder = (id: number) =>
+export const convertQuotationToOrder = (id: string) =>
   apiClient.post<{ data: SaleOrder }>(`/v1/sales/quotations/${id}/convert-to-order`)
 
 // ── Sales — Sale Orders ───────────────────────────────────────────────────────
 export interface SaleOrderLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   description: string | null
   quantity: number
-  unit_of_measure_id: number
+  unit_of_measure_id: string
   unit_price: number
   discount_percentage: number
   tax_amount: number
@@ -674,15 +674,15 @@ export interface SaleOrderLine {
 export interface SaleOrder {
   id: string
   order_number: string
-  source_quotation_id: number | null
-  customer_id: number
+  source_quotation_id: string | null
+  customer_id: string
   order_date: string
   delivery_date: string | null
-  price_list_id: number | null
+  price_list_id: string | null
   approval_status: string
   fulfillment_status: string
   posting_status: string
-  created_by: number
+  created_by: string
   created_at: string
   customer?: CustomerFull
   lines?: SaleOrderLine[]
@@ -695,29 +695,29 @@ export const fetchSaleOrder = (id: string) =>
   apiClient.get<{ data: SaleOrder }>(`/v1/sales/orders/${id}`)
 
 export const createSaleOrder = (payload: {
-  customer_id: number; order_date: string; delivery_date?: string | null
-  price_list_id?: number | null; lines: Omit<SaleOrderLine, 'id' | 'item' | 'quantity_invoiced'>[]
+  customer_id: string; order_date: string; delivery_date?: string | null
+  price_list_id?: string | null; lines: Omit<SaleOrderLine, 'id' | 'item' | 'quantity_invoiced'>[]
 }) => apiClient.post<{ data: SaleOrder }>('/v1/sales/orders', payload)
 
-export const updateSaleOrder = (id: number, payload: Partial<Parameters<typeof createSaleOrder>[0]>) =>
+export const updateSaleOrder = (id: string, payload: Partial<Parameters<typeof createSaleOrder>[0]>) =>
   apiClient.patch<{ data: SaleOrder }>(`/v1/sales/orders/${id}`, payload)
 
-export const submitSaleOrderForApproval = (id: number, comments?: string) =>
+export const submitSaleOrderForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/orders/${id}/submit-for-approval`, { comments })
 
-export const approveSaleOrder = (id: number, comments?: string) =>
+export const approveSaleOrder = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/orders/${id}/approve`, { comments })
 
-export const rejectSaleOrder = (id: number, comments?: string) =>
+export const rejectSaleOrder = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/orders/${id}/reject`, { comments })
 
 // ── Sales — Sale Invoices ─────────────────────────────────────────────────────
 export interface SaleInvoiceLine {
-  id?: number
-  item_id: number
+  id?: string
+  item_id: string
   description: string | null
   quantity: number
-  unit_of_measure_id: number
+  unit_of_measure_id: string
   unit_price: number
   discount_percentage: number
   tax_amount: number
@@ -728,11 +728,11 @@ export interface SaleInvoiceLine {
 export interface SaleInvoice {
   id: string
   invoice_number: string
-  source_sale_order_id: number | null
-  customer_id: number
+  source_sale_order_id: string | null
+  customer_id: string
   invoice_date: string
   due_date: string | null
-  fiscal_period_id: number
+  fiscal_period_id: string
   tax_rate: number
   discount_amount: number
   subtotal: number
@@ -740,8 +740,8 @@ export interface SaleInvoice {
   total_amount: number
   approval_status: string
   posting_status: string
-  created_by: number
-  posted_by: number | null
+  created_by: string
+  posted_by: string | null
   posted_at: string | null
   created_at: string
   customer?: CustomerFull
@@ -756,33 +756,33 @@ export const fetchSaleInvoice = (id: string) =>
   apiClient.get<{ data: SaleInvoice }>(`/v1/sales/invoices/${id}`)
 
 export const createSaleInvoice = (payload: {
-  source_sale_order_id?: number | null; customer_id: number; invoice_date: string
-  due_date?: string | null; fiscal_period_id: number; tax_rate?: number
+  source_sale_order_id?: string | null; customer_id: string; invoice_date: string
+  due_date?: string | null; fiscal_period_id: string; tax_rate?: number
   discount_amount?: number; lines: Omit<SaleInvoiceLine, 'id' | 'item'>[]
 }) => apiClient.post<{ data: SaleInvoice }>('/v1/sales/invoices', payload)
 
-export const updateSaleInvoice = (id: number, payload: Partial<Parameters<typeof createSaleInvoice>[0]>) =>
+export const updateSaleInvoice = (id: string, payload: Partial<Parameters<typeof createSaleInvoice>[0]>) =>
   apiClient.patch<{ data: SaleInvoice }>(`/v1/sales/invoices/${id}`, payload)
 
-export const submitSaleInvoiceForApproval = (id: number, comments?: string) =>
+export const submitSaleInvoiceForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/invoices/${id}/submit-for-approval`, { comments })
 
-export const approveSaleInvoice = (id: number, comments?: string) =>
+export const approveSaleInvoice = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/invoices/${id}/approve`, { comments })
 
-export const rejectSaleInvoice = (id: number, comments?: string) =>
+export const rejectSaleInvoice = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/invoices/${id}/reject`, { comments })
 
-export const postSaleInvoice = (id: number) =>
+export const postSaleInvoice = (id: string) =>
   apiClient.post(`/v1/sales/invoices/${id}/post`)
 
-export const downloadInvoicePdf = (id: number) =>
+export const downloadInvoicePdf = (id: string) =>
   apiClient.get(`/v1/sales/invoices/${id}/pdf`, { responseType: 'blob' })
 
 // ── Sales — Receipts ──────────────────────────────────────────────────────────
 export interface ReceiptAllocation {
-  id?: number
-  invoice_id: number
+  id?: string
+  invoice_id: string
   allocated_amount: number
   invoice?: SaleInvoice
 }
@@ -790,13 +790,13 @@ export interface ReceiptAllocation {
 export interface SaleReceipt {
   id: string
   receipt_number: string
-  customer_id: number
+  customer_id: string
   receipt_date: string
   amount_received: number
   payment_method: string
   reference: string | null
   posting_status: string
-  created_by: number
+  created_by: string
   posted_at: string | null
   created_at: string
   customer?: CustomerFull
@@ -810,29 +810,29 @@ export const fetchSaleReceipt = (id: string) =>
   apiClient.get<{ data: SaleReceipt }>(`/v1/sales/receipts/${id}`)
 
 export const createSaleReceipt = (payload: {
-  customer_id: number; receipt_date: string; amount_received: number
+  customer_id: string; receipt_date: string; amount_received: number
   payment_method: string; reference?: string | null
-  allocations?: { invoice_id: number; allocated_amount: number }[]
+  allocations?: { invoice_id: string; allocated_amount: number }[]
 }) => apiClient.post<{ data: SaleReceipt }>('/v1/sales/receipts', payload)
 
-export const postSaleReceipt = (id: number) =>
+export const postSaleReceipt = (id: string) =>
   apiClient.post(`/v1/sales/receipts/${id}/post`)
 
-export const fetchOutstandingInvoices = (customerId: number) =>
+export const fetchOutstandingInvoices = (customerId: string) =>
   apiClient.get<{ data: SaleInvoice[] }>(`/v1/sales/customers/${customerId}/outstanding-invoices`)
 
 // ── Sales — Credit Notes ──────────────────────────────────────────────────────
 export interface CreditNote {
-  id: number
+  id: string
   credit_note_number: string
-  source_invoice_id: number
-  customer_id: number
+  source_invoice_id: string
+  customer_id: string
   credit_date: string
   reason: string | null
   total_amount: number
   approval_status: string
   posting_status: string
-  created_by: number
+  created_by: string
   posted_at: string | null
   created_at: string
   customer?: CustomerFull
@@ -842,48 +842,48 @@ export interface CreditNote {
 export const fetchCreditNotes = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<CreditNote>>('/v1/sales/credit-notes', { params })
 
-export const fetchCreditNote = (id: number) =>
+export const fetchCreditNote = (id: string) =>
   apiClient.get<{ data: CreditNote }>(`/v1/sales/credit-notes/${id}`)
 
 export const createCreditNote = (payload: {
-  source_invoice_id: number; customer_id: number; credit_date: string
+  source_invoice_id: string; customer_id: string; credit_date: string
   reason?: string | null; total_amount: number
 }) => apiClient.post<{ data: CreditNote }>('/v1/sales/credit-notes', payload)
 
-export const submitCreditNoteForApproval = (id: number, comments?: string) =>
+export const submitCreditNoteForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/credit-notes/${id}/submit-for-approval`, { comments })
 
-export const approveCreditNote = (id: number, comments?: string) =>
+export const approveCreditNote = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/credit-notes/${id}/approve`, { comments })
 
-export const rejectCreditNote = (id: number, comments?: string) =>
+export const rejectCreditNote = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/credit-notes/${id}/reject`, { comments })
 
-export const postCreditNote = (id: number) =>
+export const postCreditNote = (id: string) =>
   apiClient.post(`/v1/sales/credit-notes/${id}/post`)
 
 // ── Sales — Outward Gate Passes ───────────────────────────────────────────────
 export interface GatePassLine {
-  id?: number
-  invoice_line_id: number
-  item_id: number
+  id?: string
+  invoice_line_id: string
+  item_id: string
   quantity_dispatched: number
-  batch_id: number | null
-  serial_number_id: number | null
+  batch_id: string | null
+  serial_number_id: string | null
   item?: Item
 }
 
 export interface OutwardGatePass {
-  id: number
+  id: string
   gate_pass_number: string
-  source_invoice_id: number
-  warehouse_id: number
+  source_invoice_id: string
+  warehouse_id: string
   dispatch_date: string
   vehicle_number: string | null
   driver_name: string | null
   approval_status: string
   status: string
-  created_by: number
+  created_by: string
   created_at: string
   warehouse?: Warehouse
   source_invoice?: SaleInvoice
@@ -893,30 +893,30 @@ export interface OutwardGatePass {
 export const fetchGatePasses = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<OutwardGatePass>>('/v1/sales/gate-passes', { params })
 
-export const fetchGatePass = (id: number) =>
+export const fetchGatePass = (id: string) =>
   apiClient.get<{ data: OutwardGatePass }>(`/v1/sales/gate-passes/${id}`)
 
 export const createGatePass = (payload: {
-  source_invoice_id: number; warehouse_id: number; dispatch_date: string
+  source_invoice_id: string; warehouse_id: string; dispatch_date: string
   vehicle_number?: string | null; driver_name?: string | null
   lines: Omit<GatePassLine, 'id' | 'item'>[]
 }) => apiClient.post<{ data: OutwardGatePass }>('/v1/sales/gate-passes', payload)
 
-export const submitGatePassForApproval = (id: number, comments?: string) =>
+export const submitGatePassForApproval = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/gate-passes/${id}/submit-for-approval`, { comments })
 
-export const approveGatePass = (id: number, comments?: string) =>
+export const approveGatePass = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/gate-passes/${id}/approve`, { comments })
 
-export const rejectGatePass = (id: number, comments?: string) =>
+export const rejectGatePass = (id: string, comments?: string) =>
   apiClient.post(`/v1/sales/gate-passes/${id}/reject`, { comments })
 
-export const dispatchGatePass = (id: number) =>
+export const dispatchGatePass = (id: string) =>
   apiClient.post(`/v1/sales/gate-passes/${id}/dispatch`)
 
 // ── Sales — Reports ───────────────────────────────────────────────────────────
-export const fetchSalesRegister = (params: { date_from: string; date_to: string; customer_id?: number; page?: number }) =>
+export const fetchSalesRegister = (params: { date_from: string; date_to: string; customer_id?: string; page?: number }) =>
   apiClient.get('/v1/sales/reports/sales-register', { params })
 
-export const fetchReceivablesAging = (params?: { customer_id?: number }) =>
+export const fetchReceivablesAging = (params?: { customer_id?: string }) =>
   apiClient.get('/v1/sales/reports/receivables-aging', { params })

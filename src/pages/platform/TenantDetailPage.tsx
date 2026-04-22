@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Puzzle } from 'lucide-react'
@@ -37,9 +37,10 @@ export default function TenantDetailPage() {
     queryKey: ['platform', 'tenants', id, 'logs'],
     queryFn: () => fetchProvisioningLogs(id!).then((r) => r.data.data),
     enabled: !!id,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refetch more frequently if any log is 'running'
-      return data?.data?.some(l => l.status === 'running') ? 5000 : 30000
+      const logs = query.state.data as any
+      return logs?.some((l: any) => l.status === 'running') ? 5000 : 30000
     }
   })
 
@@ -52,7 +53,7 @@ export default function TenantDetailPage() {
     const sorted = [...logs].sort((a, b) => {
       const timeDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       if (timeDiff !== 0) return timeDiff
-      return a.id - b.id // Oldest ID first
+      return (a.id || "").localeCompare(b.id || "") // Oldest ID first
     })
 
     sorted.forEach(log => {
@@ -63,7 +64,7 @@ export default function TenantDetailPage() {
     return Array.from(latestMap.values()).sort((a, b) => {
       const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       if (timeDiff !== 0) return timeDiff
-      return b.id - a.id
+      return (b.id || "").localeCompare(a.id || "")
     })
   }, [logs])
 

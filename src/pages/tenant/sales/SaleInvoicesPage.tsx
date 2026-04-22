@@ -92,14 +92,14 @@ export default function SaleInvoicesPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createSaleInvoice({
-      customer_id: Number(v.customer_id),
-      source_sale_order_id: v.source_sale_order_id && v.source_sale_order_id !== 'none' ? Number(v.source_sale_order_id) : null,
+      customer_id: v.customer_id,
+      source_sale_order_id: v.source_sale_order_id && v.source_sale_order_id !== 'none' ? v.source_sale_order_id : null,
       invoice_date: v.invoice_date, due_date: v.due_date,
-      fiscal_period_id: Number(v.fiscal_period_id),
+      fiscal_period_id: v.fiscal_period_id,
       tax_rate: v.tax_rate, discount_amount: v.discount_amount,
       lines: v.lines.map((l) => ({
-        item_id: Number(l.item_id), description: l.description,
-        quantity: l.quantity, unit_of_measure_id: Number(l.unit_of_measure_id),
+        item_id: l.item_id, description: l.description,
+        quantity: l.quantity, unit_of_measure_id: l.unit_of_measure_id,
         unit_price: l.unit_price, discount_percentage: l.discount_percentage,
         tax_amount: l.tax_amount, line_total: l.line_total,
       })),

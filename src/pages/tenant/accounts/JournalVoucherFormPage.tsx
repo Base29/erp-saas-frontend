@@ -57,13 +57,13 @@ export default function JournalVoucherFormPage() {
 
   const { data: jv } = useQuery({
     queryKey: ['journal-voucher', id],
-    queryFn: () => fetchJournalVoucher(Number(id)).then((r) => r.data),
+    queryFn: () => fetchJournalVoucher(id!).then((r) => r.data.data),
     enabled: isEdit,
   })
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => fetchAccounts({ is_active: true }).then((r) => r.data.data),
+    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
   })
 
   const { data: periods = [] } = useQuery({
@@ -105,23 +105,23 @@ export default function JournalVoucherFormPage() {
       const payload = {
         voucher_type: v.voucher_type,
         voucher_date: v.voucher_date,
-        fiscal_period_id: Number(v.fiscal_period_id),
+        fiscal_period_id: v.fiscal_period_id,
         reference: v.reference || undefined,
         narration: v.narration || undefined,
         lines: v.lines.map((l) => ({
-          account_id: Number(l.account_id),
+          account_id: l.account_id,
           debit_amount: parseFloat(l.debit_amount) || 0,
           credit_amount: parseFloat(l.credit_amount) || 0,
           line_narration: l.line_narration || undefined,
         })),
       }
       return isEdit
-        ? updateJournalVoucher(Number(id), payload)
+        ? updateJournalVoucher(id!, payload)
         : createJournalVoucher(payload)
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
-      navigate(`/accounts/journal-vouchers/${res.data.id}`)
+      navigate(`/accounts/journal-vouchers/${res.data.data.id}`)
     },
   })
 

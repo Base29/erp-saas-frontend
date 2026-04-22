@@ -44,8 +44,8 @@ export default function ReceiptsPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['receipts', page],
@@ -70,18 +70,18 @@ export default function ReceiptsPage() {
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createSaleReceipt({
-      customer_id: Number(v.customer_id),
+      customer_id: v.customer_id,
       receipt_date: v.receipt_date,
       amount_received: v.amount_received,
       payment_method: v.payment_method,
       reference: v.reference,
-      allocations: v.allocations.map((a) => ({ invoice_id: Number(a.invoice_id), allocated_amount: a.allocated_amount })),
+      allocations: v.allocations.map((a) => ({ invoice_id: a.invoice_id, allocated_amount: a.allocated_amount })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['receipts'] }); setCreateOpen(false) },
   })
 
   const post = useMutation({
-    mutationFn: (id: number) => postSaleReceipt(id),
+    mutationFn: (id: string) => postSaleReceipt(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['receipt', detailId] }); qc.invalidateQueries({ queryKey: ['receipts'] }) },
   })
 
@@ -128,7 +128,7 @@ export default function ReceiptsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Customer</Label>
-                <Select value={watch('customer_id')} onValueChange={(v) => { setValue('customer_id', v, { shouldValidate: true }); setSelectedCustomerId(Number(v)) }}>
+                <Select value={watch('customer_id')} onValueChange={(v) => { setValue('customer_id', v, { shouldValidate: true }); setSelectedCustomerId(v) }}>
                   <SelectTrigger><SelectValue placeholder="Select customer…" /></SelectTrigger>
                   <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>

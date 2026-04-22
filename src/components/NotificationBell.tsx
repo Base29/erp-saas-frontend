@@ -28,7 +28,7 @@ export default function NotificationBell() {
   })
 
   const markRead = useMutation({
-    mutationFn: (id: number) => markNotificationRead(id),
+    mutationFn: (id: string) => markNotificationRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },

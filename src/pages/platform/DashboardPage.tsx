@@ -12,9 +12,10 @@ export default function PlatformDashboardPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['platform', 'dashboard'],
     queryFn: () => fetchPlatformDashboard().then((r) => r.data.data),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refetch every 5s if any log is 'running', otherwise every 30s
-      return data?.recent_provisioning_events?.some(l => l.status === 'running') ? 5000 : 30000
+      const dashboard = query.state.data as any
+      return dashboard?.recent_provisioning_events?.some((l: any) => l.status === 'running') ? 5000 : 30000
     },
   })
 

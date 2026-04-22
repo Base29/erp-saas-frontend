@@ -65,8 +65,8 @@ export default function JournalVoucherDetailPage() {
     return <div className="p-6 text-destructive">Voucher not found</div>
   }
 
-  const totalDebit = (jv.lines ?? []).reduce((s, l) => s + Number(l.debit_amount), 0)
-  const totalCredit = (jv.lines ?? []).reduce((s, l) => s + Number(l.credit_amount), 0)
+  const totalDebit = (jv.lines ?? []).reduce((s: number, l) => s + Number(l.debit_amount), 0)
+  const totalCredit = (jv.lines ?? []).reduce((s: number, l) => s + Number(l.credit_amount), 0)
 
   const canEditDoc =
     canEdit &&

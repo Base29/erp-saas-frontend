@@ -45,7 +45,7 @@ export default function FiscalPeriodsTab() {
   })
 
   const close = useMutation({
-    mutationFn: (id: number) => closeFiscalPeriod(id),
+    mutationFn: (id: string) => closeFiscalPeriod(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fiscal-periods'] }),
   })
 

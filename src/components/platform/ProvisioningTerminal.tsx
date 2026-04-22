@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2, CheckCircle2, XCircle, Clock, Terminal } from 'lucide-react'
 import { type ProvisioningLog } from '@/api/platform'
 import { cn } from '@/lib/utils'

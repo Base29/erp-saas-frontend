@@ -21,7 +21,7 @@ function StockBalanceTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock-balance', itemId, warehouseId],
-    queryFn: () => fetchStockBalance({ item_id: itemId && itemId !== 'all' ? Number(itemId) : undefined, warehouse_id: warehouseId && warehouseId !== 'all' ? Number(warehouseId) : undefined }).then((r) => r.data),
+    queryFn: () => fetchStockBalance({ item_id: itemId && itemId !== 'all' ? itemId : undefined, warehouse_id: warehouseId && warehouseId !== 'all' ? warehouseId : undefined }).then((r) => r.data),
     enabled: submitted,
   })
 
@@ -98,11 +98,11 @@ function StockLedgerTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock-ledger', itemId, dateFrom, dateTo],
-    queryFn: () => fetchStockLedger({ item_id: Number(itemId), date_from: dateFrom, date_to: dateTo }).then((r) => r.data),
+    queryFn: () => fetchStockLedger({ item_id: itemId, date_from: dateFrom, date_to: dateTo }).then((r) => r.data),
     enabled: submitted && !!itemId && !!dateFrom && !!dateTo,
   })
 
-  const rows: Array<{ movement_date: string; movement_type: string; source_document_type: string; source_document_id: number; quantity: number; running_balance: number }> =
+  const rows: Array<{ movement_date: string; movement_type: string; source_document_type: string; source_document_id: string; quantity: number; running_balance: number }> =
     (data as { data?: typeof rows })?.data ?? (Array.isArray(data) ? data : [])
 
   return (

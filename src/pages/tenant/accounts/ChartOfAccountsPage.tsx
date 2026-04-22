@@ -74,7 +74,7 @@ export default function ChartOfAccountsPage() {
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
-      const payload = { ...v, account_type_id: Number(v.account_type_id) }
+      const payload = { ...v, account_type_id: v.account_type_id }
       return editing
         ? updateAccount(editing.id, payload)
         : createAccount(payload)
@@ -106,7 +106,7 @@ export default function ChartOfAccountsPage() {
   }
 
   // Group types by group for the select
-  const typesByGroup = groups.reduce<Record<number, { group: AccountGroup; types: AccountType[] }>>(
+  const typesByGroup = groups.reduce<Record<string, { group: AccountGroup; types: AccountType[] }>>(
     (acc, g) => {
       acc[g.id] = { group: g, types: types.filter((t) => t.account_group_id === g.id) }
       return acc

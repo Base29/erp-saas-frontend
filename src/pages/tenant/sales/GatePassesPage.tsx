@@ -56,7 +56,7 @@ export default function GatePassesPage() {
 
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<SaleInvoice | null>(null)
 
   const { data, isLoading } = useQuery({
@@ -70,32 +70,32 @@ export default function GatePassesPage() {
     enabled: !!detailId,
   })
 
-  const { data: invoicesData } = useQuery({ queryKey: ['sale-invoices-all'], queryFn: () => fetchSaleInvoices({ per_page: 500, posting_status: 'posted' }).then((r) => r.data.data) })
-  const invoices: SaleInvoice[] = invoicesData ?? []
+  const { data: invoicesData } = useQuery({ queryKey: ['sale-invoices-all'], queryFn: () => fetchSaleInvoices({ per_page: 500, posting_status: 'posted' }).then((r) => r.data) })
+  const invoices: SaleInvoice[] = invoicesData?.data ?? []
 
-  const { data: warehousesData } = useQuery({ queryKey: ['warehouses'], queryFn: () => fetchWarehouses().then((r) => r.data.data ?? r.data) })
-  const warehouses: Warehouse[] = warehousesData ?? []
+  const { data: warehousesData } = useQuery({ queryKey: ['warehouses'], queryFn: () => fetchWarehouses().then((r) => r.data) })
+  const warehouses: Warehouse[] = warehousesData?.data ?? []
 
   const create = useMutation({
     mutationFn: (v: FormValues) => createGatePass({
-      source_invoice_id: Number(v.source_invoice_id),
-      warehouse_id: Number(v.warehouse_id),
+      source_invoice_id: v.source_invoice_id,
+      warehouse_id: v.warehouse_id,
       dispatch_date: v.dispatch_date,
       vehicle_number: v.vehicle_number,
       driver_name: v.driver_name,
       lines: v.lines.map((l) => ({
-        invoice_line_id: Number(l.invoice_line_id),
-        item_id: Number(l.item_id),
+        invoice_line_id: l.invoice_line_id,
+        item_id: l.item_id,
         quantity_dispatched: l.quantity_dispatched,
-        batch_id: l.batch_id ? Number(l.batch_id) : null,
-        serial_number_id: l.serial_number_id ? Number(l.serial_number_id) : null,
+        batch_id: l.batch_id,
+        serial_number_id: l.serial_number_id,
       })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['gate-passes'] }); setCreateOpen(false) },
   })
 
   const dispatch = useMutation({
-    mutationFn: (id: number) => dispatchGatePass(id),
+    mutationFn: (id: string) => dispatchGatePass(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['gate-pass', detailId] }); qc.invalidateQueries({ queryKey: ['gate-passes'] }) },
   })
 

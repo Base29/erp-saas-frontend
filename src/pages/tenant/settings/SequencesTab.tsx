@@ -15,7 +15,7 @@ import {
 
 export default function SequencesTab() {
   const queryClient = useQueryClient()
-  const [editing, setEditing] = useState<number | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<Partial<Sequence>>({})
   const [page, setPage] = useState(1)
 
@@ -27,7 +27,7 @@ export default function SequencesTab() {
   const sequences = data?.data ?? []
 
   const save = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Sequence> }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Sequence> }) =>
       updateSequence(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sequences'] })
