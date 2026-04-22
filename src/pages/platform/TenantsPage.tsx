@@ -1,6 +1,20 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { Plus, ExternalLink, Loader2 } from 'lucide-react'
+import { fetchTenants, type Tenant } from '@/api/platform'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { CreateTenantDialog } from '@/components/platform/CreateTenantDialog'
 
-// ... (existing statusVariant function)
+function statusVariant(status: Tenant['status']) {
+  switch (status) {
+    case 'active': return 'success'
+    case 'suspended': return 'warning'
+    case 'provisioning_failed': return 'destructive'
+    default: return 'secondary'
+  }
+}
 
 export default function TenantsPage() {
   const navigate = useNavigate()
