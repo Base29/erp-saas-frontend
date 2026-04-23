@@ -5,8 +5,7 @@ import type { AuthUser } from '@/store/authStore'
 export const tenantLogin = (email: string, password: string) =>
   apiClient.post<{ token: string; user: AuthUser }>('/v1/auth/login', { email, password })
 
-export const tenantDemoLogin = () =>
-  apiClient.post<{ token: string; user: AuthUser }>('/v1/auth/demo-login')
+
 
 export const tenantLogout = () => apiClient.post('/v1/auth/logout')
 

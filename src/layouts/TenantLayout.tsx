@@ -100,7 +100,7 @@ export default function TenantLayout() {
       <aside className="w-56 flex flex-col border-r bg-card overflow-y-auto">
         <div className="px-6 py-5 border-b shrink-0">
           <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            ERP
+            Genie Cloud
           </span>
         </div>
 

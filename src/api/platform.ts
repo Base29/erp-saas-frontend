@@ -47,10 +47,7 @@ export const platformLogin = (email: string, password: string) =>
     { email, password }
   )
 
-export const platformDemoLogin = () =>
-  apiClient.post<{ token: string; user: { id: number; name: string; email: string } }>(
-    '/platform/v1/auth/demo-login'
-  )
+
 
 export const platformLogout = () => apiClient.post('/platform/v1/auth/logout')
 
