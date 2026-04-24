@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   BookOpen,
@@ -14,8 +15,17 @@ import { canAccessSection, isModuleActive, ROLE_LABELS } from '@/utils/permissio
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import NotificationBell from '@/components/NotificationBell'
-import { cn } from '@/lib/utils'
 import apiClient from '@/api/client'
+import { fetchCompanies, type Company } from '@/api/tenant'
+import { Building2, ChevronDown, Check } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const navSections = [
   {
@@ -71,17 +81,34 @@ const navSections = [
 ]
 
 export default function TenantLayout() {
-  const { user, role, logout, setActiveModules, token } = useAuthStore()
+  const { user, role, logout, setActiveModules, token, activeCompanyId, setActiveCompanyId } = useAuthStore()
   const navigate = useNavigate()
+  const [companies, setCompanies] = useState<Company[]>([])
 
   // Re-fetch active modules on mount so newly activated modules appear
   // without requiring a logout/login cycle.
   useEffect(() => {
     if (!token) return
+    
+    // Fetch active modules
     apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
       .then((res) => setActiveModules(res.data.data ?? []))
-      .catch(() => {/* non-fatal */})
-  }, [token])
+      .catch(() => {})
+
+    // Fetch companies
+    fetchCompanies()
+      .then((res) => {
+        const list = res.data.data ?? []
+        setCompanies(list)
+        // Set default company if none selected
+        if (!activeCompanyId && list.length > 0) {
+          setActiveCompanyId(list[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [token, activeCompanyId])
+
+  const activeCompany = companies.find(c => c.id === activeCompanyId)
 
   const handleLogout = async () => {
     try {
@@ -155,9 +182,32 @@ export default function TenantLayout() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
         <header className="h-14 border-b bg-card flex items-center justify-between px-6 shrink-0">
-          <div />
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 font-medium">
+                  <Building2 size={16} className="text-primary" />
+                  {activeCompany ? activeCompany.name : 'Select Company'}
+                  <ChevronDown size={14} className="text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Switch Company</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {companies.map((company) => (
+                  <DropdownMenuItem
+                    key={company.id}
+                    onClick={() => setActiveCompanyId(company.id)}
+                    className="justify-between"
+                  >
+                    {company.name}
+                    {activeCompanyId === company.id && <Check size={14} />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
             <div className="flex items-center gap-2">

@@ -103,6 +103,32 @@ export const updateUser = (id: string, payload: Partial<TenantUser>) =>
 export const deactivateUser = (id: string) =>
   apiClient.post<{ data: TenantUser }>(`/v1/settings/users/${id}/deactivate`)
 
+// ── Companies ────────────────────────────────────────────────────────────────
+export interface Company {
+  id: string
+  name: string
+  address: string | null
+  registration_number: string | null
+  tax_number: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  logo_url: string | null
+  is_active: boolean
+}
+
+export const fetchCompanies = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Company>>('/v1/settings/companies', { params })
+
+export const createCompany = (payload: Omit<Company, 'id' | 'logo_url'>) =>
+  apiClient.post<{ data: Company }>('/v1/settings/companies', payload)
+
+export const updateCompany = (id: string, payload: Partial<Company>) =>
+  apiClient.patch<{ data: Company }>(`/v1/settings/companies/${id}`, payload)
+
+export const deleteCompany = (id: string) =>
+  apiClient.delete(`/v1/settings/companies/${id}`)
+
 // ── Attachments ───────────────────────────────────────────────────────────────
 export interface Attachment {
   id: string

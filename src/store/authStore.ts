@@ -25,10 +25,12 @@ interface AuthState {
   role: UserRole | null
   isPlatform: boolean
   activeModules: string[]
+  activeCompanyId: string | null
   login: (token: string, user: AuthUser, isPlatform?: boolean) => Promise<void>
   logout: () => void
   setUser: (user: AuthUser) => void
   setActiveModules: (modules: string[]) => void
+  setActiveCompanyId: (id: string | null) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -39,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
       role: null,
       isPlatform: false,
       activeModules: [],
+      activeCompanyId: null,
 
       login: async (token, user, isPlatform = false) => {
         setToken(token)
@@ -66,6 +69,10 @@ export const useAuthStore = create<AuthState>()(
 
       setActiveModules: (modules) => {
         set({ activeModules: modules })
+      },
+
+      setActiveCompanyId: (id) => {
+        set({ activeCompanyId: id })
       },
     }),
     {

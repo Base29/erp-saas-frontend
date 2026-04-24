@@ -6,7 +6,7 @@ const apiClient = axios.create({
 })
 
 // Attach JWT Bearer token and tenant subdomain header
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -15,6 +15,14 @@ apiClient.interceptors.request.use((config) => {
   if (subdomain) {
     config.headers['X-Tenant-Subdomain'] = subdomain
   }
+
+  // Add active company ID if selected
+  const { useAuthStore } = await import('@/store/authStore')
+  const companyId = useAuthStore.getState().activeCompanyId
+  if (companyId) {
+    config.headers['X-Company-ID'] = companyId
+  }
+
   return config
 })
 

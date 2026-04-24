@@ -6,6 +6,7 @@ import UsersTab from './UsersTab'
 import ActiveModulesTab from './ActiveModulesTab'
 import ProductCategoriesTab from './ProductCategoriesTab'
 import CustomerCategoriesTab from './CustomerCategoriesTab'
+import CompaniesTab from './CompaniesTab'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'users', label: 'Users' },
   { id: 'categories', label: 'Product Categories' },
   { id: 'customer-categories', label: 'Customer Categories' },
+  { id: 'companies', label: 'Companies' },
   { id: 'modules', label: 'Active Modules' },
 ] as const
 
@@ -51,6 +53,7 @@ export default function SettingsPage() {
         {tab === 'users' && <UsersTab />}
         {tab === 'categories' && <ProductCategoriesTab />}
         {tab === 'customer-categories' && <CustomerCategoriesTab />}
+        {tab === 'companies' && <CompaniesTab />}
         {tab === 'modules' && <ActiveModulesTab />}
       </div>
     </div>
