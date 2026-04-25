@@ -24,7 +24,11 @@ import ChartOfAccountsPage from '@/pages/tenant/accounts/ChartOfAccountsPage'
 import JournalVouchersPage from '@/pages/tenant/accounts/JournalVouchersPage'
 import JournalVoucherFormPage from '@/pages/tenant/accounts/JournalVoucherFormPage'
 import JournalVoucherDetailPage from '@/pages/tenant/accounts/JournalVoucherDetailPage'
-import AccountsReportsPage from '@/pages/tenant/accounts/AccountsReportsPage'
+import GeneralLedgerPage from '@/pages/tenant/accounts/reports/GeneralLedgerPage'
+import TrialBalancePage from '@/pages/tenant/accounts/reports/TrialBalancePage'
+import ProfitAndLossPage from '@/pages/tenant/accounts/reports/ProfitAndLossPage'
+import BalanceSheetPage from '@/pages/tenant/accounts/reports/BalanceSheetPage'
+import CustomerStatementPage from '@/pages/tenant/accounts/reports/CustomerStatementPage'
 
 // Inventory pages
 import ItemsPage from '@/pages/tenant/inventory/ItemsPage'
@@ -131,7 +135,13 @@ export const router = createBrowserRouter([
               { path: 'journal-vouchers/new', element: <JournalVoucherFormPage /> },
               { path: 'journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
               { path: 'journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
-              { path: 'reports', element: <AccountsReportsPage /> },
+              // Report sub-routes
+              { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
+              { path: 'reports/general-ledger',     element: <GeneralLedgerPage /> },
+              { path: 'reports/trial-balance',      element: <TrialBalancePage /> },
+              { path: 'reports/profit-and-loss',    element: <ProfitAndLossPage /> },
+              { path: 'reports/balance-sheet',      element: <BalanceSheetPage /> },
+              { path: 'reports/customer-statement', element: <CustomerStatementPage /> },
             ],
           },
           // Inventory module
