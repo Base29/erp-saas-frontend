@@ -53,7 +53,16 @@ export default function CompaniesTab() {
   const companies = data?.data ?? []
 
   const create = useMutation({
-    mutationFn: (v: FormValues) => createCompany({ ...v, is_active: true }),
+    mutationFn: (v: FormValues) => createCompany({
+      name: v.name,
+      email: v.email || null,
+      phone: v.phone || null,
+      website: v.website || null,
+      address: v.address || null,
+      registration_number: v.registration_number || null,
+      tax_number: v.tax_number || null,
+      is_active: true,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] })
       setOpen(false)
@@ -61,7 +70,16 @@ export default function CompaniesTab() {
   })
 
   const update = useMutation({
-    mutationFn: (v: FormValues) => updateCompany(editingCompany!.id, { ...v, is_active: true }),
+    mutationFn: (v: FormValues) => updateCompany(editingCompany!.id, {
+      name: v.name,
+      email: v.email || null,
+      phone: v.phone || null,
+      website: v.website || null,
+      address: v.address || null,
+      registration_number: v.registration_number || null,
+      tax_number: v.tax_number || null,
+      is_active: true,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] })
       setOpen(false)
