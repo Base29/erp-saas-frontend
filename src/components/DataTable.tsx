@@ -42,6 +42,11 @@ export default function DataTable<TData>({
   filterPlaceholder = 'Search…',
   filterKey,
 }: DataTableProps<TData>) {
+  const totalPages = pagination && pagination.per_page > 0
+    ? Math.ceil(pagination.total / pagination.per_page)
+    : 1
+  const currentPage = pagination?.page ?? 1
+
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [filterValue, setFilterValue] = useState('')
@@ -51,6 +56,7 @@ export default function DataTable<TData>({
     columns,
     state: { sorting, columnFilters },
     manualPagination: true,
+    pageCount: totalPages,
     manualSorting: true,
     manualFiltering: true,
     getCoreRowModel: getCoreRowModel(),
@@ -70,9 +76,6 @@ export default function DataTable<TData>({
       onFilterChange({ [filterKey]: value })
     }
   }
-
-  const totalPages = pagination ? Math.ceil(pagination.total / pagination.per_page) : 1
-  const currentPage = pagination?.page ?? 1
 
   return (
     <div className="space-y-3">
@@ -150,7 +153,7 @@ export default function DataTable<TData>({
         </table>
       </div>
 
-      {pagination && totalPages > 1 && (
+      {pagination && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Page {currentPage} of {totalPages} ({pagination.total} total)

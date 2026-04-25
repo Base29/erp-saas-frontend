@@ -45,7 +45,7 @@ export default function CustomersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', page],
-    queryFn: () => fetchCustomersFull({ page }).then((r) => r.data),
+    queryFn: () => fetchCustomersFull({ page, per_page: 100 }).then((r) => r.data),
   })
 
   const { data: categories = [] } = useQuery({

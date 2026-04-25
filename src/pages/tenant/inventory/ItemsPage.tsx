@@ -73,7 +73,7 @@ export default function ItemsPage() {
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['items-all'],
-    queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data.data),
+    queryFn: () => fetchItems({ per_page: 100 }).then((r) => r.data.data),
   })
 
   const save = useMutation({

@@ -1,4 +1,12 @@
 import apiClient from './client'
+ 
+export interface PaginatedResponse<T> {
+  data: T[]
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+}
 
 export interface Tenant {
   id: string
@@ -51,8 +59,17 @@ export const platformLogin = (email: string, password: string) =>
 
 export const platformLogout = () => apiClient.post('/platform/v1/auth/logout')
 
+export interface PaginatedResponse<T> {
+  data: T[]
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+}
+
 // Tenants
-export const fetchTenants = () => apiClient.get<{ data: Tenant[] }>('/platform/v1/tenants')
+export const fetchTenants = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Tenant>>('/platform/v1/tenants', { params })
 
 export const fetchTenant = (id: string) =>
   apiClient.get<{ data: Tenant }>(`/platform/v1/tenants/${id}`)

@@ -6,6 +6,8 @@ import { fetchTenants, type Tenant } from '@/api/platform'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CreateTenantDialog } from '@/components/platform/CreateTenantDialog'
+import DataTable from '@/components/DataTable'
+import type { ColumnDef } from '@tanstack/react-table'
 
 function statusVariant(status: Tenant['status']) {
   switch (status) {
@@ -19,74 +21,76 @@ function statusVariant(status: Tenant['status']) {
 export default function TenantsPage() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['platform', 'tenants'],
-    queryFn: () => fetchTenants().then((r) => r.data.data),
+    queryKey: ['platform', 'tenants', page, search],
+    queryFn: () => fetchTenants({ page, search }).then((r) => r.data),
   })
+
+  const columns: ColumnDef<Tenant>[] = [
+    { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+    { accessorKey: 'subdomain', header: 'Subdomain', cell: ({ row }) => <span className="text-muted-foreground">{row.original.subdomain}</span> },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Badge variant={statusVariant(row.original.status)}>{row.original.status}</Badge>
+          {row.original.status === 'pending' && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
+        </div>
+      ),
+    },
+    { accessorKey: 'plan_name', header: 'Plan', cell: ({ row }) => <span className="text-muted-foreground">{row.original.plan_name ?? '—'}</span> },
+    {
+      accessorKey: 'created_at',
+      header: 'Created',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{new Date(row.original.created_at).toLocaleDateString()}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/platform/tenants/${row.original.id}`)}
+        >
+          <ExternalLink className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Tenants</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Tenants</h1>
+          <p className="text-sm text-muted-foreground">Manage SaaS platform tenants</p>
+        </div>
         <Button onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Tenant
         </Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Name</th>
-                <th className="px-4 py-3 text-left font-medium">Subdomain</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Plan</th>
-                <th className="px-4 py-3 text-left font-medium">Created</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((tenant) => (
-                <tr key={tenant.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{tenant.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{tenant.subdomain}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
-                      {tenant.status === 'pending' && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{tenant.plan_name ?? '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(tenant.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/platform/tenants/${tenant.id}`)}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {data?.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    No tenants yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        pagination={data ? { page: data.current_page, per_page: data.per_page, total: data.total } : undefined}
+        onPageChange={setPage}
+        filterPlaceholder="Search by name or subdomain…"
+        filterKey="search"
+        onFilterChange={(filters) => {
+          setSearch(filters.search || '')
+          setPage(1)
+        }}
+      />
 
       <CreateTenantDialog open={open} onOpenChange={setOpen} />
     </div>

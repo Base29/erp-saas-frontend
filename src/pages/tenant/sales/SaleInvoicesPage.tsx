@@ -75,16 +75,16 @@ export default function SaleInvoicesPage() {
     enabled: !!detailId,
   })
 
-  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 500 }).then((r) => r.data.data) })
+  const { data: customersData } = useQuery({ queryKey: ['customers-all'], queryFn: () => fetchCustomersFull({ per_page: 100 }).then((r) => r.data.data) })
   const customers: CustomerFull[] = customersData ?? []
 
-  const { data: ordersData } = useQuery({ queryKey: ['sale-orders-all'], queryFn: () => fetchSaleOrders({ per_page: 500 }).then((r) => r.data.data) })
+  const { data: ordersData } = useQuery({ queryKey: ['sale-orders-all'], queryFn: () => fetchSaleOrders({ per_page: 100, approval_status: 'approved' }).then((r) => r.data.data) })
   const orders: SaleOrder[] = ordersData ?? []
 
   const { data: periodsData } = useQuery({ queryKey: ['fiscal-periods'], queryFn: () => fetchFiscalPeriods().then((r) => r.data.data ?? r.data) })
   const periods: FiscalPeriod[] = periodsData ?? []
 
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data.data) })
+  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => fetchItems({ per_page: 100 }).then((r) => r.data.data) })
   const allItems: Item[] = itemsData ?? []
 
   const { data: uomsData } = useQuery({ queryKey: ['uoms'], queryFn: () => fetchUoms().then((r) => r.data.data ?? r.data) })
