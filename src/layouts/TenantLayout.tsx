@@ -8,6 +8,12 @@ import {
   Package,
   Settings,
   LogOut,
+  Users,
+  FileText,
+  CreditCard,
+  Target,
+  RefreshCcw,
+  PieChart,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -40,6 +46,12 @@ const navSections = [
     items: [
       { to: '/accounts/chart-of-accounts',          label: 'Chart of Accounts', icon: BookOpen },
       { to: '/accounts/journal-vouchers',            label: 'Journal Vouchers',  icon: BookOpen },
+      { to: '/accounts/suppliers',                  label: 'Suppliers',         icon: Users },
+      { to: '/accounts/purchase-invoices',           label: 'Purchase Invoices',  icon: FileText },
+      { to: '/accounts/supplier-payments',           label: 'Supplier Payments',  icon: CreditCard },
+      { to: '/accounts/cost-centers',               label: 'Cost Centers',      icon: Target },
+      { to: '/accounts/bank-reconciliation',         label: 'Bank Reconciliation', icon: RefreshCcw },
+      { to: '/accounts/budgets',                    label: 'Budgeting',         icon: PieChart },
       { to: '/accounts/reports/general-ledger',      label: 'General Ledger',    icon: BookOpen },
       { to: '/accounts/reports/trial-balance',       label: 'Trial Balance',     icon: BookOpen },
       { to: '/accounts/reports/profit-and-loss',     label: 'Profit & Loss',     icon: BookOpen },

@@ -9,6 +9,7 @@ import {
   fetchJournalVoucher,
   fetchAccounts,
   fetchFiscalPeriods,
+  fetchCostCenters,
   createJournalVoucher,
   updateJournalVoucher,
 } from '@/api/tenant'
@@ -25,6 +26,7 @@ import {
 
 const lineSchema = z.object({
   account_id: z.string().min(1, 'Required'),
+  cost_center_id: z.string().optional().nullable(),
   debit_amount: z.string().default('0'),
   credit_amount: z.string().default('0'),
   line_narration: z.string().optional(),
@@ -71,12 +73,17 @@ export default function JournalVoucherFormPage() {
     queryFn: () => fetchFiscalPeriods().then((r) => r.data.data),
   })
 
+  const { data: costCenters = [] } = useQuery({
+    queryKey: ['cost-centers'],
+    queryFn: () => fetchCostCenters({ is_active: 1 }).then((r) => r.data.data),
+  })
+
   const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
     useForm<FormValues>({
       resolver: zodResolver(schema),
       defaultValues: {
         fiscal_period_id: '',
-        lines: [{ account_id: '', debit_amount: '0', credit_amount: '0' }],
+        lines: [{ account_id: '', cost_center_id: '', debit_amount: '0', credit_amount: '0' }],
       },
     })
 
@@ -92,6 +99,7 @@ export default function JournalVoucherFormPage() {
         narration: jv.narration ?? '',
         lines: (jv.lines ?? []).map((l) => ({
           account_id: String(l.account_id),
+          cost_center_id: l.cost_center_id ? String(l.cost_center_id) : '',
           debit_amount: String(l.debit_amount),
           credit_amount: String(l.credit_amount),
           line_narration: l.line_narration ?? '',
@@ -110,6 +118,7 @@ export default function JournalVoucherFormPage() {
         narration: v.narration || undefined,
         lines: v.lines.map((l) => ({
           account_id: l.account_id,
+          cost_center_id: l.cost_center_id || undefined,
           debit_amount: parseFloat(l.debit_amount) || 0,
           credit_amount: parseFloat(l.credit_amount) || 0,
           line_narration: l.line_narration || undefined,
@@ -229,6 +238,7 @@ export default function JournalVoucherFormPage() {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-64">Account</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-48">Cost Center</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Narration</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Debit</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Credit</th>
@@ -251,6 +261,27 @@ export default function JournalVoucherFormPage() {
                               {accounts.map((a) => (
                                 <SelectItem key={a.id} value={String(a.id)}>
                                   {a.account_code} — {a.account_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Controller
+                        control={control}
+                        name={`lines.${i}.cost_center_id`}
+                        render={({ field: f }) => (
+                          <Select value={f.value || ''} onValueChange={f.onChange} disabled={isReadOnly}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="No cost center" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {costCenters.map((cc) => (
+                                <SelectItem key={cc.id} value={String(cc.id)}>
+                                  {cc.code} — {cc.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -304,7 +335,7 @@ export default function JournalVoucherFormPage() {
               </tbody>
               <tfoot className="bg-muted/30 border-t">
                 <tr>
-                  <td colSpan={2} className="px-3 py-2 text-sm font-medium text-right">Totals</td>
+                  <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Totals</td>
                   <td className="px-3 py-2 text-right font-mono font-medium">
                     {totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                   </td>

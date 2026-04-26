@@ -31,6 +31,17 @@ import BalanceSheetPage from '@/pages/tenant/accounts/reports/BalanceSheetPage'
 import CashFlowPage from '@/pages/tenant/accounts/reports/CashFlowPage'
 import EquityChangesPage from '@/pages/tenant/accounts/reports/EquityChangesPage'
 import CustomerStatementPage from '@/pages/tenant/accounts/reports/CustomerStatementPage'
+import SuppliersPage from '@/pages/tenant/accounts/payables/SuppliersPage'
+import PurchaseInvoicesPage from '@/pages/tenant/accounts/payables/PurchaseInvoicesPage'
+import PurchaseInvoiceFormPage from '@/pages/tenant/accounts/payables/PurchaseInvoiceFormPage'
+import SupplierPaymentsPage from '@/pages/tenant/accounts/payables/SupplierPaymentsPage'
+import SupplierPaymentFormPage from '@/pages/tenant/accounts/payables/SupplierPaymentFormPage'
+import CostCentersPage from '@/pages/tenant/accounts/CostCentersPage'
+import BankReconciliationPage from '@/pages/tenant/accounts/BankReconciliationPage'
+import BankStatementFormPage from '@/pages/tenant/accounts/BankStatementFormPage'
+import BankReconciliationWorkspacePage from '@/pages/tenant/accounts/BankReconciliationWorkspacePage'
+import BudgetsPage from '@/pages/tenant/accounts/BudgetsPage'
+import BudgetReportPage from '@/pages/tenant/accounts/BudgetReportPage'
 
 // Inventory pages
 import ItemsPage from '@/pages/tenant/inventory/ItemsPage'
@@ -137,6 +148,26 @@ export const router = createBrowserRouter([
               { path: 'journal-vouchers/new', element: <JournalVoucherFormPage /> },
               { path: 'journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
               { path: 'journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
+              
+              // Accounts Payable
+              { path: 'suppliers', element: <SuppliersPage /> },
+              { path: 'purchase-invoices', element: <PurchaseInvoicesPage /> },
+              { path: 'purchase-invoices/new', element: <PurchaseInvoiceFormPage /> },
+              { path: 'supplier-payments', element: <SupplierPaymentsPage /> },
+              { path: 'supplier-payments/new', element: <SupplierPaymentFormPage /> },
+              
+              // Cost Centers
+              { path: 'cost-centers', element: <CostCentersPage /> },
+              
+              // Bank Reconciliation
+              { path: 'bank-reconciliation', element: <BankReconciliationPage /> },
+              { path: 'bank-reconciliation/new', element: <BankStatementFormPage /> },
+              { path: 'bank-reconciliation/:id', element: <BankReconciliationWorkspacePage /> },
+              
+              // Budgets
+              { path: 'budgets', element: <BudgetsPage /> },
+              { path: 'budgets/:id/report', element: <BudgetReportPage /> },
+
               // Report sub-routes
               { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
               { path: 'reports/general-ledger',     element: <GeneralLedgerPage /> },

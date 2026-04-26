@@ -223,10 +223,12 @@ export const deleteAccount = (id: string) =>
 export interface JournalVoucherLine {
   id?: string
   account_id: string
+  cost_center_id?: string | null
   debit_amount: number
   credit_amount: number
   line_narration?: string
   account?: Account
+  cost_center?: CostCenter
 }
 
 export interface JournalVoucher {
@@ -1007,3 +1009,160 @@ export const fetchSalesRegister = (params: { date_from: string; date_to: string;
 
 export const fetchReceivablesAging = (params?: { customer_id?: string }) =>
   apiClient.get('/v1/sales/reports/receivables-aging', { params })
+
+// ── Accounts — Suppliers & Payables ───────────────────────────────────────────
+export interface Supplier {
+  id: string
+  supplier_code: string
+  name: string
+  tax_number?: string
+  email?: string
+  phone?: string
+  address?: string
+  default_payable_account_id?: string
+  is_active: boolean
+  default_payable_account?: Account
+}
+
+export interface PurchaseInvoice {
+  id: string
+  supplier_id: string
+  invoice_number: string
+  invoice_date: string
+  due_date: string | null
+  total_amount: number
+  tax_amount: number
+  status: string
+  journal_voucher_id: string | null
+  created_by: string
+  supplier?: Supplier
+  journal_voucher?: JournalVoucher
+}
+
+export interface SupplierPayment {
+  id: string
+  supplier_id: string
+  payment_date: string
+  payment_reference: string | null
+  amount: number
+  bank_account_id: string
+  journal_voucher_id: string | null
+  supplier?: Supplier
+  bank_account?: Account
+}
+
+export const fetchSuppliers = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Supplier>>('/v1/accounts/suppliers', { params })
+
+export const createSupplier = (payload: Omit<Supplier, 'id' | 'default_payable_account'>) =>
+  apiClient.post<{ data: Supplier }>('/v1/accounts/suppliers', payload)
+
+export const updateSupplier = (id: string, payload: Partial<Supplier>) =>
+  apiClient.patch<{ data: Supplier }>(`/v1/accounts/suppliers/${id}`, payload)
+
+export const deleteSupplier = (id: string) =>
+  apiClient.delete(`/v1/accounts/suppliers/${id}`)
+
+export const fetchPurchaseInvoices = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<PurchaseInvoice>>('/v1/accounts/purchase-invoices', { params })
+
+export const createPurchaseInvoice = (payload: {
+  supplier_id: string; invoice_number: string; invoice_date: string; due_date?: string | null;
+  total_amount: number; tax_amount?: number; expense_account_id: string; cost_center_id?: string | null;
+}) => apiClient.post<{ data: PurchaseInvoice }>('/v1/accounts/purchase-invoices', payload)
+
+export const fetchSupplierPayments = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<SupplierPayment>>('/v1/accounts/supplier-payments', { params })
+
+export const createSupplierPayment = (payload: {
+  supplier_id: string; payment_date: string; payment_reference?: string | null;
+  amount: number; bank_account_id: string;
+}) => apiClient.post<{ data: SupplierPayment }>('/v1/accounts/supplier-payments', payload)
+
+// ── Accounts — Cost Centers ───────────────────────────────────────────────────
+export interface CostCenter {
+  id: string
+  code: string
+  name: string
+  is_active: boolean
+}
+
+export const fetchCostCenters = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<CostCenter>>('/v1/accounts/cost-centers', { params })
+
+export const createCostCenter = (payload: Omit<CostCenter, 'id'>) =>
+  apiClient.post<{ data: CostCenter }>('/v1/accounts/cost-centers', payload)
+
+export const updateCostCenter = (id: string, payload: Partial<CostCenter>) =>
+  apiClient.patch<{ data: CostCenter }>(`/v1/accounts/cost-centers/${id}`, payload)
+
+export const deleteCostCenter = (id: string) =>
+  apiClient.delete(`/v1/accounts/cost-centers/${id}`)
+
+// ── Accounts — Bank Reconciliation ───────────────────────────────────────────
+export interface BankStatementLine {
+  id: string
+  bank_statement_id: string
+  transaction_date: string
+  description: string
+  amount: number
+  matched_journal_line_id: string | null
+  matched_journal_line?: JournalVoucherLine
+}
+
+export interface BankStatement {
+  id: string
+  bank_account_id: string
+  start_date: string
+  end_date: string
+  opening_balance: number
+  closing_balance: number
+  status: string
+  bank_account?: Account
+  lines?: BankStatementLine[]
+}
+
+export const fetchBankStatements = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<BankStatement>>('/v1/accounts/bank-statements', { params })
+
+export const fetchBankStatement = (id: string) =>
+  apiClient.get<{ data: BankStatement }>(`/v1/accounts/bank-statements/${id}`)
+
+export const createBankStatement = (payload: {
+  bank_account_id: string; start_date: string; end_date: string;
+  opening_balance: number; closing_balance: number;
+  lines: Omit<BankStatementLine, 'id' | 'bank_statement_id' | 'matched_journal_line_id'>[];
+}) => apiClient.post<{ data: BankStatement }>('/v1/accounts/bank-statements', payload)
+
+export const fetchUnmatchedJournalLines = (bankAccountId: string) =>
+  apiClient.get<{ data: JournalVoucherLine[] }>(`/v1/accounts/bank-reconciliation/unmatched/${bankAccountId}`)
+
+export const matchBankStatementLine = (lineId: string, journalLineId: string) =>
+  apiClient.post(`/v1/accounts/bank-reconciliation/match/${lineId}`, { journal_line_id: journalLineId })
+
+// ── Accounts — Budgets ───────────────────────────────────────────────────────
+export interface Budget {
+  id: string
+  fiscal_period_id: string
+  account_id: string
+  cost_center_id: string | null
+  amount: number
+  fiscal_period?: FiscalPeriod
+  account?: Account
+  cost_center?: CostCenter
+}
+
+export const fetchBudgets = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<Budget>>('/v1/accounts/budgets', { params })
+
+export const fetchBudgetPerformance = (id: string) =>
+  apiClient.get<{ data: any }>(`/v1/accounts/budgets/${id}/performance`)
+
+export const createBudget = (payload: Omit<Budget, 'id' | 'fiscal_period' | 'account' | 'cost_center'>) =>
+  apiClient.post<{ data: Budget }>('/v1/accounts/budgets', payload)
+
+export const updateBudget = (id: string, payload: { amount: number }) =>
+  apiClient.patch<{ data: Budget }>(`/v1/accounts/budgets/${id}`, payload)
+
+export const deleteBudget = (id: string) =>
+  apiClient.delete(`/v1/accounts/budgets/${id}`)
