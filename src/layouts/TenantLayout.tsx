@@ -15,6 +15,7 @@ import { canAccessSection, isModuleActive, ROLE_LABELS } from '@/utils/permissio
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import NotificationBell from '@/components/NotificationBell'
+import { useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/client'
 import { fetchCompanies, type Company } from '@/api/tenant'
 import { Building2, ChevronDown, Check } from 'lucide-react'
@@ -89,6 +90,7 @@ const navSections = [
 export default function TenantLayout() {
   const { user, role, logout, setActiveModules, token, activeCompanyId, setActiveCompanyId } = useAuthStore()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [companies, setCompanies] = useState<Company[]>([])
 
   // Re-fetch active modules on mount so newly activated modules appear
@@ -113,6 +115,14 @@ export default function TenantLayout() {
       })
       .catch(() => {})
   }, [token, activeCompanyId])
+
+  // Invalidate all queries when switching companies to ensure data is refetched
+  useEffect(() => {
+    if (activeCompanyId) {
+      queryClient.invalidateQueries()
+    }
+  }, [activeCompanyId, queryClient])
+
 
   const activeCompany = companies.find(c => c.id === activeCompanyId)
 
