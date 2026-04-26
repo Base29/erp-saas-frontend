@@ -9,8 +9,7 @@ import {
   createAccountType, 
   updateAccountType, 
   deleteAccountType, 
-  type AccountType,
-  type AccountGroup
+  type AccountType
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
