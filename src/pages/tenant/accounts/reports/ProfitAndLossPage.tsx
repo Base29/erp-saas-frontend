@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { Printer, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchProfitAndLoss } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

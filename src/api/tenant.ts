@@ -272,7 +272,7 @@ export const postJournalVoucher = (id: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/post`)
 
 // ── Accounts — Reports ────────────────────────────────────────────────────────
-export const fetchGeneralLedger = (params: { account_id: string; date_from: string; date_to: string; page?: number }) =>
+export const fetchGeneralLedger = (params: { account_id: string; date_from: string; date_to: string; page?: number; per_page?: number }) =>
   apiClient.get('/v1/accounts/reports/general-ledger', { params })
 
 export const fetchTrialBalance = (params: { fiscal_period_id: string }) =>
