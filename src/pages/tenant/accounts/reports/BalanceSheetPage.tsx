@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 type BSRow = {
-  group_name: string
   account_code: string
   account_name: string
   balance: number
@@ -17,53 +16,43 @@ function fmt(n: number) {
   return n.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const SECTION_COLORS: Record<string, { bg: string; border: string; header: string }> = {
-  Assets:      { bg: 'bg-blue-50',   border: 'border-blue-200',   header: 'bg-blue-100 text-blue-800' },
-  Liabilities: { bg: 'bg-orange-50', border: 'border-orange-200', header: 'bg-orange-100 text-orange-800' },
-  Equity:      { bg: 'bg-purple-50', border: 'border-purple-200', header: 'bg-purple-100 text-purple-800' },
-}
-
 function BSSection({
   label,
-  rows,
+  items,
   total,
 }: {
   label: string
-  rows: BSRow[]
+  items: BSRow[]
   total: number
 }) {
-  const colors = SECTION_COLORS[label] ?? { bg: 'bg-muted/30', border: 'border', header: 'bg-muted/60 text-foreground' }
-
   return (
-    <div className={`rounded-lg border ${colors.border} overflow-hidden`}>
-      <div className={`px-4 py-2.5 font-semibold text-sm uppercase tracking-wider ${colors.header}`}>
-        {label}
+    <div className="space-y-1">
+      <div className="flex justify-between items-center px-2 py-1 bg-muted/20 rounded font-medium text-xs uppercase tracking-wider text-muted-foreground">
+        <span>{label}</span>
       </div>
       <table className="w-full text-sm">
-        <tbody className={colors.bg}>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-t border-black/5 hover:brightness-95 transition-all">
-              <td className="px-4 py-2 font-mono text-xs text-muted-foreground w-20">
+        <tbody>
+          {items.map((row, i) => (
+            <tr key={i} className="border-b border-black/5 last:border-0">
+              <td className="px-2 py-1.5 font-mono text-xs text-muted-foreground w-20">
                 {row.account_code}
               </td>
-              <td className="px-4 py-2">{row.account_name}</td>
-              <td className="px-4 py-2 text-right font-mono">{fmt(Math.abs(row.balance))}</td>
+              <td className="px-2 py-1.5">{row.account_name}</td>
+              <td className="px-2 py-1.5 text-right font-mono">{fmt(Math.abs(row.balance))}</td>
             </tr>
           ))}
-          {rows.length === 0 && (
+          {items.length === 0 && (
             <tr>
-              <td colSpan={3} className="px-4 py-3 text-sm text-muted-foreground text-center">
-                No {label.toLowerCase()} accounts with a balance
+              <td colSpan={3} className="px-2 py-2 text-xs text-muted-foreground italic">
+                No items in this category
               </td>
             </tr>
           )}
         </tbody>
-        <tfoot className="border-t border-black/10 font-semibold bg-white/50">
+        <tfoot className="font-semibold text-xs border-t">
           <tr>
-            <td colSpan={2} className="px-4 py-2.5 text-right text-sm">
-              Total {label}
-            </td>
-            <td className="px-4 py-2.5 text-right font-mono">{fmt(Math.abs(total))}</td>
+            <td colSpan={2} className="px-2 py-1.5 text-right">Subtotal {label}</td>
+            <td className="px-2 py-1.5 text-right font-mono">{fmt(Math.abs(total))}</td>
           </tr>
         </tfoot>
       </table>
@@ -81,22 +70,13 @@ export default function BalanceSheetPage() {
     enabled: submitted && !!asOfDate,
   })
 
-  const rows: BSRow[] = (data as { rows?: BSRow[] })?.rows ?? []
-  const assets: number = (data as { assets?: number })?.assets ?? 0
-  const liabilities: number = (data as { liabilities?: number })?.liabilities ?? 0
-  const equity: number = (data as { equity?: number })?.equity ?? 0
-  const balanced: boolean = (data as { balanced?: boolean })?.balanced ?? false
-
-  const sections: Array<{ key: string; label: string }> = [
-    { key: 'Assets', label: 'Assets' },
-    { key: 'Liabilities', label: 'Liabilities' },
-    { key: 'Equity', label: 'Equity' },
-  ]
-
-  const totals: Record<string, number> = { Assets: assets, Liabilities: liabilities, Equity: equity }
+  const assets = data?.assets
+  const liabilities = data?.liabilities
+  const equity = data?.equity
+  const balanced = data?.is_balanced ?? false
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <style>{`
         @media print {
           body > * { display: none !important; }
@@ -108,94 +88,136 @@ export default function BalanceSheetPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Balance Sheet</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Statement of Financial Position</h1>
           <p className="text-sm text-muted-foreground">
-            Asset, Liability, and Equity balances as of a specific date
+            Balance Sheet as of a specific date (IAS 1 compliant)
           </p>
         </div>
-        {rows.length > 0 && (
+        {data && (
           <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-4 w-4 mr-1.5" />
+            <Printer className="h-4 w-4 mr-2" />
             Print / PDF
           </Button>
         )}
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30">
-        <div className="space-y-1">
-          <Label>As of Date</Label>
+      <div className="flex gap-4 items-end p-4 rounded-xl border bg-card shadow-sm print:hidden">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-bold uppercase text-muted-foreground">As of Date</Label>
           <Input
             type="date"
             value={asOfDate}
             onChange={(e) => { setAsOfDate(e.target.value); setSubmitted(false) }}
-            className="w-44"
+            className="w-48 h-9"
           />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!asOfDate}>
+        <Button onClick={() => setSubmitted(true)} disabled={!asOfDate} size="sm" className="h-9 px-6">
           Run Report
         </Button>
       </div>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          Loading…
+        <div className="flex flex-col items-center gap-3 py-12 justify-center text-muted-foreground animate-pulse">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium">Preparing report...</span>
         </div>
       )}
 
-      {submitted && !isLoading && rows.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          No posted transactions found as of the selected date.
+      {submitted && !isLoading && !data && (
+        <div className="text-center py-16 rounded-xl border-2 border-dashed">
+          <p className="text-sm text-muted-foreground font-medium">No financial data found for the selected date.</p>
         </div>
       )}
 
-      {submitted && !isLoading && rows.length > 0 && (
-        <div id="bs-print-area" className="space-y-4">
-          {/* Print header */}
-          <div className="hidden print:block mb-4">
-            <h2 className="text-lg font-bold">Balance Sheet</h2>
-            <p className="text-sm">As of: {asOfDate}</p>
+      {submitted && !isLoading && data && (
+        <div id="bs-print-area" className="space-y-8 bg-card p-8 rounded-2xl border shadow-sm print:shadow-none print:border-0">
+          <div className="text-center space-y-1 border-b pb-6">
+            <h2 className="text-xl font-bold uppercase tracking-widest">Statement of Financial Position</h2>
+            <p className="text-sm text-muted-foreground font-medium">As of {asOfDate}</p>
           </div>
 
-          {/* Summary strip */}
-          <div className="grid grid-cols-3 gap-4 print:hidden">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 mb-1">Total Assets</p>
-              <p className="text-xl font-bold font-mono text-blue-700">{fmt(assets)}</p>
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Assets Side */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold border-b-2 border-primary w-fit pr-4 pb-1">ASSETS</h3>
+              
+              <BSSection 
+                label="Current Assets" 
+                items={assets?.current ?? []} 
+                total={assets?.current?.reduce((acc: number, curr: any) => acc + curr.balance, 0) ?? 0} 
+              />
+              
+              <BSSection 
+                label="Non-Current Assets" 
+                items={assets?.non_current ?? []} 
+                total={assets?.non_current?.reduce((acc: number, curr: any) => acc + curr.balance, 0) ?? 0} 
+              />
+
+              <div className="flex justify-between items-center p-3 bg-blue-50 text-blue-900 rounded-lg font-bold border border-blue-100">
+                <span>TOTAL ASSETS</span>
+                <span className="font-mono text-lg">{fmt(assets?.total ?? 0)}</span>
+              </div>
             </div>
-            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-orange-700 mb-1">Total Liabilities</p>
-              <p className="text-xl font-bold font-mono text-orange-700">{fmt(liabilities)}</p>
-            </div>
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-purple-700 mb-1">Total Equity</p>
-              <p className="text-xl font-bold font-mono text-purple-700">{fmt(equity)}</p>
+
+            {/* Liabilities & Equity Side */}
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold border-b-2 border-orange-500 w-fit pr-4 pb-1">LIABILITIES</h3>
+                
+                <BSSection 
+                  label="Current Liabilities" 
+                  items={liabilities?.current ?? []} 
+                  total={liabilities?.current?.reduce((acc: number, curr: any) => acc + curr.balance, 0) ?? 0} 
+                />
+                
+                <BSSection 
+                  label="Non-Current Liabilities" 
+                  items={liabilities?.non_current ?? []} 
+                  total={liabilities?.non_current?.reduce((acc: number, curr: any) => acc + curr.balance, 0) ?? 0} 
+                />
+
+                <div className="flex justify-between items-center p-3 bg-orange-50 text-orange-900 rounded-lg font-bold border border-orange-100">
+                  <span>TOTAL LIABILITIES</span>
+                  <span className="font-mono text-lg">{fmt(liabilities?.total ?? 0)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold border-b-2 border-purple-500 w-fit pr-4 pb-1">EQUITY</h3>
+                
+                <BSSection 
+                  label="Owner's Equity" 
+                  items={equity?.items ?? []} 
+                  total={equity?.items?.reduce((acc: number, curr: any) => acc + curr.balance, 0) ?? 0} 
+                />
+
+                <div className="flex justify-between items-center px-2 py-1.5 text-sm font-medium italic border-t border-dashed">
+                   <span>Retained Earnings / Current Year Profit</span>
+                   <span className="font-mono">{fmt(equity?.net_profit ?? 0)}</span>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-purple-50 text-purple-900 rounded-lg font-bold border border-purple-100">
+                  <span>TOTAL EQUITY</span>
+                  <span className="font-mono text-lg">{fmt(equity?.total ?? 0)}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t-2 border-double border-muted">
+                <div className={`flex justify-between items-center p-4 rounded-xl font-black ${balanced ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  <span>TOTAL LIABILITIES & EQUITY</span>
+                  <span className="font-mono text-xl">{fmt((liabilities?.total ?? 0) + (equity?.total ?? 0))}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {sections.map(({ key, label }) => (
-            <BSSection
-              key={key}
-              label={label}
-              rows={rows.filter((r) => r.group_name === key)}
-              total={totals[key]}
-            />
-          ))}
-
-          {/* Balance check */}
-          <div
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium ${
-              balanced
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}
-          >
-            <span className="text-base">{balanced ? '✓' : '✗'}</span>
-            {balanced
-              ? `Balanced — Assets (${fmt(assets)}) = Liabilities (${fmt(liabilities)}) + Equity (${fmt(equity)})`
-              : 'Balance sheet does not balance — check for unposted or missing entries'}
-          </div>
+          {!balanced && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-center gap-2">
+              <span className="text-lg font-bold">⚠️</span>
+              The statement does not balance. This may be due to unposted transactions or incorrect account mapping.
+            </div>
+          )}
         </div>
       )}
     </div>

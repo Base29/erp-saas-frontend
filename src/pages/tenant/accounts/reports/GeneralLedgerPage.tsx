@@ -36,10 +36,12 @@ export default function GeneralLedgerPage() {
 
   const [params, setParams] = useState({
     account_id: prefilledAccount,
-    date_from: '',
-    date_to: '',
+    date_from: searchParams.get('date_from') ?? '',
+    date_to: searchParams.get('date_to') ?? '',
   })
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(
+    !!prefilledAccount && !!searchParams.get('date_from') && !!searchParams.get('date_to')
+  )
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts-all'],
@@ -55,6 +57,7 @@ export default function GeneralLedgerPage() {
         account_id: params.account_id,
         date_from: params.date_from,
         date_to: params.date_to,
+        per_page: 500,
       }).then((r) => r.data),
     enabled: submitted && !!params.account_id && !!params.date_from && !!params.date_to,
   })

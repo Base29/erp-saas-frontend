@@ -279,10 +279,54 @@ export const fetchTrialBalance = (params: { fiscal_period_id: string }) =>
   apiClient.get('/v1/accounts/reports/trial-balance', { params })
 
 export const fetchProfitAndLoss = (params: { date_from: string; date_to: string }) =>
-  apiClient.get('/v1/accounts/reports/profit-and-loss', { params })
+  apiClient.get<{
+    revenue: { sales: number; other: number; total: number }
+    cogs: number
+    gross_profit: number
+    operating_expenses: number
+    operating_profit: number
+    financial_expenses: number
+    net_profit: number
+    details: any[]
+  }>('/v1/accounts/reports/profit-and-loss', { params })
 
 export const fetchBalanceSheet = (params: { as_of_date: string }) =>
-  apiClient.get('/v1/accounts/reports/balance-sheet', { params })
+  apiClient.get<{
+    assets: { current: any[]; non_current: any[]; total: number }
+    liabilities: { current: any[]; non_current: any[]; total: number }
+    equity: { items: any[]; net_profit: number; total: number }
+    is_balanced: boolean
+  }>('/v1/accounts/reports/balance-sheet', { params })
+
+export const fetchCashFlow = (params: { date_from: string; date_to: string }) =>
+  apiClient.get<{
+    operating_activities: {
+      net_profit: number
+      depreciation_adj: number
+      ar_change: number
+      inventory_change: number
+      ap_change: number
+      net_operating_cash: number
+    }
+    investing_activities: {
+      ppe_movements: number
+      net_investing_cash: number
+    }
+    financing_activities: {
+      loan_movements: number
+      net_financing_cash: number
+    }
+    net_cash_increase: number
+  }>('/v1/accounts/reports/cash-flow', { params })
+
+export const fetchEquityChanges = (params: { date_from: string; date_to: string }) =>
+  apiClient.get<{
+    opening_balance: number
+    share_capital_issued: number
+    net_profit_for_period: number
+    dividends_drawings: number
+    closing_balance: number
+  }>('/v1/accounts/reports/equity-changes', { params })
 
 export const fetchCustomerStatement = (params: { customer_id: string; date_from: string; date_to: string }) =>
   apiClient.get('/v1/accounts/reports/customer-statement', { params })
@@ -510,25 +554,25 @@ export const postGoodsIssue = (id: string) =>
 
 // Stock Transfers
 export const fetchStockTransfers = (params?: Record<string, string | number>) =>
-  apiClient.get<PaginatedResponse<StockTransfer>>('/v1/inventory/transfers', { params })
+  apiClient.get<PaginatedResponse<StockTransfer>>('/v1/inventory/stock-transfers', { params })
 
 export const fetchStockTransfer = (id: string) =>
-  apiClient.get<{ data: StockTransfer }>(`/v1/inventory/transfers/${id}`)
+  apiClient.get<{ data: StockTransfer }>(`/v1/inventory/stock-transfers/${id}`)
 
 export const createStockTransfer = (payload: { from_warehouse_id: string; to_warehouse_id: string; transfer_date: string; lines: StockTransferLine[] }) =>
-  apiClient.post<{ data: StockTransfer }>('/v1/inventory/transfers', payload)
+  apiClient.post<{ data: StockTransfer }>('/v1/inventory/stock-transfers', payload)
 
 export const submitStockTransferForApproval = (id: string, comments?: string) =>
-  apiClient.post(`/v1/inventory/transfers/${id}/submit-for-approval`, { comments })
+  apiClient.post(`/v1/inventory/stock-transfers/${id}/submit-for-approval`, { comments })
 
 export const approveStockTransfer = (id: string, comments?: string) =>
-  apiClient.post(`/v1/inventory/transfers/${id}/approve`, { comments })
+  apiClient.post(`/v1/inventory/stock-transfers/${id}/approve`, { comments })
 
 export const rejectStockTransfer = (id: string, comments?: string) =>
-  apiClient.post(`/v1/inventory/transfers/${id}/reject`, { comments })
+  apiClient.post(`/v1/inventory/stock-transfers/${id}/reject`, { comments })
 
 export const postStockTransfer = (id: string) =>
-  apiClient.post(`/v1/inventory/transfers/${id}/post`)
+  apiClient.post(`/v1/inventory/stock-transfers/${id}/post`)
 
 // ── Inventory — Reports ───────────────────────────────────────────────────────
 export const fetchStockBalance = (params?: { item_id?: string; warehouse_id?: string; page?: number }) =>

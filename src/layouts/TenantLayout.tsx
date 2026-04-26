@@ -43,6 +43,8 @@ const navSections = [
       { to: '/accounts/reports/trial-balance',       label: 'Trial Balance',     icon: BookOpen },
       { to: '/accounts/reports/profit-and-loss',     label: 'Profit & Loss',     icon: BookOpen },
       { to: '/accounts/reports/balance-sheet',       label: 'Balance Sheet',     icon: BookOpen },
+      { to: '/accounts/reports/cash-flow',           label: 'Cash Flow',         icon: BookOpen },
+      { to: '/accounts/reports/equity-changes',      label: 'Equity Changes',    icon: BookOpen },
       { to: '/accounts/reports/customer-statement',  label: 'Customer Statement', icon: BookOpen },
     ],
     groupLabel: 'Accounts',

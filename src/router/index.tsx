@@ -28,6 +28,8 @@ import GeneralLedgerPage from '@/pages/tenant/accounts/reports/GeneralLedgerPage
 import TrialBalancePage from '@/pages/tenant/accounts/reports/TrialBalancePage'
 import ProfitAndLossPage from '@/pages/tenant/accounts/reports/ProfitAndLossPage'
 import BalanceSheetPage from '@/pages/tenant/accounts/reports/BalanceSheetPage'
+import CashFlowPage from '@/pages/tenant/accounts/reports/CashFlowPage'
+import EquityChangesPage from '@/pages/tenant/accounts/reports/EquityChangesPage'
 import CustomerStatementPage from '@/pages/tenant/accounts/reports/CustomerStatementPage'
 
 // Inventory pages
@@ -141,6 +143,8 @@ export const router = createBrowserRouter([
               { path: 'reports/trial-balance',      element: <TrialBalancePage /> },
               { path: 'reports/profit-and-loss',    element: <ProfitAndLossPage /> },
               { path: 'reports/balance-sheet',      element: <BalanceSheetPage /> },
+              { path: 'reports/cash-flow',          element: <CashFlowPage /> },
+              { path: 'reports/equity-changes',     element: <EquityChangesPage /> },
               { path: 'reports/customer-statement', element: <CustomerStatementPage /> },
             ],
           },
