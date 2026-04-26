@@ -186,8 +186,26 @@ export interface Account {
 export const fetchAccountGroups = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<AccountGroup>>('/v1/accounts/groups', { params })
 
+export const createAccountGroup = (payload: { name: string }) =>
+  apiClient.post<{ data: AccountGroup }>('/v1/accounts/groups', payload)
+
+export const updateAccountGroup = (id: string, payload: { name: string }) =>
+  apiClient.patch<{ data: AccountGroup }>(`/v1/accounts/groups/${id}`, payload)
+
+export const deleteAccountGroup = (id: string) =>
+  apiClient.delete(`/v1/accounts/groups/${id}`)
+
 export const fetchAccountTypes = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<AccountType>>('/v1/accounts/types', { params })
+
+export const createAccountType = (payload: { name: string; account_group_id: string }) =>
+  apiClient.post<{ data: AccountType }>('/v1/accounts/types', payload)
+
+export const updateAccountType = (id: string, payload: { name: string; account_group_id: string }) =>
+  apiClient.patch<{ data: AccountType }>(`/v1/accounts/types/${id}`, payload)
+
+export const deleteAccountType = (id: string) =>
+  apiClient.delete(`/v1/accounts/types/${id}`)
 
 export const fetchAccounts = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params })
