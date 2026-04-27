@@ -32,22 +32,25 @@ export interface DashboardSummary {
     email: string | null
     registration_number: string | null
   }>
-  recent_activities: Array<{
-    id: string
-    type: string
-    reference: string
-    description: string
-    amount: number | null
-    date: string
-    status: string
-  }>
+  recent_activities: Array<Activity>
+}
+
+export interface Activity {
+  id: string
+  type: string
+  reference: string
+  description: string
+  amount: number | null
+  date: string
+  status: string
+  causer_name?: string
 }
 
 export const fetchDashboardSummary = () =>
   apiClient.get<DashboardSummary>('/v1/dashboard/summary')
 
 export const fetchActivities = (params?: Record<string, string | number>) =>
-  apiClient.get<PaginatedResponse<DashboardSummary['recent_activities'][0]>>('/v1/activities', { params })
+  apiClient.get<PaginatedResponse<Activity>>('/v1/activities', { params })
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 export interface Notification {

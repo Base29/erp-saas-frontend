@@ -3,9 +3,7 @@ import { fetchActivities } from '@/api/tenant'
 import { 
   Card, 
   CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription
+  CardHeader
 } from '@/components/ui/card'
 import { 
   ShoppingCart, 
@@ -39,7 +37,6 @@ export default function RecentActivitiesPage() {
   })
 
   const activities = data?.data || []
-  const meta = data?.meta
 
   return (
     <div className="p-6 space-y-6">
@@ -166,10 +163,10 @@ export default function RecentActivitiesPage() {
             </TableBody>
           </Table>
         </CardContent>
-        {meta && meta.total > meta.per_page && (
+        {data && data.total > data.per_page && (
           <div className="p-4 border-t flex items-center justify-between bg-muted/50">
             <div className="text-xs text-muted-foreground">
-              Showing {activities.length} of {meta.total} activities
+              Showing {activities.length} of {data.total} activities
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -181,13 +178,13 @@ export default function RecentActivitiesPage() {
                 Previous
               </Button>
               <div className="text-xs font-medium px-2">
-                Page {page} of {meta.last_page}
+                Page {page} of {data.last_page}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
-                disabled={page === meta.last_page}
+                onClick={() => setPage(p => Math.min(data.last_page, p + 1))}
+                disabled={page === data.last_page}
               >
                 Next
               </Button>
