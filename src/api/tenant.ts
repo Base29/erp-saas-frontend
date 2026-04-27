@@ -11,6 +11,44 @@ export const tenantLogout = () => apiClient.post('/v1/auth/logout')
 
 export const tenantMe = () => apiClient.get<{ data: AuthUser }>('/v1/auth/me')
 
+// ── Dashboard ────────────────────────────────────────────────────────────────
+export interface DashboardSummary {
+  financials: {
+    revenue: number
+    expenses: number
+    net_profit: number
+  }
+  sales: {
+    total_orders: number
+    pending_quotations: number
+  }
+  inventory: {
+    total_items: number
+    low_stock_items: number
+  }
+  companies: Array<{
+    id: string
+    name: string
+    email: string | null
+    registration_number: string | null
+  }>
+  recent_activities: Array<{
+    id: string
+    type: string
+    reference: string
+    description: string
+    amount: number | null
+    date: string
+    status: string
+  }>
+}
+
+export const fetchDashboardSummary = () =>
+  apiClient.get<DashboardSummary>('/v1/dashboard/summary')
+
+export const fetchActivities = (params?: Record<string, string | number>) =>
+  apiClient.get<PaginatedResponse<DashboardSummary['recent_activities'][0]>>('/v1/activities', { params })
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 export interface Notification {
   id: string

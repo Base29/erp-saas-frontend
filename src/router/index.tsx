@@ -17,6 +17,7 @@ import TenantModulesPage from '@/pages/platform/TenantModulesPage'
 // Tenant pages
 import TenantLoginPage from '@/pages/tenant/LoginPage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
+import RecentActivitiesPage from '@/pages/tenant/RecentActivitiesPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
 
 // Accounts pages
@@ -137,6 +138,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <TenantDashboardPage /> },
+          { path: 'activities', element: <RecentActivitiesPage /> },
           { path: 'settings', element: <SettingsPage /> },
           // Accounts module
           {
