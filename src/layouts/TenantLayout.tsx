@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -14,6 +14,13 @@ import {
   Target,
   RefreshCcw,
   PieChart,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -24,7 +31,6 @@ import NotificationBell from '@/components/NotificationBell'
 import { useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/client'
 import { fetchCompanies, type Company } from '@/api/tenant'
-import { Building2, ChevronDown, Check } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 const navSections = [
   {
@@ -102,25 +109,53 @@ const navSections = [
 export default function TenantLayout() {
   const { user, role, logout, setActiveModules, token, activeCompanyId, setActiveCompanyId } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    return saved === 'true'
+  })
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  
+  // Accordion state: track which group labels are expanded
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    // By default, expand the section that contains the current path
+    const initial: Record<string, boolean> = {}
+    navSections.forEach(section => {
+      if (section.groupLabel) {
+        const isActive = section.items.some(item => location.pathname.startsWith(item.to))
+        if (isActive) {
+          initial[section.groupLabel] = true
+        }
+      }
+    })
+    return initial
+  })
 
-  // Re-fetch active modules on mount so newly activated modules appear
-  // without requiring a logout/login cycle.
+  const toggleSection = (label: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }))
+  }
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(isCollapsed))
+  }, [isCollapsed])
+
+  // Re-fetch active modules on mount
   useEffect(() => {
     if (!token) return
     
-    // Fetch active modules
     apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
       .then((res) => setActiveModules(res.data.data ?? []))
       .catch(() => {})
 
-    // Fetch companies
     fetchCompanies()
       .then((res) => {
         const list = res.data.data ?? []
         setCompanies(list)
-        // Set default company if none selected
         if (!activeCompanyId && list.length > 0) {
           setActiveCompanyId(list[0].id)
         }
@@ -128,13 +163,11 @@ export default function TenantLayout() {
       .catch(() => {})
   }, [token, activeCompanyId])
 
-  // Invalidate all queries when switching companies to ensure data is refetched
   useEffect(() => {
     if (activeCompanyId) {
       queryClient.invalidateQueries()
     }
   }, [activeCompanyId, queryClient])
-
 
   const activeCompany = companies.find(c => c.id === activeCompanyId)
 
@@ -149,75 +182,152 @@ export default function TenantLayout() {
     }
   }
 
-  return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-56 flex flex-col border-r bg-card overflow-y-auto">
-        <div className="px-6 py-5 border-b shrink-0">
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+  const SidebarContent = ({ collapsed = false, onNavItemClick = () => {} }) => (
+    <>
+      <div className={cn("px-6 py-5 border-b shrink-0 flex items-center justify-between", collapsed && "px-4 justify-center")}>
+        {!collapsed && (
+          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider overflow-hidden text-nowrap">
             Genie Cloud
           </span>
-        </div>
+        )}
+        {collapsed && (
+          <span className="text-xl font-bold text-primary">G</span>
+        )}
+      </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-4">
-          {navSections.map((group, gi) => {
-            if (group.section && !canAccessSection(role, group.section)) return null
-            // Hide module sections when the module is not active for this tenant
-            if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
-            return (
-              <div key={gi}>
-                {group.groupLabel && (
-                  <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {group.groupLabel}
-                  </p>
+      <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+        {navSections.map((group, gi) => {
+          if (group.section && !canAccessSection(role, group.section)) return null
+          if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
+          
+          const isExpanded = group.groupLabel ? expandedSections[group.groupLabel] : true
+
+          return (
+            <div key={gi} className="space-y-1">
+              {group.groupLabel && !collapsed && (
+                <button 
+                  onClick={() => toggleSection(group.groupLabel!)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors group"
+                >
+                  <span>{group.groupLabel}</span>
+                  <ChevronDown 
+                    size={12} 
+                    className={cn("transition-transform duration-200", isExpanded ? "rotate-0" : "-rotate-90")} 
+                  />
+                </button>
+              )}
+              
+              <div 
+                className={cn(
+                  "space-y-0.5 overflow-hidden transition-all duration-300",
+                  !isExpanded && !collapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
                 )}
-                <div className="space-y-0.5">
-                  {group.items.map(({ to, label, icon: Icon }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                          isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        )
-                      }
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {label}
-                    </NavLink>
-                  ))}
-                </div>
+              >
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={onNavItemClick}
+                    title={collapsed ? label : undefined}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        collapsed && "justify-center px-2"
+                      )
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span>{label}</span>}
+                  </NavLink>
+                ))}
               </div>
-            )
-          })}
-        </nav>
+            </div>
+          )
+        })}
+      </nav>
 
-        <div className="px-3 py-4 border-t shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-3"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
+      <div className={cn("px-3 py-4 border-t shrink-0", collapsed && "px-2")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("w-full justify-start gap-3", collapsed && "justify-center")}
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Logout</span>}
+        </Button>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Desktop Sidebar */}
+      <aside 
+        className={cn(
+          "hidden lg:flex flex-col border-r bg-card transition-all duration-300 relative",
+          isCollapsed ? "w-16" : "w-56"
+        )}
+      >
+        <SidebarContent collapsed={isCollapsed} />
+        
+        {/* Toggle Button */}
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute -right-3 top-20 h-6 w-6 rounded-full border shadow-sm z-10 hidden lg:flex"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </Button>
+      </aside>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside 
+        className={cn(
+          "fixed inset-y-0 left-0 w-64 bg-card border-r z-50 transform transition-transform duration-300 lg:hidden flex flex-col",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="absolute right-4 top-4 lg:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+            <X size={20} />
           </Button>
         </div>
+        <SidebarContent onNavItemClick={() => setIsMobileMenuOpen(false)} />
       </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b bg-card flex items-center justify-between px-6 shrink-0">
-          <div>
+        <header className="h-14 border-b bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
+          <div className="flex items-center gap-4">
+            {/* Mobile Menu Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="lg:hidden" 
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 font-medium">
-                  <Building2 size={16} className="text-primary" />
-                  {activeCompany ? activeCompany.name : 'Select Company'}
-                  <ChevronDown size={14} className="text-muted-foreground" />
+                <Button variant="ghost" size="sm" className="gap-2 font-medium max-w-[200px] truncate">
+                  <Building2 size={16} className="text-primary shrink-0" />
+                  <span className="truncate">{activeCompany ? activeCompany.name : 'Select Company'}</span>
+                  <ChevronDown size={14} className="text-muted-foreground shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
@@ -236,12 +346,14 @@ export default function TenantLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2 lg:gap-3">
+            <ThemeToggle />
             <NotificationBell />
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{user?.name}</span>
+              <span className="text-sm font-medium hidden sm:inline-block">{user?.name}</span>
               {role && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-[10px] lg:text-xs">
                   {ROLE_LABELS[role]}
                 </Badge>
               )}
@@ -250,10 +362,12 @@ export default function TenantLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-muted/30">
           <Outlet />
         </main>
       </div>
     </div>
   )
 }
+
+
