@@ -53,21 +53,21 @@ const navSections = [
     section: 'accounts',
     moduleKey: 'accounts',
     items: [
-      { to: '/accounts/chart-of-accounts',          label: 'Chart of Accounts', icon: BookOpen },
-      { to: '/accounts/journal-vouchers',            label: 'Journal Vouchers',  icon: BookOpen },
-      { to: '/accounts/suppliers',                  label: 'Suppliers',         icon: Users },
-      { to: '/accounts/purchase-invoices',           label: 'Purchase Invoices',  icon: FileText },
-      { to: '/accounts/supplier-payments',           label: 'Supplier Payments',  icon: CreditCard },
-      { to: '/accounts/cost-centers',               label: 'Cost Centers',      icon: Target },
-      { to: '/accounts/bank-reconciliation',         label: 'Bank Reconciliation', icon: RefreshCcw },
-      { to: '/accounts/budgets',                    label: 'Budgeting',         icon: PieChart },
-      { to: '/accounts/reports/general-ledger',      label: 'General Ledger',    icon: BookOpen },
-      { to: '/accounts/reports/trial-balance',       label: 'Trial Balance',     icon: BookOpen },
-      { to: '/accounts/reports/profit-and-loss',     label: 'Profit & Loss',     icon: BookOpen },
-      { to: '/accounts/reports/balance-sheet',       label: 'Balance Sheet',     icon: BookOpen },
-      { to: '/accounts/reports/cash-flow',           label: 'Cash Flow',         icon: BookOpen },
-      { to: '/accounts/reports/equity-changes',      label: 'Equity Changes',    icon: BookOpen },
-      { to: '/accounts/reports/customer-statement',  label: 'Customer Statement', icon: BookOpen },
+      { to: '/accounts/chart-of-accounts', label: 'Chart of Accounts', icon: BookOpen },
+      { to: '/accounts/journal-vouchers', label: 'Journal Vouchers', icon: BookOpen },
+      { to: '/accounts/suppliers', label: 'Suppliers', icon: Users },
+      { to: '/accounts/purchase-invoices', label: 'Purchase Invoices', icon: FileText },
+      { to: '/accounts/supplier-payments', label: 'Supplier Payments', icon: CreditCard },
+      { to: '/accounts/cost-centers', label: 'Cost Centers', icon: Target },
+      { to: '/accounts/bank-reconciliation', label: 'Bank Reconciliation', icon: RefreshCcw },
+      { to: '/accounts/budgets', label: 'Budgeting', icon: PieChart },
+      { to: '/accounts/reports/general-ledger', label: 'General Ledger', icon: BookOpen },
+      { to: '/accounts/reports/trial-balance', label: 'Trial Balance', icon: BookOpen },
+      { to: '/accounts/reports/profit-and-loss', label: 'Profit & Loss', icon: BookOpen },
+      { to: '/accounts/reports/balance-sheet', label: 'Balance Sheet', icon: BookOpen },
+      { to: '/accounts/reports/cash-flow', label: 'Cash Flow', icon: BookOpen },
+      { to: '/accounts/reports/equity-changes', label: 'Equity Changes', icon: BookOpen },
+      { to: '/accounts/reports/customer-statement', label: 'Customer Statement', icon: BookOpen },
     ],
     groupLabel: 'Accounts',
     icon: BookOpen,
@@ -123,7 +123,7 @@ export default function TenantLayout() {
     return saved === 'true'
   })
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  
+
   // Accordion state: track which group labels are expanded
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     // By default, expand the section that contains the current path
@@ -168,10 +168,10 @@ export default function TenantLayout() {
   // Re-fetch active modules on mount
   useEffect(() => {
     if (!token) return
-    
+
     apiClient.get<{ data: string[] }>('/v1/settings/active-modules')
       .then((res) => setActiveModules(res.data.data ?? []))
-      .catch(() => {})
+      .catch(() => { })
 
     fetchCompanies()
       .then((res) => {
@@ -181,7 +181,7 @@ export default function TenantLayout() {
           setActiveCompanyId(list[0].id)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [token, activeCompanyId])
 
   useEffect(() => {
@@ -203,13 +203,13 @@ export default function TenantLayout() {
     }
   }
 
-  const SidebarContent = ({ collapsed = false, onNavItemClick = () => {} }) => (
+  const SidebarContent = ({ collapsed = false, onNavItemClick = () => { } }) => (
     <>
-      <div className={cn("px-0 py-2 border-b shrink-0 flex items-center justify-center", collapsed && "justify-center")}>
+      <div className={cn("px-8 py-8 border-b shrink-0 flex items-center justify-center", collapsed && "justify-center")}>
         {!collapsed ? (
-          <img 
-            src={resolvedTheme === 'dark' ? "/logo-dark.png" : "/logo.png"} 
-            alt="Genie Cloud" 
+          <img
+            src={resolvedTheme === 'dark' ? "/logo-dark.png" : "/logo.png"}
+            alt="Genie Cloud"
             className="w-full h-auto object-contain px-2"
             onError={(e) => {
               // Fallback to text if image fails to load
@@ -231,27 +231,27 @@ export default function TenantLayout() {
         {navSections.map((group, gi) => {
           if (group.section && !canAccessSection(role, group.section)) return null
           if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
-          
+
           const isExpanded = group.groupLabel ? expandedSections[group.groupLabel] : true
 
           return (
             <div key={gi} className="space-y-1">
               {group.groupLabel && !collapsed && (
-                <button 
+                <button
                   onClick={() => toggleSection(group.groupLabel!)}
                   className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors group"
                 >
                   <span>{group.groupLabel}</span>
-                  <ChevronDown 
-                    size={12} 
-                    className={cn("transition-transform duration-200", isExpanded ? "rotate-0" : "-rotate-90")} 
+                  <ChevronDown
+                    size={12}
+                    className={cn("transition-transform duration-200", isExpanded ? "rotate-0" : "-rotate-90")}
                   />
                 </button>
               )}
 
               {collapsed && group.icon && (
                 <div className="flex justify-center py-2">
-                   <NavLink
+                  <NavLink
                     to={group.items[0].to}
                     title={group.groupLabel || group.items[0].label}
                     className={({ isActive }) =>
@@ -267,8 +267,8 @@ export default function TenantLayout() {
                   </NavLink>
                 </div>
               )}
-              
-              <div 
+
+              <div
                 className={cn(
                   "space-y-0.5 overflow-hidden transition-all duration-300",
                   (!isExpanded || collapsed) ? "max-h-0 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
@@ -317,14 +317,14 @@ export default function TenantLayout() {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside 
+      <aside
         className={cn(
           "hidden lg:flex flex-col border-r bg-card transition-all duration-300 relative",
           isCollapsed ? "w-16" : "w-56"
         )}
       >
         <SidebarContent collapsed={isCollapsed} />
-        
+
         {/* Toggle Button */}
         <Button
           variant="secondary"
@@ -338,14 +338,14 @@ export default function TenantLayout() {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Sidebar */}
-      <aside 
+      <aside
         className={cn(
           "fixed inset-y-0 left-0 w-64 bg-card border-r z-50 transform transition-transform duration-300 lg:hidden flex flex-col",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -364,10 +364,10 @@ export default function TenantLayout() {
         <header className="h-14 border-b bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Toggle */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
               onClick={() => setIsMobileMenuOpen(true)}
             >
               <Menu size={20} />
