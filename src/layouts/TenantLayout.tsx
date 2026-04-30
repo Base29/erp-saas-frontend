@@ -40,12 +40,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { useTheme } from '@/components/ThemeProvider'
 
 const navSections = [
   {
     section: null, // always visible
     moduleKey: null,
     items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    icon: LayoutDashboard,
   },
   {
     section: 'accounts',
@@ -68,6 +70,7 @@ const navSections = [
       { to: '/accounts/reports/customer-statement',  label: 'Customer Statement', icon: BookOpen },
     ],
     groupLabel: 'Accounts',
+    icon: BookOpen,
   },
   {
     section: 'sales',
@@ -84,6 +87,7 @@ const navSections = [
       { to: '/sales/reports', label: 'Reports', icon: ShoppingCart },
     ],
     groupLabel: 'Sales',
+    icon: ShoppingCart,
   },
   {
     section: 'inventory',
@@ -97,12 +101,14 @@ const navSections = [
       { to: '/inventory/reports', label: 'Reports', icon: Package },
     ],
     groupLabel: 'Inventory',
+    icon: Package,
   },
   {
     section: 'settings',
     moduleKey: null,
     items: [{ to: '/settings', label: 'Settings', icon: Settings }],
     groupLabel: 'Settings',
+    icon: Settings,
   },
 ]
 
@@ -132,6 +138,21 @@ export default function TenantLayout() {
     })
     return initial
   })
+
+  const { theme } = useTheme()
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const updateTheme = () => setResolvedTheme(mediaQuery.matches ? 'dark' : 'light')
+      updateTheme()
+      mediaQuery.addEventListener('change', updateTheme)
+      return () => mediaQuery.removeEventListener('change', updateTheme)
+    } else {
+      setResolvedTheme(theme as 'light' | 'dark')
+    }
+  }, [theme])
 
   const toggleSection = (label: string) => {
     setExpandedSections(prev => ({
@@ -184,14 +205,25 @@ export default function TenantLayout() {
 
   const SidebarContent = ({ collapsed = false, onNavItemClick = () => {} }) => (
     <>
-      <div className={cn("px-6 py-5 border-b shrink-0 flex items-center justify-between", collapsed && "px-4 justify-center")}>
+      <div className={cn("px-0 py-2 border-b shrink-0 flex items-center justify-center", collapsed && "justify-center")}>
+        {!collapsed ? (
+          <img 
+            src={resolvedTheme === 'dark' ? "/logo-dark.png" : "/logo.png"} 
+            alt="Genie Cloud" 
+            className="w-full h-auto object-contain px-2"
+            onError={(e) => {
+              // Fallback to text if image fails to load
+              e.currentTarget.style.display = 'none'
+              e.currentTarget.nextElementSibling?.classList.remove('hidden')
+            }}
+          />
+        ) : (
+          <span className="text-xl font-bold text-primary">G</span>
+        )}
         {!collapsed && (
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider overflow-hidden text-nowrap">
+          <span className="hidden text-sm font-semibold text-muted-foreground uppercase tracking-wider overflow-hidden text-nowrap">
             Genie Cloud
           </span>
-        )}
-        {collapsed && (
-          <span className="text-xl font-bold text-primary">G</span>
         )}
       </div>
 
@@ -216,11 +248,30 @@ export default function TenantLayout() {
                   />
                 </button>
               )}
+
+              {collapsed && group.icon && (
+                <div className="flex justify-center py-2">
+                   <NavLink
+                    to={group.items[0].to}
+                    title={group.groupLabel || group.items[0].label}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center justify-center rounded-md p-2 transition-all',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      )
+                    }
+                  >
+                    <group.icon className="h-5 w-5" />
+                  </NavLink>
+                </div>
+              )}
               
               <div 
                 className={cn(
                   "space-y-0.5 overflow-hidden transition-all duration-300",
-                  !isExpanded && !collapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                  (!isExpanded || collapsed) ? "max-h-0 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
                 )}
               >
                 {group.items.map(({ to, label, icon: Icon }) => (
@@ -235,7 +286,7 @@ export default function TenantLayout() {
                         isActive
                           ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                        collapsed && "justify-center px-2"
+                        collapsed && "hidden"
                       )
                     }
                   >
