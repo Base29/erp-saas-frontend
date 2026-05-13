@@ -202,6 +202,18 @@ export const fetchAttachments = (attachableType: string, attachableId: string) =
   )
 
 // ── Accounts — Chart of Accounts ─────────────────────────────────────────────
+export interface AccountCategory {
+  id: string
+  parent_id: string | null
+  name: string
+  code: string | null
+  depth: number
+  is_active: boolean
+  children?: AccountCategory[]
+  accounts?: Account[]
+  has_data?: boolean
+}
+
 export interface AccountGroup {
   id: string
   name: string
@@ -220,8 +232,11 @@ export interface Account {
   account_code: string
   account_name: string
   account_type_id: string
+  account_category_id: string
   is_active: boolean
   account_type?: AccountType & { account_group?: AccountGroup }
+  account_category?: AccountCategory
+  has_data?: boolean
 }
 
 export const fetchAccountGroups = (params?: Record<string, string | number>) =>
@@ -248,10 +263,22 @@ export const updateAccountType = (id: string, payload: { name: string; account_g
 export const deleteAccountType = (id: string) =>
   apiClient.delete(`/v1/accounts/types/${id}`)
 
+export const fetchAccountCategories = () =>
+  apiClient.get<{ data: AccountCategory[] }>('/v1/accounts/categories')
+
+export const createAccountCategory = (payload: { name: string; code?: string; parent_id?: string | null }) =>
+  apiClient.post<{ data: AccountCategory }>('/v1/accounts/categories', payload)
+
+export const updateAccountCategory = (id: string, payload: Partial<AccountCategory>) =>
+  apiClient.patch<{ data: AccountCategory }>(`/v1/accounts/categories/${id}`, payload)
+
+export const deleteAccountCategory = (id: string) =>
+  apiClient.delete(`/v1/accounts/categories/${id}`)
+
 export const fetchAccounts = (params?: Record<string, string | number>) =>
   apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params })
 
-export const createAccount = (payload: { account_code: string; account_name: string; account_type_id: string; is_active?: boolean }) =>
+export const createAccount = (payload: { account_code: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
 
 export const updateAccount = (id: string, payload: Partial<Account>) =>

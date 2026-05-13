@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,13 +6,11 @@ import { z } from 'zod'
 import { Plus, Pencil } from 'lucide-react'
 import {
   fetchAccounts,
-  fetchAccountGroups,
-  fetchAccountTypes,
+  fetchAccountCategories,
   createAccount,
   updateAccount,
   type Account,
-  type AccountGroup,
-  type AccountType,
+  type AccountCategory,
 } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
@@ -36,15 +34,16 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
 import type { ColumnDef } from '@tanstack/react-table'
+import { toast } from 'sonner'
 
-const schema = z.object({
+const accountSchema = z.object({
   account_code: z.string().min(1, 'Required'),
   account_name: z.string().min(1, 'Required'),
-  account_type_id: z.string().min(1, 'Required'),
+  account_category_id: z.string().min(1, 'Required'),
   is_active: z.boolean().default(true),
 })
 
-type FormValues = z.infer<typeof schema>
+type AccountFormValues = z.infer<typeof accountSchema>
 
 export default function ChartOfAccountsPage() {
   const qc = useQueryClient()
@@ -54,43 +53,39 @@ export default function ChartOfAccountsPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [page, setPage] = useState(1)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['accounts', page],
-    queryFn: () => fetchAccounts({ page }).then((r) => r.data),
+    queryKey: ['accounts', page, selectedCategoryId],
+    queryFn: () => fetchAccounts({ page, category_id: selectedCategoryId }).then((r) => r.data),
   })
 
   const accounts = data?.data ?? []
 
-  const { data: groups = [] } = useQuery({
-    queryKey: ['account-groups'],
-    queryFn: () => fetchAccountGroups({ per_page: 100 }).then((r) => r.data.data),
+  const { data: categories = [] } = useQuery({
+    queryKey: ['account-categories'],
+    queryFn: () => fetchAccountCategories().then((r) => r.data.data),
   })
 
-  const { data: types = [] } = useQuery({
-    queryKey: ['account-types'],
-    queryFn: () => fetchAccountTypes({ per_page: 100 }).then((r) => r.data.data),
-  })
-
-  const save = useMutation({
-    mutationFn: (v: FormValues) => {
-      const payload = { ...v, account_type_id: v.account_type_id }
+  const saveAccount = useMutation({
+    mutationFn: (v: AccountFormValues) => {
       return editing
-        ? updateAccount(editing.id, payload)
-        : createAccount(payload)
+        ? updateAccount(editing.id, v)
+        : createAccount(v)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['accounts'] })
       setOpen(false)
+      toast.success('Account saved successfully')
     },
   })
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } =
-    useForm<FormValues>({ resolver: zodResolver(schema) })
+    useForm<AccountFormValues>({ resolver: zodResolver(accountSchema) })
 
   const openCreate = () => {
     setEditing(null)
-    reset({ account_code: '', account_name: '', account_type_id: '', is_active: true })
+    reset({ account_code: '', account_name: '', account_category_id: selectedCategoryId || '', is_active: true })
     setOpen(true)
   }
 
@@ -99,33 +94,35 @@ export default function ChartOfAccountsPage() {
     reset({
       account_code: acc.account_code,
       account_name: acc.account_name,
-      account_type_id: String(acc.account_type_id),
+      account_category_id: acc.account_category_id,
       is_active: acc.is_active,
     })
     setOpen(true)
   }
 
-  // Group types by group for the select
-  const typesByGroup = groups.reduce<Record<string, { group: AccountGroup; types: AccountType[] }>>(
-    (acc, g) => {
-      acc[g.id] = { group: g, types: types.filter((t) => t.account_group_id === g.id) }
-      return acc
-    },
-    {}
-  )
+  const flatCategories = useMemo(() => {
+    const flattened: Array<{ id: string; label: string; depth: number }> = []
+    const walk = (cats: AccountCategory[], prefix = '') => {
+      cats.forEach((c) => {
+        const label = prefix ? `${prefix} > ${c.name} [${c.code}]` : `${c.name} [${c.code}]`
+        flattened.push({ id: c.id, label, depth: c.depth })
+        if (c.children) walk(c.children, label)
+      })
+    }
+    walk(categories)
+    return flattened
+  }, [categories])
 
   const columns: ColumnDef<Account>[] = [
     { accessorKey: 'account_code', header: 'Code', enableSorting: true },
     { accessorKey: 'account_name', header: 'Name', enableSorting: true },
     {
-      id: 'type',
-      header: 'Type',
-      cell: ({ row }) => row.original.account_type?.name ?? '—',
-    },
-    {
-      id: 'group',
-      header: 'Group',
-      cell: ({ row }) => row.original.account_type?.account_group?.name ?? '—',
+      id: 'category',
+      header: 'Category',
+      cell: ({ row }) => {
+        const cat = row.original.account_category
+        return cat ? `${cat.name} [${cat.code}]` : '—'
+      },
     },
     {
       accessorKey: 'is_active',
@@ -158,11 +155,29 @@ export default function ChartOfAccountsPage() {
           <h1 className="text-xl font-semibold">Chart of Accounts</h1>
           <p className="text-sm text-muted-foreground">Manage your ledger accounts</p>
         </div>
-        {canEdit && (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1" /> New Account
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <Select
+            value={selectedCategoryId || 'all'}
+            onValueChange={(v) => setSelectedCategoryId(v === 'all' ? null : v)}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {flatCategories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {canEdit && (
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1" /> New Account
+            </Button>
+          )}
+        </div>
       </div>
 
       <DataTable
@@ -175,12 +190,13 @@ export default function ChartOfAccountsPage() {
         filterPlaceholder="Search by code…"
       />
 
+      {/* Account Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Account' : 'New Account'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-4 py-2">
+          <form onSubmit={handleSubmit((v) => saveAccount.mutate(v))} className="space-y-4 py-2">
             <div className="space-y-1">
               <Label htmlFor="ac-code">Account Code</Label>
               <Input id="ac-code" {...register('account_code')} placeholder="e.g. 1001" />
@@ -192,32 +208,23 @@ export default function ChartOfAccountsPage() {
               {errors.account_name && <p className="text-xs text-destructive">{errors.account_name.message}</p>}
             </div>
             <div className="space-y-1">
-              <Label>Account Type</Label>
+              <Label>Category</Label>
               <Select
-                value={watch('account_type_id')}
-                onValueChange={(v) => setValue('account_type_id', v, { shouldValidate: true })}
+                value={watch('account_category_id')}
+                onValueChange={(v) => setValue('account_category_id', v, { shouldValidate: true })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select type…" />
+                  <SelectValue placeholder="Select category…" />
                 </SelectTrigger>
-                <SelectContent>
-                  {Object.values(typesByGroup).map(({ group, types: gTypes }) =>
-                    gTypes.length > 0 ? (
-                      <div key={group.id}>
-                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                          {group.name}
-                        </div>
-                        {gTypes.map((t) => (
-                          <SelectItem key={t.id} value={String(t.id)}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ) : null
-                  )}
+                <SelectContent className="max-h-[300px]">
+                  {flatCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="text-xs">{c.label}</span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {errors.account_type_id && <p className="text-xs text-destructive">{errors.account_type_id.message}</p>}
+              {errors.account_category_id && <p className="text-xs text-destructive">{errors.account_category_id.message}</p>}
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -228,10 +235,9 @@ export default function ChartOfAccountsPage() {
               />
               <Label htmlFor="ac-active">Active</Label>
             </div>
-            {save.isError && <p className="text-xs text-destructive">Failed to save account</p>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting || save.isPending}>
+              <Button type="submit" disabled={isSubmitting || saveAccount.isPending}>
                 {editing ? 'Save' : 'Create'}
               </Button>
             </DialogFooter>
