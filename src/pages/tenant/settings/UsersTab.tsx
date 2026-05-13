@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Plus } from 'lucide-react'
+import SettingsHeaderActions from './SettingsHeaderActions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -132,9 +134,11 @@ export default function UsersTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center">
-        <Button size="sm" onClick={openCreate}>Add User</Button>
-      </div>
+      <SettingsHeaderActions>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-2" /> Add User
+        </Button>
+      </SettingsHeaderActions>
 
       <DataTable
         columns={columns}

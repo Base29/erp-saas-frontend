@@ -19,6 +19,15 @@ import TenantLoginPage from '@/pages/tenant/LoginPage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
 import RecentActivitiesPage from '@/pages/tenant/RecentActivitiesPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
+import FiscalPeriodsTab from '@/pages/tenant/settings/FiscalPeriodsTab'
+import TaxSettingsTab from '@/pages/tenant/settings/TaxSettingsTab'
+import SequencesTab from '@/pages/tenant/settings/SequencesTab'
+import UsersTab from '@/pages/tenant/settings/UsersTab'
+import ActiveModulesTab from '@/pages/tenant/settings/ActiveModulesTab'
+import ProductCategoriesTab from '@/pages/tenant/settings/ProductCategoriesTab'
+import CustomerCategoriesTab from '@/pages/tenant/settings/CustomerCategoriesTab'
+import CompaniesTab from '@/pages/tenant/settings/CompaniesTab'
+import AccountCategoriesTab from '@/pages/tenant/settings/AccountCategoriesTab'
 
 // Accounts pages
 import ChartOfAccountsPage from '@/pages/tenant/accounts/ChartOfAccountsPage'
@@ -139,7 +148,22 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'activities', element: <RecentActivitiesPage /> },
-          { path: 'settings', element: <SettingsPage /> },
+          { 
+            path: 'settings', 
+            element: <SettingsPage />,
+            children: [
+              { index: true, element: <Navigate to="companies" replace /> },
+              { path: 'companies', element: <CompaniesTab /> },
+              { path: 'modules', element: <ActiveModulesTab /> },
+              { path: 'fiscal', element: <FiscalPeriodsTab /> },
+              { path: 'tax', element: <TaxSettingsTab /> },
+              { path: 'account-categories', element: <AccountCategoriesTab /> },
+              { path: 'sequences', element: <SequencesTab /> },
+              { path: 'categories', element: <ProductCategoriesTab /> },
+              { path: 'customer-categories', element: <CustomerCategoriesTab /> },
+              { path: 'users', element: <UsersTab /> },
+            ]
+          },
           // Accounts module
           {
             path: 'accounts',

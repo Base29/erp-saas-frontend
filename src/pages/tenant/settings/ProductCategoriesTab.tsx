@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import SettingsHeaderActions from './SettingsHeaderActions'
 import { canWrite } from '@/utils/permissions'
 
 const schema = z.object({
@@ -137,16 +138,15 @@ export default function ProductCategoriesTab() {
       ),
     },
   ]
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center">
+      <SettingsHeaderActions>
         {canEdit && (
           <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1" /> Add Category
+            <Plus className="h-4 w-4 mr-2" /> Add Category
           </Button>
         )}
-      </div>
+      </SettingsHeaderActions>
 
       <DataTable
         columns={columns}

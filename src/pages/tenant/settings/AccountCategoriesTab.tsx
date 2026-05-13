@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import SettingsHeaderActions from './SettingsHeaderActions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -112,11 +113,11 @@ export default function AccountCategoriesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
+      <SettingsHeaderActions>
         <Button size="sm" onClick={() => openCreate(null)}>
-          <Plus className="h-4 w-4 mr-1" /> New Root Category
+          <Plus className="h-4 w-4 mr-2" /> New Root Category
         </Button>
-      </div>
+      </SettingsHeaderActions>
 
       <div className="border rounded-lg bg-card p-6">
         <div className="max-w-2xl">

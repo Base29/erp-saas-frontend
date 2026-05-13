@@ -18,13 +18,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { MoreHorizontal, Building2, Check, Globe, Mail, Phone, MapPin } from 'lucide-react'
+import { MoreHorizontal, Building2, Check, Globe, Mail, Phone, MapPin, Plus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import SettingsHeaderActions from './SettingsHeaderActions'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -187,11 +188,11 @@ export default function CompaniesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center">
+      <SettingsHeaderActions>
         <Button size="sm" onClick={() => { setEditingCompany(null); reset({ name: '', email: '', phone: '', website: '', address: '', registration_number: '', tax_number: '' }); setOpen(true) }}>
-          Add Company
+          <Plus className="h-4 w-4 mr-2" /> Add Company
         </Button>
-      </div>
+      </SettingsHeaderActions>
 
       <DataTable
         columns={columns}

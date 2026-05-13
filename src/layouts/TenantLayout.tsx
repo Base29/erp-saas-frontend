@@ -21,6 +21,12 @@ import {
   Building2,
   ChevronDown,
   Check,
+  Blocks,
+  Calendar,
+  Percent,
+  Network,
+  ListOrdered,
+  UserCog,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -106,7 +112,17 @@ const navSections = [
   {
     section: 'settings',
     moduleKey: null,
-    items: [{ to: '/settings', label: 'Settings', icon: Settings }],
+    items: [
+      { to: '/settings/companies', label: 'Companies', icon: Building2 },
+      { to: '/settings/modules', label: 'Active Modules', icon: Blocks },
+      { to: '/settings/fiscal', label: 'Fiscal Periods', icon: Calendar },
+      { to: '/settings/tax', label: 'Tax Settings', icon: Percent },
+      { to: '/settings/account-categories', label: 'Account Categories', icon: Network },
+      { to: '/settings/sequences', label: 'Sequences', icon: ListOrdered },
+      { to: '/settings/categories', label: 'Product Categories', icon: Package },
+      { to: '/settings/customer-categories', label: 'Customer Categories', icon: Users },
+      { to: '/settings/users', label: 'Users', icon: UserCog },
+    ],
     groupLabel: 'Settings',
     icon: Settings,
   },
