@@ -110,8 +110,7 @@ export default function CustomerCategoriesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Manage customer categories for CRM organization.</p>
+      <div className="flex justify-end items-center">
         {canEdit && (
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1" /> Add Category

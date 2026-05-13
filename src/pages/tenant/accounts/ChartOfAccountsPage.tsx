@@ -57,7 +57,7 @@ export default function ChartOfAccountsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounts', page, selectedCategoryId],
-    queryFn: () => fetchAccounts({ page, category_id: selectedCategoryId }).then((r) => r.data),
+    queryFn: () => fetchAccounts({ page, ...(selectedCategoryId ? { category_id: selectedCategoryId } : {}) }).then((r) => r.data),
   })
 
   const accounts = data?.data ?? []

@@ -41,8 +41,7 @@ export default function TaxSettingsTab() {
   }, [active, reset])
 
   return (
-    <div className="max-w-sm space-y-4">
-      <p className="text-sm text-muted-foreground">Configure the active tax rate for this tenant.</p>
+    <div className="max-w-sm space-y-4 pt-4">
       <form onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-4">
         <div className="space-y-1">
           <Label htmlFor="tax-name">Tax Name</Label>

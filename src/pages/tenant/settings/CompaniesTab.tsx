@@ -187,11 +187,7 @@ export default function CompaniesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-medium">Companies</h3>
-          <p className="text-sm text-muted-foreground">Manage multi-company entities within your tenant</p>
-        </div>
+      <div className="flex justify-end items-center">
         <Button size="sm" onClick={() => { setEditingCompany(null); reset({ name: '', email: '', phone: '', website: '', address: '', registration_number: '', tax_number: '' }); setOpen(true) }}>
           Add Company
         </Button>

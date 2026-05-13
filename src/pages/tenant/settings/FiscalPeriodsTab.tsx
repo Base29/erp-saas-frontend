@@ -90,8 +90,7 @@ export default function FiscalPeriodsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Manage accounting periods</p>
+      <div className="flex justify-end items-center">
         <Button size="sm" onClick={() => { reset(); setOpen(true) }}>Add Period</Button>
       </div>
 

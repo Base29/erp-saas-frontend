@@ -23,10 +23,7 @@ export default function ActiveModulesTab() {
   }, [])
 
   return (
-    <div className="space-y-3 max-w-2xl">
-      <p className="text-sm text-muted-foreground">
-        Modules are managed by your platform administrator. Contact them to activate or deactivate modules.
-      </p>
+    <div className="space-y-3 max-w-2xl pt-4">
 
       <div className="rounded-md border divide-y">
         {ALL_MODULES.map((mod) => {

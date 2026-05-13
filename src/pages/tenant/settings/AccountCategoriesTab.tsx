@@ -112,11 +112,7 @@ export default function AccountCategoriesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Account Categories</h3>
-          <p className="text-sm text-muted-foreground">Manage the 5-level chart of accounts hierarchy</p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button size="sm" onClick={() => openCreate(null)}>
           <Plus className="h-4 w-4 mr-1" /> New Root Category
         </Button>

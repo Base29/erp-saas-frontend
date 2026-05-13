@@ -132,8 +132,7 @@ export default function UsersTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Manage tenant users and roles</p>
+      <div className="flex justify-end items-center">
         <Button size="sm" onClick={openCreate}>Add User</Button>
       </div>
 

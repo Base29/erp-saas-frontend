@@ -111,8 +111,7 @@ export default function SequencesTab() {
   ]
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Configure document numbering sequences.</p>
+    <div className="space-y-3 pt-4">
       <DataTable
         columns={columns}
         data={sequences}
