@@ -135,7 +135,7 @@ export default function TenantDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 overflow-hidden">
+        <Card className="col-span-full lg:col-span-4 overflow-hidden">
           <CardHeader>
             <CardTitle>Financial Summary</CardTitle>
             <CardDescription>Comparison of revenue and expenses for the current month.</CardDescription>
@@ -182,7 +182,7 @@ export default function TenantDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="col-span-full lg:col-span-3">
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
             <CardDescription>Latest orders and transactions.</CardDescription>

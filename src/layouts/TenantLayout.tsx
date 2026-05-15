@@ -420,7 +420,7 @@ export default function TenantLayout() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium hidden sm:inline-block">{user?.name}</span>
               {role && (
-                <Badge variant="secondary" className="text-[10px] lg:text-xs">
+                <Badge variant="secondary" className="hidden md:inline-flex text-[10px] lg:text-xs">
                   {ROLE_LABELS[role]}
                 </Badge>
               )}
