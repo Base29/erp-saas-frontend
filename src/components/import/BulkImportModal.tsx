@@ -32,6 +32,7 @@ interface Props {
   title: string
   description?: string
   extraFields?: React.ReactNode
+  extraOptions?: Record<string, any>
   getExtraOptions?: () => Record<string, any>
   onSuccess?: (res: any) => void
 }
@@ -43,6 +44,7 @@ export default function BulkImportModal({
   title,
   description,
   extraFields,
+  extraOptions,
   getExtraOptions,
   onSuccess,
 }: Props) {
@@ -53,6 +55,40 @@ export default function BulkImportModal({
   const [validationResult, setValidationResult] = useState<ImportValidationResult | null>(null)
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const extraOptionsRef = React.useRef<Record<string, any> | undefined>(extraOptions)
+  extraOptionsRef.current = extraOptions
+
+  const getExtraOptionsRef = React.useRef(getExtraOptions)
+  getExtraOptionsRef.current = getExtraOptions
+
+  // Track the unique key of file + options last validated to prevent looping
+  const lastValidatedKeyRef = React.useRef<string>('')
+
+  const runValidation = React.useCallback(
+    async (selectedFile: File, optionsKey: string) => {
+      if (lastValidatedKeyRef.current === optionsKey) {
+        return
+      }
+      lastValidatedKeyRef.current = optionsKey
+
+      setIsValidating(true)
+      try {
+        const extra = extraOptionsRef.current ?? (getExtraOptionsRef.current ? getExtraOptionsRef.current() : {})
+        const res = await validateImportFile(type, selectedFile, extra)
+        setValidationResult(res)
+        if (res.errors.length === 0) {
+          toast.success(`Validated ${res.total_rows} rows successfully`, { id: 'import-validation' })
+        } else {
+          toast.error(`Validation found ${res.errors.length} error${res.errors.length > 1 ? 's' : ''}`, { id: 'import-validation' })
+        }
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || err?.message || 'Failed to validate file', { id: 'import-validation' })
+      } finally {
+        setIsValidating(false)
+      }
+    },
+    [type]
+  )
 
   // Reset states when closed
   React.useEffect(() => {
@@ -61,31 +97,29 @@ export default function BulkImportModal({
       setValidationResult(null)
       setIsValidating(false)
       setIsCommitting(false)
+      lastValidatedKeyRef.current = ''
     }
   }, [open])
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Re-run validation ONLY when extraOptions actually changes while a file is already loaded
+  const extraOptionsSerialized = JSON.stringify(extraOptions ?? {})
+  React.useEffect(() => {
+    if (!open || !file) return
+    const key = `${file.name}_${file.size}_${file.lastModified}_${extraOptionsSerialized}`
+    if (key !== lastValidatedKeyRef.current) {
+      runValidation(file, key)
+    }
+  }, [extraOptionsSerialized, file, open, runValidation])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0]
     if (!selected) return
 
     setFile(selected)
     setValidationResult(null)
-    setIsValidating(true)
-
-    try {
-      const extra = getExtraOptions ? getExtraOptions() : {}
-      const res = await validateImportFile(type, selected, extra)
-      setValidationResult(res)
-      if (res.errors.length === 0) {
-        toast.success(`Validated ${res.total_rows} rows successfully`)
-      } else {
-        toast.error(`Validation found ${res.errors.length} errors`)
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to validate file')
-    } finally {
-      setIsValidating(false)
-    }
+    const extra = extraOptionsRef.current ?? (getExtraOptionsRef.current ? getExtraOptionsRef.current() : {})
+    const key = `${selected.name}_${selected.size}_${selected.lastModified}_${JSON.stringify(extra)}`
+    runValidation(selected, key)
   }
 
   const handleDownloadTemplate = async () => {
@@ -105,7 +139,7 @@ export default function BulkImportModal({
 
     setIsCommitting(true)
     try {
-      const extra = getExtraOptions ? getExtraOptions() : {}
+      const extra = extraOptions ?? (getExtraOptions ? getExtraOptions() : {})
       const res = await commitImportFile(type, file, extra)
       toast.success(res.message || 'Data imported successfully')
       onOpenChange(false)

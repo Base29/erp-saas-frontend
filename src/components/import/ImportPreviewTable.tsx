@@ -121,11 +121,14 @@ export default function ImportPreviewTable({ headers, rows, errors, warnings }: 
           <div className="font-semibold text-destructive flex items-center gap-1">
             <AlertCircle className="h-3.5 w-3.5" /> Please fix the following errors before proceeding:
           </div>
-          {errors.map((err, i) => (
-            <div key={i} className="text-destructive/90 pl-4">
-              • <span className="font-mono font-semibold">Row {err.row}</span> ({err.field}): {err.message}
-            </div>
-          ))}
+          {errors.map((err, i) => {
+            const isRowNumeric = !isNaN(Number(err.row))
+            return (
+              <div key={i} className="text-destructive/90 pl-4">
+                • {isRowNumeric ? <span className="font-mono font-semibold">Row {err.row}</span> : <span className="font-semibold">[{err.row}]</span>} ({err.field}): {err.message}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

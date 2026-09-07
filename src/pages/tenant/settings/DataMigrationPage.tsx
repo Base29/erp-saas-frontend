@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,13 @@ export default function DataMigrationPage() {
     const cat = (a.account_category?.name ?? '').toLowerCase()
     return cat.includes('bank') || cat.includes('cash') || a.account_code.startsWith('111')
   })
+
+  // Pre-select first bank account once loaded
+  useEffect(() => {
+    if (!selectedBankAccountId && bankAccounts.length > 0) {
+      setSelectedBankAccountId(bankAccounts[0].id)
+    }
+  }, [bankAccounts, selectedBankAccountId])
 
   const handleDownload = async (type: string) => {
     try {
@@ -251,6 +258,7 @@ export default function DataMigrationPage() {
             </Select>
           </div>
         }
+        extraOptions={{ bank_account_id: selectedBankAccountId }}
         getExtraOptions={() => ({ bank_account_id: selectedBankAccountId })}
       />
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchBankStatements, fetchAccounts } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,13 @@ export default function BankReconciliationPage() {
     const cat = (a.account_category?.name ?? '').toLowerCase()
     return cat.includes('bank') || cat.includes('cash') || a.account_code.startsWith('111')
   })
+
+  // Pre-select first bank account once loaded
+  useEffect(() => {
+    if (!selectedBankAccountId && bankAccounts.length > 0) {
+      setSelectedBankAccountId(bankAccounts[0].id)
+    }
+  }, [bankAccounts, selectedBankAccountId])
 
   return (
     <div className="p-6 space-y-6">
@@ -115,6 +122,7 @@ export default function BankReconciliationPage() {
             </Select>
           </div>
         }
+        extraOptions={{ bank_account_id: selectedBankAccountId }}
         getExtraOptions={() => ({ bank_account_id: selectedBankAccountId })}
         onSuccess={(res) => {
           qc.invalidateQueries({ queryKey: ['bank-statements'] })
