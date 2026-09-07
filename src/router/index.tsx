@@ -28,6 +28,7 @@ import ProductCategoriesTab from '@/pages/tenant/settings/ProductCategoriesTab'
 import CustomerCategoriesTab from '@/pages/tenant/settings/CustomerCategoriesTab'
 import CompaniesTab from '@/pages/tenant/settings/CompaniesTab'
 import AccountCategoriesTab from '@/pages/tenant/settings/AccountCategoriesTab'
+import DataMigrationPage from '@/pages/tenant/settings/DataMigrationPage'
 
 // Accounts pages
 import ChartOfAccountsPage from '@/pages/tenant/accounts/ChartOfAccountsPage'
@@ -164,6 +165,8 @@ export const router = createBrowserRouter([
               { path: 'users', element: <UsersTab /> },
             ]
           },
+          { path: 'settings/data-migration', element: <DataMigrationPage /> },
+          { path: 'data-migration', element: <DataMigrationPage /> },
           // Accounts module
           {
             path: 'accounts',

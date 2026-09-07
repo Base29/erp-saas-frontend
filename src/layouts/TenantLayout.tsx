@@ -27,6 +27,7 @@ import {
   Network,
   ListOrdered,
   UserCog,
+  UploadCloud,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -122,6 +123,7 @@ const navSections = [
       { to: '/settings/categories', label: 'Product Categories', icon: Package },
       { to: '/settings/customer-categories', label: 'Customer Categories', icon: Users },
       { to: '/settings/users', label: 'Users', icon: UserCog },
+      { to: '/settings/data-migration', label: 'Data Migration', icon: UploadCloud },
     ],
     groupLabel: 'Settings',
     icon: Settings,

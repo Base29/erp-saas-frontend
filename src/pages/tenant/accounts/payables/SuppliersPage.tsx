@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Search, AlertCircle } from 'lucide-react'
+import { Plus, Search, AlertCircle, Upload } from 'lucide-react'
+import BulkImportModal from '@/components/import/BulkImportModal'
+import { useQueryClient } from '@tanstack/react-query'
 import { fetchSuppliers, type Supplier } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
@@ -14,8 +16,10 @@ import type { ColumnDef } from '@tanstack/react-table'
 export default function SuppliersPage() {
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
+  const qc = useQueryClient()
   
   const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -112,10 +116,16 @@ export default function SuppliersPage() {
           <p className="text-muted-foreground">Manage your vendors and their details.</p>
         </div>
         {canEdit && (
-          <Button className="gap-2" onClick={handleAdd}>
-            <Plus size={16} />
-            Add Supplier
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+              <Upload size={16} />
+              Import Suppliers
+            </Button>
+            <Button className="gap-2" onClick={handleAdd}>
+              <Plus size={16} />
+              Add Supplier
+            </Button>
+          </div>
         )}
       </div>
 
@@ -151,6 +161,16 @@ export default function SuppliersPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         supplier={selectedSupplier ?? undefined}
+      />
+
+      <BulkImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        type="suppliers"
+        title="Import Suppliers"
+        description="Upload CSV containing supplier master records, contact details, and payable accounts."
+        getExtraOptions={() => ({ default_type: 'vendor' })}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['suppliers'] })}
       />
     </div>
   )

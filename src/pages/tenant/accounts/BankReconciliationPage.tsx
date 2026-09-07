@@ -1,15 +1,34 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchBankStatements } from '@/api/tenant'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchBankStatements, fetchAccounts } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
-import { Plus, RefreshCcw, Landmark } from 'lucide-react'
+import { Plus, RefreshCcw, Landmark, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import BulkImportModal from '@/components/import/BulkImportModal'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function BankReconciliationPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
+  const [importOpen, setImportOpen] = useState(false)
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('')
+
   const { data: statements, isLoading } = useQuery({
     queryKey: ['bank-statements'],
     queryFn: () => fetchBankStatements(),
+  })
+
+  // Load bank accounts for CSV upload
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts', { is_active: 1 }],
+    queryFn: () => fetchAccounts({ is_active: 1, per_page: 200 }).then((r) => r.data),
+  })
+
+  const bankAccounts = (accountsData?.data ?? []).filter((a) => {
+    const cat = (a.account_category?.name ?? '').toLowerCase()
+    return cat.includes('bank') || cat.includes('cash') || a.account_code.startsWith('111')
   })
 
   return (
@@ -19,10 +38,16 @@ export default function BankReconciliationPage() {
           <h1 className="text-2xl font-bold tracking-tight">Bank Reconciliation</h1>
           <p className="text-muted-foreground">Match your bank statements with internal accounting records.</p>
         </div>
-        <Button className="gap-2" onClick={() => navigate('/accounts/bank-reconciliation/new')}>
-          <Plus size={16} />
-          Import Statement
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload size={16} />
+            Upload Statement CSV
+          </Button>
+          <Button className="gap-2" onClick={() => navigate('/accounts/bank-reconciliation/new')}>
+            <Plus size={16} />
+            New Statement
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -30,7 +55,11 @@ export default function BankReconciliationPage() {
           <div className="col-span-full text-center py-12">Loading statements...</div>
         ) : statements?.data?.data?.length ? (
           statements.data.data.map((stmt) => (
-            <div key={stmt.id} className="border rounded-xl p-5 bg-card hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-primary">
+            <div
+              key={stmt.id}
+              onClick={() => navigate(`/accounts/bank-reconciliation/${stmt.id}`)}
+              className="border rounded-xl p-5 bg-card hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-primary"
+            >
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg text-primary">
                   <Landmark size={20} />
@@ -55,10 +84,45 @@ export default function BankReconciliationPage() {
           <div className="col-span-full flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-2xl bg-muted/30">
             <RefreshCcw size={48} className="text-muted-foreground mb-4 opacity-20" />
             <p className="text-lg font-medium text-muted-foreground">No reconciliation statements found</p>
-            <Button variant="outline" className="mt-4">Start your first reconciliation</Button>
+            <div className="flex gap-3 mt-4">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>Upload Statement CSV</Button>
+              <Button onClick={() => navigate('/accounts/bank-reconciliation/new')}>Create Statement Manually</Button>
+            </div>
           </div>
         )}
       </div>
+
+      <BulkImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        type="bank_statements"
+        title="Import Bank Statement CSV"
+        description="Select the destination bank account and upload your bank statement CSV file."
+        extraFields={
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Target Bank Account *</Label>
+            <Select value={selectedBankAccountId} onValueChange={setSelectedBankAccountId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Select bank account…" />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.account_code} - {a.account_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        getExtraOptions={() => ({ bank_account_id: selectedBankAccountId })}
+        onSuccess={(res) => {
+          qc.invalidateQueries({ queryKey: ['bank-statements'] })
+          if (res?.bank_statement_id) {
+            navigate(`/accounts/bank-reconciliation/${res.bank_statement_id}`)
+          }
+        }}
+      />
     </div>
   )
 }

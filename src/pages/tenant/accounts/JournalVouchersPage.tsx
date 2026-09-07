@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Eye, Search, X } from 'lucide-react'
+import { Plus, Eye, Search, X, Upload } from 'lucide-react'
+import BulkImportModal from '@/components/import/BulkImportModal'
 import { fetchJournalVouchers, type JournalVoucher } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
@@ -45,9 +46,11 @@ const TABS: { id: VoucherTab; label: string }[] = [
 
 export default function JournalVouchersPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
+  const [importOpen, setImportOpen] = useState(false)
 
   const [activeTab, setActiveTab]           = useState<VoucherTab>('all')
   const [page, setPage]                     = useState(1)
@@ -163,10 +166,15 @@ export default function JournalVouchersPage() {
           <p className="text-sm text-muted-foreground">Double-entry accounting records</p>
         </div>
         {canEdit && (
-          <Button size="sm" onClick={handleNewVoucher}>
-            <Plus className="h-4 w-4 mr-1" />
-            {activeTab === 'all' ? 'New Voucher' : `New ${TABS.find((t) => t.id === activeTab)?.label.slice(0, -1)}`}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-1" /> Import Journals
+            </Button>
+            <Button size="sm" onClick={handleNewVoucher}>
+              <Plus className="h-4 w-4 mr-1" />
+              {activeTab === 'all' ? 'New Voucher' : `New ${TABS.find((t) => t.id === activeTab)?.label.slice(0, -1)}`}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -277,6 +285,15 @@ export default function JournalVouchersPage() {
         isLoading={isLoading}
         pagination={pagination}
         onPageChange={setPage}
+      />
+
+      <BulkImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        type="manual_journal"
+        title="Import Manual Journals"
+        description="Upload CSV containing balanced journal vouchers. Total debits and credits must equal zero."
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['journal-vouchers'] })}
       />
     </div>
   )

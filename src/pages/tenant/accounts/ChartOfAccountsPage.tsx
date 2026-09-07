@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Upload } from 'lucide-react'
+import BulkImportModal from '@/components/import/BulkImportModal'
 import {
   fetchAccounts,
   fetchAccountCategories,
@@ -51,6 +52,7 @@ export default function ChartOfAccountsPage() {
   const canEdit = canWrite(role, 'accounts')
 
   const [open, setOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [page, setPage] = useState(1)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -173,9 +175,14 @@ export default function ChartOfAccountsPage() {
             </SelectContent>
           </Select>
           {canEdit && (
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-1" /> New Account
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-1" /> Import Accounts
+              </Button>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="h-4 w-4 mr-1" /> New Account
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -244,6 +251,15 @@ export default function ChartOfAccountsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <BulkImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        type="accounts"
+        title="Import Chart of Accounts"
+        description="Upload CSV to import ledger account codes, categories, tax settings, and opening balances."
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['accounts'] })}
+      />
     </div>
   )
 }

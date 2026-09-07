@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Upload } from 'lucide-react'
+import BulkImportModal from '@/components/import/BulkImportModal'
 import {
   fetchCustomersFull, fetchCustomerCategories, fetchCustomerGroups, fetchUsers,
   createCustomer, updateCustomer,
@@ -41,6 +42,7 @@ export default function CustomersPage() {
 
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<CustomerFull | null>(null)
 
   const { data, isLoading } = useQuery({
@@ -118,7 +120,16 @@ export default function CustomersPage() {
           <h1 className="text-xl font-semibold">Customers</h1>
           <p className="text-sm text-muted-foreground">Manage customer master data</p>
         </div>
-        {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Customer</Button>}
+        {canEdit && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-1" /> Import Customers
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1" /> New Customer
+            </Button>
+          </div>
+        )}
       </div>
 
       <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
@@ -206,6 +217,16 @@ export default function CustomersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <BulkImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        type="customers"
+        title="Import Customers"
+        description="Upload CSV containing customer master data, contact details, payment terms, and credit limits."
+        getExtraOptions={() => ({ default_type: 'customer' })}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['customers'] })}
+      />
     </div>
   )
 }
