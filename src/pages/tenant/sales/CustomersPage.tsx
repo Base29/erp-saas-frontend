@@ -123,7 +123,7 @@ export default function CustomersPage() {
         {canEdit && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-1" /> Import Customers
+              <Upload className="h-4 w-4 mr-1" /> Bulk Upload Customers
             </Button>
             <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4 mr-1" /> New Customer

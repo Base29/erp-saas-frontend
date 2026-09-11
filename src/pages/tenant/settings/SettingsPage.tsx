@@ -11,6 +11,7 @@ import {
   Users, 
   UserCog,
   Settings2,
+  UploadCloud,
   LucideIcon
 } from 'lucide-react'
 
@@ -41,6 +42,7 @@ const CATEGORIES: readonly Category[] = [
       { id: 'tax', label: 'Tax Settings', icon: Percent, description: 'Configure tax rates and rules' },
       { id: 'account-categories', label: 'Account Categories', icon: Network, description: 'Manage chart of accounts hierarchy' },
       { id: 'sequences', label: 'Sequences', icon: ListOrdered, description: 'Document numbering patterns' },
+      { id: 'data-migration', label: 'Bulk Upload & Migration', icon: UploadCloud, description: 'Bulk import chart of accounts, bank statements, and transactions' },
     ]
   },
   {

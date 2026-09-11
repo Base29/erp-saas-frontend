@@ -112,7 +112,7 @@ export default function DataMigrationPage() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Data Migration Hub</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bulk Upload & Data Migration Hub</h1>
           <Badge variant="outline" className="text-xs">Bulk Upload</Badge>
         </div>
         <p className="text-sm text-muted-foreground mt-1">

@@ -16,7 +16,8 @@ import {
   AlertCircle,
   FileText,
   ArrowRight,
-  Building2
+  Building2,
+  UploadCloud
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { Button } from '@/components/ui/button'
@@ -57,11 +58,19 @@ export default function TenantDashboardPage() {
 
   return (
     <div className="p-6 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.name}. Here's what's happening with your business today.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.name}. Here's what's happening with your business today.
+          </p>
+        </div>
+        <Link to="/data-migration">
+          <Button variant="outline" className="gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-medium">
+            <UploadCloud className="h-4 w-4" />
+            <span>Bulk Upload Data</span>
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

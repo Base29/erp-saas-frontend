@@ -48,7 +48,7 @@ export default function BankReconciliationPage() {
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload size={16} />
-            Upload Statement CSV
+            Bulk Upload Statement CSV
           </Button>
           <Button className="gap-2" onClick={() => navigate('/accounts/bank-reconciliation/new')}>
             <Plus size={16} />
@@ -92,7 +92,7 @@ export default function BankReconciliationPage() {
             <RefreshCcw size={48} className="text-muted-foreground mb-4 opacity-20" />
             <p className="text-lg font-medium text-muted-foreground">No reconciliation statements found</p>
             <div className="flex gap-3 mt-4">
-              <Button variant="outline" onClick={() => setImportOpen(true)}>Upload Statement CSV</Button>
+              <Button variant="outline" onClick={() => setImportOpen(true)}>Bulk Upload Statement CSV</Button>
               <Button onClick={() => navigate('/accounts/bank-reconciliation/new')}>Create Statement Manually</Button>
             </div>
           </div>

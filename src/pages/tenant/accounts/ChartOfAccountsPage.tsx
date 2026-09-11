@@ -177,7 +177,7 @@ export default function ChartOfAccountsPage() {
           {canEdit && (
             <>
               <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-                <Upload className="h-4 w-4 mr-1" /> Import Accounts
+                <Upload className="h-4 w-4 mr-1" /> Bulk Upload Accounts
               </Button>
               <Button size="sm" onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-1" /> New Account

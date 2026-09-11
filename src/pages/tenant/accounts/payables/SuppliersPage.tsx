@@ -119,7 +119,7 @@ export default function SuppliersPage() {
           <div className="flex gap-2">
             <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
               <Upload size={16} />
-              Import Suppliers
+              Bulk Upload Suppliers
             </Button>
             <Button className="gap-2" onClick={handleAdd}>
               <Plus size={16} />

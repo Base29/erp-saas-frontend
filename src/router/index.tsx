@@ -163,6 +163,7 @@ export const router = createBrowserRouter([
               { path: 'categories', element: <ProductCategoriesTab /> },
               { path: 'customer-categories', element: <CustomerCategoriesTab /> },
               { path: 'users', element: <UsersTab /> },
+              { path: 'data-migration', element: <DataMigrationPage /> },
             ]
           },
           { path: 'settings/data-migration', element: <DataMigrationPage /> },
@@ -196,6 +197,9 @@ export const router = createBrowserRouter([
               // Budgets
               { path: 'budgets', element: <BudgetsPage /> },
               { path: 'budgets/:id/report', element: <BudgetReportPage /> },
+
+              // Bulk Upload / Migration
+              { path: 'data-migration', element: <DataMigrationPage /> },
 
               // Report sub-routes
               { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },

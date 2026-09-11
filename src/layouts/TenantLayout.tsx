@@ -75,6 +75,7 @@ const navSections = [
       { to: '/accounts/reports/cash-flow', label: 'Cash Flow', icon: BookOpen },
       { to: '/accounts/reports/equity-changes', label: 'Equity Changes', icon: BookOpen },
       { to: '/accounts/reports/customer-statement', label: 'Customer Statement', icon: BookOpen },
+      { to: '/accounts/data-migration', label: 'Bulk Upload Data', icon: UploadCloud },
     ],
     groupLabel: 'Accounts',
     icon: BookOpen,
@@ -123,7 +124,7 @@ const navSections = [
       { to: '/settings/categories', label: 'Product Categories', icon: Package },
       { to: '/settings/customer-categories', label: 'Customer Categories', icon: Users },
       { to: '/settings/users', label: 'Users', icon: UserCog },
-      { to: '/settings/data-migration', label: 'Data Migration', icon: UploadCloud },
+      { to: '/settings/data-migration', label: 'Bulk Upload & Migration', icon: UploadCloud },
     ],
     groupLabel: 'Settings',
     icon: Settings,
@@ -414,6 +415,16 @@ export default function TenantLayout() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-8 hidden sm:inline-flex border-primary/30 hover:bg-primary/10 hover:text-primary transition-colors"
+              onClick={() => navigate('/data-migration')}
+            >
+              <UploadCloud className="h-3.5 w-3.5 text-primary" />
+              <span>Bulk Upload</span>
+            </Button>
           </div>
 
           <div className="flex items-center gap-2 lg:gap-3">

@@ -168,7 +168,7 @@ export default function JournalVouchersPage() {
         {canEdit && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-1" /> Import Journals
+              <Upload className="h-4 w-4 mr-1" /> Bulk Upload Journals
             </Button>
             <Button size="sm" onClick={handleNewVoucher}>
               <Plus className="h-4 w-4 mr-1" />
