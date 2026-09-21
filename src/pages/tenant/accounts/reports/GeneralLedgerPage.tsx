@@ -45,7 +45,7 @@ export default function GeneralLedgerPage() {
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts-all'],
-    queryFn: () => fetchAccounts({ per_page: 500 }).then((r) => r.data.data),
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data.data),
   })
 
   const selectedAccount = accounts.find((a) => a.id === params.account_id)
