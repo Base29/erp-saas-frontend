@@ -1,0 +1,499 @@
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  X,
+  Sparkles,
+  Send,
+  Paperclip,
+  Plus,
+  History,
+  FileText,
+  PieChart,
+  Package,
+  ShoppingCart,
+  Trash2,
+  Loader2,
+  User as UserIcon,
+  Compass,
+  ArrowRight,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useGenieStore } from '@/store/genieStore'
+import { GenieActionCard } from './GenieActionCard'
+import { GenieThinkingAccordion } from './GenieThinkingAccordion'
+import { GenieMarkdown } from './GenieMarkdown'
+import { GenieReasoningState } from './GenieReasoningState'
+import { useNavigate } from 'react-router-dom'
+
+export const GenieAssistantDrawer: React.FC = () => {
+  const {
+    isOpen,
+    setIsOpen,
+    messages,
+    isLoading,
+    isUploading,
+    status,
+    conversations,
+    currentAttachments,
+    sendMessage,
+    uploadAttachment,
+    removeAttachment,
+    startNewConversation,
+    selectConversation,
+    deleteConversation,
+    loadConversations,
+  } = useGenieStore()
+
+  const [input, setInput] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isOpen) {
+      loadConversations()
+    }
+  }, [isOpen, loadConversations])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isLoading])
+
+  const handleSend = () => {
+    if (!input.trim() && currentAttachments.length === 0) return
+    sendMessage(input)
+    setInput('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      uploadAttachment(file)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const getQuickIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'FileText':
+        return <FileText className="h-3.5 w-3.5 text-blue-500" />
+      case 'PieChart':
+        return <PieChart className="h-3.5 w-3.5 text-emerald-500" />
+      case 'Package':
+        return <Package className="h-3.5 w-3.5 text-amber-500" />
+      case 'ShoppingCart':
+        return <ShoppingCart className="h-3.5 w-3.5 text-indigo-500" />
+      default:
+        return <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border bg-background shadow-2xl transition-all duration-300 sm:max-w-xl md:max-w-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/20 backdrop-blur-xs">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/20">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-sm text-foreground">Genie</h3>
+              <Badge variant="outline" className="h-5 gap-1.5 border-border/80 bg-muted/40 px-2 text-[10px] font-normal text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                <span>AI Assistant</span>
+              </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Genie Cloud Native Assistant</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Quick Action Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-purple-600 hover:bg-purple-50/50 dark:hover:text-purple-400 dark:hover:bg-purple-950/30"
+            onClick={() => sendMessage("Show me the quick action menu")}
+            disabled={isLoading}
+            title="Open Quick Action Menu"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+            <span className="hidden sm:inline text-[11px] font-medium">Quick Actions</span>
+          </Button>
+
+          {/* History dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <History className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs">Past Conversations</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {conversations.length === 0 ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">No past chats yet.</div>
+              ) : (
+                conversations.map((c) => (
+                  <DropdownMenuItem
+                    key={c.id}
+                    onClick={() => selectConversation(c.id)}
+                    className="flex items-center justify-between text-xs cursor-pointer"
+                  >
+                    <span className="truncate max-w-[170px]">{c.title}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteConversation(c.id)
+                      }}
+                      className="text-muted-foreground hover:text-destructive p-0.5"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* New Chat Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={startNewConversation}
+            title="New Conversation"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+
+          {/* Close Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={() => setIsOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Message Stream */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400 mb-4 shadow-inner">
+              <Sparkles className="h-7 w-7" />
+            </div>
+            <h4 className="text-base font-semibold text-foreground">Welcome to Genie Cloud</h4>
+            <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+              I am Genie, your conversational assistant for Genie Cloud. Ask me anything about accounts, sales, inventory, or let me draft actions for you.
+            </p>
+
+            {/* Quick Action Prompts */}
+            <div className="mt-6 w-full max-w-md space-y-2 text-left">
+              <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider px-1">
+                Ask Genie to...
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {(status?.quick_prompts || []).map((qp, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => sendMessage(qp.prompt)}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-card/60 p-2.5 text-xs text-foreground transition-all hover:border-purple-300 hover:bg-purple-50/40 hover:shadow-xs dark:hover:bg-purple-950/20 text-left"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60">
+                      {getQuickIcon(qp.icon)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-[12px]">{qp.label}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{qp.prompt}</div>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground/60" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex gap-3 ${
+                msg.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {msg.role === 'assistant' && (
+                <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xs text-xs mt-0.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+              )}
+
+              <div className={`flex flex-col ${msg.role === 'user' ? 'max-w-[85%] items-end' : 'w-full max-w-[94%] items-start'}`}>
+                {/* Attachments preview on message if any */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className="mb-1.5 flex flex-wrap gap-1.5">
+                    {msg.attachments.map((att, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-[10px] text-muted-foreground"
+                      >
+                        <FileText className="h-3 w-3 text-purple-600" />
+                        <span className="font-mono">{att.file_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reasoning Accordion */}
+                {msg.reasoning_content && (
+                  <GenieThinkingAccordion reasoning={msg.reasoning_content} />
+                )}
+
+                {/* Main Content Bubble */}
+                {msg.content && (
+                  <div
+                    className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-tr-xs'
+                        : 'w-full bg-muted/70 text-foreground border border-border/50 rounded-tl-xs shadow-xs'
+                    }`}
+                  >
+                    {msg.role === 'user' ? (
+                      <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                    ) : (
+                      <GenieMarkdown content={msg.content} />
+                    )}
+                  </div>
+                )}
+
+                {/* Navigation Link Chip if suggested by Genie */}
+                {msg.metadata?.navigation && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate(msg.metadata!.navigation!.path)
+                      setIsOpen(false)
+                    }}
+                    className="mt-2 flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300"
+                  >
+                    <Compass className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Go to {msg.metadata.navigation.label}</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+
+                {/* Quick Action Chips in Chat */}
+                {(msg.metadata?.quick_actions || (msg.role === 'assistant' && msg.content?.includes('Genie Quick Actions Menu'))) && (
+                  <div className="w-full mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(msg.metadata?.quick_actions || status?.quick_prompts || []).map((qa, qidx) => (
+                      <button
+                        key={qidx}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => sendMessage(qa.prompt)}
+                        className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-card/80 p-2.5 text-left transition hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-xs dark:hover:bg-purple-950/20 group"
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/70 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40">
+                          {getQuickIcon(qa.icon)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-[12px] text-foreground group-hover:text-purple-700 dark:group-hover:text-purple-300">
+                            {qa.label}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {qa.prompt}
+                          </div>
+                        </div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-purple-600 transition shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* HITL Action Cards */}
+                {msg.actions && msg.actions.length > 0 && (
+                  <div className="w-full mt-2">
+                    {msg.actions.map((act) => (
+                      <GenieActionCard key={act.id} action={act} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {msg.role === 'user' && (
+                <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-lg bg-primary/20 text-primary text-xs mt-0.5">
+                  <UserIcon className="h-3.5 w-3.5" />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+
+        {/* Live Behind-the-Scenes Reasoning State */}
+        {isLoading && (
+          <div className="flex items-start gap-3 w-full animate-in fade-in-50 duration-300">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xs mt-1">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+            </div>
+            <GenieReasoningState
+              userPrompt={messages.filter((m) => m.role === 'user').slice(-1)[0]?.content || ''}
+            />
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-border p-3 bg-card/60 backdrop-blur-xs">
+        {/* Attachment chips */}
+        {currentAttachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {currentAttachments.map((att, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs text-purple-900 dark:border-purple-900/50 dark:bg-purple-950/40 dark:text-purple-200"
+              >
+                <FileText className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                <span className="font-mono text-[11px] truncate max-w-[140px]">
+                  {att.file_name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(idx)}
+                  className="text-purple-500 hover:text-purple-800 dark:hover:text-purple-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Input box */}
+        <div className="relative flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 shadow-xs focus-within:ring-1 focus-within:ring-ring">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".csv,.json,.txt,.pdf"
+            className="hidden"
+          />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || isUploading}
+            title="Attach file (CSV, JSON, PDF)"
+          >
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Quick Actions Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-purple-600 hover:bg-purple-50/50 dark:hover:text-purple-400 dark:hover:bg-purple-950/30"
+                disabled={isLoading}
+                title="Quick Action Menu"
+              >
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" className="w-72 p-1.5 shadow-xl">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs px-2 py-1">
+                <span className="font-semibold text-foreground">Genie Quick Actions</span>
+                <span className="text-[10px] text-muted-foreground font-normal">Instant Prompts</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {(status?.quick_prompts || []).map((qp, idx) => (
+                <DropdownMenuItem
+                  key={idx}
+                  onClick={() => sendMessage(qp.prompt)}
+                  className="flex items-center gap-2.5 p-2 text-xs cursor-pointer rounded-lg hover:bg-purple-50/60 dark:hover:bg-purple-950/30"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/70">
+                    {getQuickIcon(qp.icon)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-[11px] text-foreground">{qp.label}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{qp.prompt}</div>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => sendMessage("Show me the quick action menu")}
+                className="text-[11px] text-purple-600 dark:text-purple-400 justify-center font-medium cursor-pointer py-1.5 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+              >
+                Post Menu in Chat Stream
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask Genie anything, query data, or propose an action..."
+            rows={1}
+            disabled={isLoading}
+            className="min-h-[36px] max-h-32 resize-none border-0 p-1.5 text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+
+          <Button
+            type="button"
+            size="icon"
+            disabled={isLoading || (!input.trim() && currentAttachments.length === 0)}
+            onClick={handleSend}
+            className="h-8 w-8 shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-xs"
+          >
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+        <div className="mt-1.5 text-center text-[10px] text-muted-foreground">
+          Genie AI Assistant with Human-In-The-Loop action approvals. Press <kbd className="font-mono">Enter</kbd> to send.
+        </div>
+      </div>
+    </div>
+  )
+}
