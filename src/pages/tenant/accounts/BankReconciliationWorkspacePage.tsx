@@ -222,7 +222,7 @@ export default function BankReconciliationWorkspacePage() {
                             : "border-red-600/40 text-red-700 bg-red-50/60 dark:bg-red-950/30"
                         )}
                       >
-                        {line.amount >= 0 ? 'DR' : 'CR'}
+                        {line.amount >= 0 ? 'CR' : 'DR'}
                       </Badge>
                       <span className={cn("font-mono font-bold", line.amount < 0 ? "text-red-600" : "text-green-600")}>
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(line.amount))}
@@ -391,13 +391,13 @@ export default function BankReconciliationWorkspacePage() {
                           : "border-red-600/40 text-red-700 bg-red-50/60 dark:bg-red-950/30"
                       )}
                     >
-                      {selectedLine.amount >= 0 ? 'DR' : 'CR'}
+                      {selectedLine.amount >= 0 ? 'CR' : 'DR'}
                     </Badge>
                     <span className={cn('font-mono font-bold', selectedLine.amount < 0 ? 'text-red-600' : 'text-green-600')}>
                       {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(selectedLine.amount))}
                     </span>
                     <span className="text-[10px] font-normal ml-1 text-muted-foreground">
-                      ({selectedLine.amount >= 0 ? 'Debit / Deposit — Asset Inflow' : 'Credit / Disbursement — Asset Outflow'})
+                      ({selectedLine.amount >= 0 ? 'Credit / Deposit — Asset Inflow' : 'Debit / Disbursement — Asset Outflow'})
                     </span>
                   </div>
                 </div>
