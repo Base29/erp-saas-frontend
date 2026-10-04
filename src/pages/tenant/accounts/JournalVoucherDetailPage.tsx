@@ -7,6 +7,7 @@ import {
   approveJournalVoucher,
   rejectJournalVoucher,
   postJournalVoucher,
+  VOUCHER_TYPE_LABELS,
 } from '@/api/tenant'
 import ApprovalActions from '@/components/ApprovalActions'
 import { Button } from '@/components/ui/button'
@@ -84,8 +85,8 @@ export default function JournalVoucherDetailPage() {
           </Button>
           <div className="flex-1">
             <h1 className="text-xl font-semibold">{jv.voucher_number}</h1>
-            <p className="text-sm text-muted-foreground capitalize">
-              {jv.voucher_type.replace(/_/g, ' ')} · {formatDate(jv.voucher_date)}
+            <p className="text-sm text-muted-foreground">
+              {VOUCHER_TYPE_LABELS[jv.voucher_type] ?? jv.voucher_type.replace(/_/g, ' ')} · {formatDate(jv.voucher_date)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -142,7 +143,7 @@ export default function JournalVoucherDetailPage() {
           <div className="hidden print:block mb-6 border-b pb-4">
             <h2 className="text-xl font-bold">Journal Voucher — {jv.voucher_number}</h2>
             <div className="flex gap-8 mt-2 text-sm text-gray-600">
-              <span>Type: <strong className="text-black capitalize">{jv.voucher_type.replace(/_/g, ' ')}</strong></span>
+              <span>Type: <strong className="text-black">{VOUCHER_TYPE_LABELS[jv.voucher_type] ?? jv.voucher_type.replace(/_/g, ' ')}</strong></span>
               <span>Date: <strong className="text-black">{formatDate(jv.voucher_date)}</strong></span>
               <span>Status: <strong className="text-black capitalize">{jv.approval_status.replace(/_/g, ' ')} / {jv.posting_status}</strong></span>
             </div>

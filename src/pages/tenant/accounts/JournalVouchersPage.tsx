@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Eye, Search, X, Upload } from 'lucide-react'
 import BulkImportModal from '@/components/import/BulkImportModal'
-import { fetchJournalVouchers, type JournalVoucher } from '@/api/tenant'
+import { fetchJournalVouchers, type JournalVoucher, VOUCHER_TYPE_LABELS } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,7 +41,7 @@ const TABS: { id: VoucherTab; label: string }[] = [
   { id: 'cash_payment', label: 'Cash Payments' },
   { id: 'bank_receipt', label: 'Bank Receipts' },
   { id: 'bank_payment', label: 'Bank Payments' },
-  { id: 'general',      label: 'General' },
+  { id: 'general',      label: 'General Journal' },
 ]
 
 export default function JournalVouchersPage() {
@@ -112,7 +112,9 @@ export default function JournalVouchersPage() {
       accessorKey: 'voucher_type',
       header: 'Type',
       cell: ({ row }) => (
-        <span className="capitalize text-sm">{row.original.voucher_type.replace(/_/g, ' ')}</span>
+        <span className="capitalize text-sm">
+          {VOUCHER_TYPE_LABELS[row.original.voucher_type] ?? row.original.voucher_type.replace(/_/g, ' ')}
+        </span>
       ),
     },
     {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,6 +12,7 @@ import {
   fetchCostCenters,
   createJournalVoucher,
   updateJournalVoucher,
+  matchBankStatementLine,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,7 +45,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 const VOUCHER_TYPES = [
-  { value: 'general', label: 'General' },
+  { value: 'general', label: 'General Journal' },
   { value: 'cash_receipt', label: 'Cash Receipt' },
   { value: 'cash_payment', label: 'Cash Payment' },
   { value: 'bank_receipt', label: 'Bank Receipt' },
@@ -55,6 +56,7 @@ export default function JournalVoucherFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEdit = !!id && id !== 'new'
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const qc = useQueryClient()
 
   const { data: jv } = useQuery({
@@ -64,18 +66,22 @@ export default function JournalVoucherFormPage() {
   })
 
   const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['accounts', isEdit ? 'all' : 'active'],
+    queryFn: () =>
+      fetchAccounts({
+        ...(isEdit ? {} : { is_active: 1 }),
+        per_page: -1,
+      }).then((r) => r.data.data),
   })
 
   const { data: periods = [] } = useQuery({
-    queryKey: ['fiscal-periods'],
-    queryFn: () => fetchFiscalPeriods().then((r) => r.data.data),
+    queryKey: ['fiscal-periods', 'all'],
+    queryFn: () => fetchFiscalPeriods({ per_page: -1 }).then((r) => r.data.data),
   })
 
   const { data: costCenters = [] } = useQuery({
-    queryKey: ['cost-centers'],
-    queryFn: () => fetchCostCenters({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['cost-centers', 'all-active'],
+    queryFn: () => fetchCostCenters({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
   })
 
   const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
@@ -105,8 +111,51 @@ export default function JournalVoucherFormPage() {
           line_narration: l.line_narration ?? '',
         })),
       })
+    } else if (!isEdit) {
+      const bankAccountId = searchParams.get('bank_account_id')
+      const amountStr = searchParams.get('amount')
+      const dateStr = searchParams.get('date')
+      const narrationStr = searchParams.get('narration')
+      const refStr = searchParams.get('reference')
+
+      if (bankAccountId && amountStr) {
+        const amt = parseFloat(amountStr) || 0
+        const isReceipt = amt > 0
+        const absAmt = Math.abs(amt).toFixed(2)
+
+        let fpId = ''
+        if (dateStr && periods.length > 0) {
+          const matchPeriod = periods.find(p => p.status === 'open' && p.start_date <= dateStr && p.end_date >= dateStr)
+            || periods.find(p => p.status === 'open')
+          if (matchPeriod) fpId = String(matchPeriod.id)
+        }
+
+        reset({
+          voucher_type: isReceipt ? 'bank_receipt' : 'bank_payment',
+          voucher_date: dateStr || new Date().toISOString().split('T')[0],
+          fiscal_period_id: fpId,
+          reference: refStr || 'Bank Statement',
+          narration: narrationStr || '',
+          lines: [
+            {
+              account_id: bankAccountId,
+              cost_center_id: '',
+              debit_amount: isReceipt ? absAmt : '0',
+              credit_amount: isReceipt ? '0' : absAmt,
+              line_narration: narrationStr || '',
+            },
+            {
+              account_id: '',
+              cost_center_id: '',
+              debit_amount: isReceipt ? '0' : absAmt,
+              credit_amount: isReceipt ? absAmt : '0',
+              line_narration: narrationStr || '',
+            },
+          ],
+        })
+      }
     }
-  }, [jv, reset])
+  }, [jv, isEdit, searchParams, periods, reset])
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
@@ -128,9 +177,32 @@ export default function JournalVoucherFormPage() {
         ? updateJournalVoucher(id!, payload)
         : createJournalVoucher(payload)
     },
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
-      navigate(`/accounts/journal-vouchers/${res.data.data.id}`)
+
+      const bankLineId = searchParams.get('bank_line_id')
+      const bankAccountId = searchParams.get('bank_account_id')
+      const returnTo = searchParams.get('return_to')
+
+      if (bankLineId && bankAccountId && res.data?.data) {
+        const createdJv = res.data.data
+        const bankLine = createdJv.lines?.find(l => String(l.account_id) === String(bankAccountId))
+        if (bankLine?.id) {
+          try {
+            await matchBankStatementLine(bankLineId, bankLine.id)
+            qc.invalidateQueries({ queryKey: ['bank-statement'] })
+            qc.invalidateQueries({ queryKey: ['unmatched-journal-lines'] })
+          } catch (e) {
+            console.error('Failed to auto-match bank line:', e)
+          }
+        }
+      }
+
+      if (returnTo) {
+        navigate(returnTo)
+      } else {
+        navigate(`/accounts/journal-vouchers/${res.data.data.id}`)
+      }
     },
   })
 
@@ -197,7 +269,7 @@ export default function JournalVoucherFormPage() {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isReadOnly}>
                   <SelectTrigger><SelectValue placeholder="Select period…" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-72">
                     {periods.filter((p) => p.status === 'open').map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                     ))}
@@ -257,7 +329,7 @@ export default function JournalVoucherFormPage() {
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select account…" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="max-h-72 min-w-[20rem]">
                               {accounts.map((a) => (
                                 <SelectItem key={a.id} value={String(a.id)}>
                                   {a.account_code} — {a.account_name}
@@ -277,7 +349,7 @@ export default function JournalVoucherFormPage() {
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="No cost center" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="max-h-72">
                               <SelectItem value="none">None</SelectItem>
                               {costCenters.map((cc) => (
                                 <SelectItem key={cc.id} value={String(cc.id)}>

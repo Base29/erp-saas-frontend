@@ -82,8 +82,13 @@ export interface FiscalPeriod {
   status: 'open' | 'closed'
 }
 
-export const fetchFiscalPeriods = (params?: Record<string, string | number>) =>
-  apiClient.get<PaginatedResponse<FiscalPeriod>>('/v1/settings/fiscal-periods', { params })
+export const fetchFiscalPeriods = (params?: Record<string, string | number | boolean>) => {
+  const queryParams = { ...params }
+  if (queryParams.page === undefined && queryParams.per_page === undefined) {
+    queryParams.per_page = -1
+  }
+  return apiClient.get<PaginatedResponse<FiscalPeriod>>('/v1/settings/fiscal-periods', { params: queryParams })
+}
 
 export const createFiscalPeriod = (payload: Omit<FiscalPeriod, 'id' | 'status'>) =>
   apiClient.post<{ data: FiscalPeriod }>('/v1/settings/fiscal-periods', payload)
@@ -275,8 +280,13 @@ export const updateAccountCategory = (id: string, payload: Partial<AccountCatego
 export const deleteAccountCategory = (id: string) =>
   apiClient.delete(`/v1/accounts/categories/${id}`)
 
-export const fetchAccounts = (params?: Record<string, string | number>) =>
-  apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params })
+export const fetchAccounts = (params?: Record<string, string | number | boolean>) => {
+  const queryParams = { ...params }
+  if (queryParams.page === undefined && queryParams.per_page === undefined) {
+    queryParams.per_page = -1
+  }
+  return apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params: queryParams })
+}
 
 export const createAccount = (payload: { account_code: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
@@ -290,6 +300,7 @@ export const deleteAccount = (id: string) =>
 // ── Accounts — Journal Vouchers ───────────────────────────────────────────────
 export interface JournalVoucherLine {
   id?: string
+  journal_voucher_id?: string
   account_id: string
   cost_center_id?: string | null
   debit_amount: number
@@ -297,6 +308,8 @@ export interface JournalVoucherLine {
   line_narration?: string
   account?: Account
   cost_center?: CostCenter
+  journal_voucher?: JournalVoucher
+  journalVoucher?: JournalVoucher
 }
 
 export interface JournalVoucher {
@@ -316,6 +329,14 @@ export interface JournalVoucher {
   created_at: string
   lines?: JournalVoucherLine[]
   fiscal_period?: { id: string; name: string }
+}
+
+export const VOUCHER_TYPE_LABELS: Record<string, string> = {
+  general: 'General Journal',
+  cash_receipt: 'Cash Receipt',
+  cash_payment: 'Cash Payment',
+  bank_receipt: 'Bank Receipt',
+  bank_payment: 'Bank Payment',
 }
 
 export interface PaginatedResponse<T> {
@@ -1155,8 +1176,13 @@ export interface CostCenter {
   is_active: boolean
 }
 
-export const fetchCostCenters = (params?: Record<string, string | number>) =>
-  apiClient.get<PaginatedResponse<CostCenter>>('/v1/accounts/cost-centers', { params })
+export const fetchCostCenters = (params?: Record<string, string | number | boolean>) => {
+  const queryParams = { ...params }
+  if (queryParams.page === undefined && queryParams.per_page === undefined) {
+    queryParams.per_page = -1
+  }
+  return apiClient.get<PaginatedResponse<CostCenter>>('/v1/accounts/cost-centers', { params: queryParams })
+}
 
 export const createCostCenter = (payload: Omit<CostCenter, 'id'>) =>
   apiClient.post<{ data: CostCenter }>('/v1/accounts/cost-centers', payload)
@@ -1207,6 +1233,27 @@ export const fetchUnmatchedJournalLines = (bankAccountId: string) =>
 
 export const matchBankStatementLine = (lineId: string, journalLineId: string) =>
   apiClient.post(`/v1/accounts/bank-reconciliation/match/${lineId}`, { journal_line_id: journalLineId })
+
+export const createJournalVoucherForStatementLine = (
+  lineId: string,
+  payload: {
+    offset_account_id: string
+    fiscal_period_id?: string
+    cost_center_id?: string
+    voucher_type?: string
+    narration?: string
+  }
+) =>
+  apiClient.post<{
+    data: {
+      statement_line: BankStatementLine
+      journal_voucher: JournalVoucher
+    }
+    message: string
+  }>(`/v1/accounts/bank-reconciliation/lines/${lineId}/create-journal-voucher`, payload)
+
+export const invertBankStatementSigns = (statementId: string) =>
+  apiClient.post<{ data: BankStatement; message: string }>(`/v1/accounts/bank-statements/${statementId}/invert-signs`)
 
 // ── Accounts — Budgets ───────────────────────────────────────────────────────
 export interface Budget {
