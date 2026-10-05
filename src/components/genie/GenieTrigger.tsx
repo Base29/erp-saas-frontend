@@ -1,36 +1,52 @@
 import React, { useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Mic } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useGenieStore } from '@/store/genieStore'
 
 export const GenieHeaderButton: React.FC = () => {
-  const { toggleOpen, isOpen } = useGenieStore()
+  const { toggleOpen, isOpen, openWithVoice } = useGenieStore()
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={toggleOpen}
-      className={`relative h-9 gap-2 rounded-full px-3 text-xs font-medium transition-all ${
-        isOpen
-          ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300'
-          : 'hover:border-purple-300 hover:bg-purple-50/50 dark:hover:bg-purple-950/20'
-      }`}
-      title="Ask Genie (Cmd+J / Ctrl+J)"
-    >
-      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white shadow-xs">
-        <Sparkles className="h-2.5 w-2.5" />
-      </div>
-      <span className="hidden sm:inline">Genie AI</span>
-      <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground md:inline">
-        ⌘J
-      </kbd>
-    </Button>
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={toggleOpen}
+        className={`relative h-9 gap-2 rounded-full px-3 text-xs font-medium transition-all ${
+          isOpen
+            ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300'
+            : 'hover:border-purple-300 hover:bg-purple-50/50 dark:hover:bg-purple-950/20'
+        }`}
+        title="Ask Genie (Cmd+J / Ctrl+J)"
+      >
+        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white shadow-xs">
+          <Sparkles className="h-2.5 w-2.5" />
+        </div>
+        <span className="hidden sm:inline">Genie AI</span>
+        <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground md:inline">
+          ⌘J
+        </kbd>
+      </Button>
+
+      {/* Dedicated Header Mic Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={(e) => {
+          e.stopPropagation()
+          openWithVoice()
+        }}
+        className="h-9 w-9 rounded-full border-border/80 text-purple-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/40"
+        title="Voice Prompt to Genie (Speak)"
+      >
+        <Mic className="h-4 w-4" />
+      </Button>
+    </div>
   )
 }
 
 export const GenieFloatingTrigger: React.FC = () => {
-  const { toggleOpen, isOpen, loadStatus } = useGenieStore()
+  const { toggleOpen, isOpen, openWithVoice, loadStatus } = useGenieStore()
 
   useEffect(() => {
     loadStatus()
@@ -49,7 +65,18 @@ export const GenieFloatingTrigger: React.FC = () => {
   if (isOpen) return null
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+      {/* Quick Voice Prompt Floating Button with Mic Icon */}
+      <button
+        type="button"
+        onClick={openWithVoice}
+        className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-background border border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 shadow-lg shadow-purple-600/20 transition-all hover:scale-110 hover:bg-purple-50 dark:hover:bg-purple-950/50 hover:border-purple-400 active:scale-95"
+        title="Speak to Genie (Voice Prompt)"
+      >
+        <Mic className="h-5 w-5 transition-transform group-hover:scale-110" />
+      </button>
+
+      {/* Main Floating Trigger */}
       <button
         type="button"
         onClick={toggleOpen}

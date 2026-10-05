@@ -15,6 +15,9 @@ import {
   User as UserIcon,
   Compass,
   ArrowRight,
+  Volume2,
+  VolumeX,
+  Mic,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,8 +33,9 @@ import {
 import { useGenieStore } from '@/store/genieStore'
 import { GenieActionCard } from './GenieActionCard'
 import { GenieThinkingAccordion } from './GenieThinkingAccordion'
-import { GenieMarkdown } from './GenieMarkdown'
+import { GenieMarkdown, isUrduOrArabic } from './GenieMarkdown'
 import { GenieReasoningState } from './GenieReasoningState'
+import { GenieVoiceInput } from './GenieVoiceInput'
 import { useNavigate } from 'react-router-dom'
 
 export const GenieAssistantDrawer: React.FC = () => {
@@ -44,6 +48,12 @@ export const GenieAssistantDrawer: React.FC = () => {
     status,
     conversations,
     currentAttachments,
+    isListening,
+    isSpeaking,
+    voiceLanguage,
+    voiceResponseEnabled,
+    toggleVoiceResponse,
+    stopSpeaking,
     sendMessage,
     uploadAttachment,
     removeAttachment,
@@ -73,6 +83,15 @@ export const GenieAssistantDrawer: React.FC = () => {
     sendMessage(input)
     setInput('')
   }
+
+  const handleTranscript = React.useCallback((text: string) => {
+    setInput(text)
+  }, [])
+
+  const handleVoiceSend = React.useCallback((text: string) => {
+    setInput('')
+    sendMessage(text)
+  }, [sendMessage])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -140,6 +159,25 @@ export const GenieAssistantDrawer: React.FC = () => {
           >
             <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
             <span className="hidden sm:inline text-[11px] font-medium">Quick Actions</span>
+          </Button>
+
+          {/* Voice Speech Response Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 transition-colors ${
+              voiceResponseEnabled
+                ? 'text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-400'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={toggleVoiceResponse}
+            title={voiceResponseEnabled ? 'Voice responses active (Click to mute)' : 'Voice responses muted (Click to enable audio speech)'}
+          >
+            {voiceResponseEnabled ? (
+              <Volume2 className="h-4 w-4" />
+            ) : (
+              <VolumeX className="h-4 w-4" />
+            )}
           </Button>
 
           {/* History dropdown */}
@@ -213,8 +251,19 @@ export const GenieAssistantDrawer: React.FC = () => {
               I am Genie, your conversational assistant for Genie Cloud. Ask me anything about accounts, sales, inventory, or let me draft actions for you.
             </p>
 
+            {/* Voice Prompt Tip Banner */}
+            <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-purple-200/80 bg-purple-50/70 p-2.5 text-xs text-purple-900 dark:border-purple-805/60 dark:bg-purple-950/40 dark:text-purple-300 max-w-md w-full">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+                <Mic className="h-4 w-4" />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-medium text-[11px] text-foreground">Voice Prompts Enabled</div>
+                <div className="text-[10px] text-muted-foreground">Click the microphone icon below or speak prompts naturally.</div>
+              </div>
+            </div>
+
             {/* Quick Action Prompts */}
-            <div className="mt-6 w-full max-w-md space-y-2 text-left">
+            <div className="mt-5 w-full max-w-md space-y-2 text-left">
               <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider px-1">
                 Ask Genie to...
               </div>
@@ -277,14 +326,26 @@ export const GenieAssistantDrawer: React.FC = () => {
                 {/* Main Content Bubble */}
                 {msg.content && (
                   <div
+                    dir={isUrduOrArabic(msg.content) ? 'rtl' : 'ltr'}
                     className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-tr-xs'
-                        : 'w-full bg-muted/70 text-foreground border border-border/50 rounded-tl-xs shadow-xs'
+                        ? `bg-primary text-primary-foreground rounded-tr-xs ${
+                            isUrduOrArabic(msg.content) ? 'text-right font-urdu leading-[1.85]' : 'text-left'
+                          }`
+                        : `w-full bg-muted/70 text-foreground border border-border/50 rounded-tl-xs shadow-xs ${
+                            isUrduOrArabic(msg.content) ? 'text-right font-urdu' : 'text-left'
+                          }`
                     }`}
                   >
                     {msg.role === 'user' ? (
-                      <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                      <div
+                        dir="auto"
+                        className={`whitespace-pre-wrap font-sans ${
+                          isUrduOrArabic(msg.content) ? 'text-right font-urdu leading-[1.85]' : 'text-left'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
                     ) : (
                       <GenieMarkdown content={msg.content} />
                     )}
@@ -395,6 +456,59 @@ export const GenieAssistantDrawer: React.FC = () => {
           </div>
         )}
 
+        {/* Realtime Voice Listening Indicator */}
+        {isListening && (
+          <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-purple-700 dark:text-purple-300 bg-purple-50/95 dark:bg-purple-950/70 rounded-xl border border-purple-300 dark:border-purple-700 animate-pulse shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <div>
+                <span className="font-semibold text-[11px] block text-foreground">
+                  {voiceLanguage === 'ur-PK' ? '🎙️ آواز سن رہا ہوں...' : 'Listening to your voice...'}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {voiceLanguage === 'ur-PK'
+                    ? 'اردو میں بولیں یا "منظور کریں" / "رد کریں" کہیں'
+                    : 'Speak prompt or say "Approve" / "Cancel"'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[10px] h-4 border-purple-300 dark:border-purple-700 bg-white/80 dark:bg-gray-900/80 font-mono">
+                {voiceLanguage === 'ur-PK' ? 'اردو ur-PK' : 'EN en-US'}
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => useGenieStore.getState().setIsListening(false)}
+                className="h-5 px-1.5 text-[10px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+              >
+                Stop
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Active Speaking Indicator */}
+        {isSpeaking && (
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-3.5 w-3.5 animate-bounce text-indigo-600" />
+              <span className="font-medium text-[11px]">Genie is reading response aloud...</span>
+            </div>
+            <button
+              type="button"
+              onClick={stopSpeaking}
+              className="text-[10px] font-medium text-indigo-600 hover:text-indigo-800 dark:hover:text-indigo-200 underline"
+            >
+              Stop
+            </button>
+          </div>
+        )}
+
         {/* Input box */}
         <div className="relative flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 shadow-xs focus-within:ring-1 focus-within:ring-ring">
           <input
@@ -420,6 +534,14 @@ export const GenieAssistantDrawer: React.FC = () => {
               <Paperclip className="h-4 w-4" />
             )}
           </Button>
+
+          {/* Voice Input Microphone */}
+          <GenieVoiceInput
+            disabled={isLoading}
+            onTranscript={handleTranscript}
+            onSend={handleVoiceSend}
+            autoSend={true}
+          />
 
           {/* Quick Actions Dropdown Menu */}
           <DropdownMenu>
@@ -467,13 +589,24 @@ export const GenieAssistantDrawer: React.FC = () => {
           </DropdownMenu>
 
           <Textarea
+            dir="auto"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Genie anything, query data, or propose an action..."
+            placeholder={
+              isListening
+                ? (voiceLanguage === 'ur-PK'
+                    ? "🎙️ سن رہا ہوں... اردو میں بولیں یا 'منظور کریں' کہیں..."
+                    : "🎙️ Listening... Speak your prompt or 'Approve'...")
+                : (voiceLanguage === 'ur-PK'
+                    ? "جینی سے پوچھیں، ڈیٹا تلاش کریں، یا ایکشن تجویز کریں..."
+                    : "Ask Genie anything, query data, or propose an action...")
+            }
             rows={1}
             disabled={isLoading}
-            className="min-h-[36px] max-h-32 resize-none border-0 p-1.5 text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className={`min-h-[36px] max-h-32 resize-none border-0 p-1.5 text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 ${
+              isListening ? 'placeholder:text-purple-600 dark:placeholder:text-purple-400 font-medium' : ''
+            } ${isUrduOrArabic(input) ? 'text-right font-urdu leading-[1.8]' : 'text-left'}`}
           />
 
           <Button

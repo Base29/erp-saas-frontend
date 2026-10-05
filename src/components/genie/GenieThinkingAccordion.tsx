@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import { isUrduOrArabic } from './GenieMarkdown'
 
 interface GenieThinkingAccordionProps {
   reasoning: string
@@ -9,6 +10,8 @@ export const GenieThinkingAccordion: React.FC<GenieThinkingAccordionProps> = ({ 
   const [isOpen, setIsOpen] = useState(false)
 
   if (!reasoning || !reasoning.trim()) return null
+
+  const isUrdu = isUrduOrArabic(reasoning)
 
   return (
     <div className="mb-2.5 overflow-hidden rounded-lg border border-border/60 bg-muted/25 text-xs">
@@ -29,7 +32,12 @@ export const GenieThinkingAccordion: React.FC<GenieThinkingAccordionProps> = ({ 
       </button>
 
       {isOpen && (
-        <div className="border-t border-border/50 bg-background/60 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
+        <div
+          dir={isUrdu ? 'rtl' : 'ltr'}
+          className={`border-t border-border/50 bg-background/60 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap ${
+            isUrdu ? 'text-right font-urdu leading-[1.8]' : 'text-left'
+          }`}
+        >
           {reasoning}
         </div>
       )}

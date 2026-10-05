@@ -69,13 +69,13 @@ export const GenieActionCard: React.FC<GenieActionCardProps> = ({ action }) => {
             {getActionIcon(action.action_type)}
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <h4 dir="auto" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
               <span>{action.title}</span>
               <span className="text-[11px] font-normal text-purple-600 dark:text-purple-400 font-sans">
                 • Proposed by Genie
               </span>
             </h4>
-            <p className="text-xs text-muted-foreground">
+            <p dir="auto" className="text-xs text-muted-foreground">
               {action.description || 'Human review required before committing changes.'}
             </p>
           </div>

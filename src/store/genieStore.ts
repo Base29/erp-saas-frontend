@@ -44,6 +44,33 @@ interface GenieState {
   approveAction: (actionId: string) => Promise<void>
   rejectAction: (actionId: string) => Promise<void>
   deleteConversation: (id: string) => Promise<void>
+
+  // Voice capabilities
+  isListening: boolean
+  setIsListening: (listening: boolean) => void
+  isSpeaking: boolean
+  voiceResponseEnabled: boolean
+  voiceLanguage: 'en-US' | 'ur-PK'
+  setVoiceLanguage: (lang: 'en-US' | 'ur-PK') => void
+  toggleVoiceLanguage: () => void
+  toggleVoiceResponse: () => void
+  speakText: (text: string) => void
+  stopSpeaking: () => void
+  shouldStartListening: boolean
+  setShouldStartListening: (val: boolean) => void
+  openWithVoice: () => void
+}
+
+function cleanMarkdownForSpeech(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\|[^\n]+\|/g, '')
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Strip emojis
+    .replace(/[#*_~>\[\]\(\)]/g, '')
+    .replace(/[-•–]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export const useGenieStore = create<GenieState>((set, get) => ({
@@ -58,6 +85,76 @@ export const useGenieStore = create<GenieState>((set, get) => ({
   isLoading: false,
   isUploading: false,
   currentAttachments: [],
+
+  // Voice state defaults
+  isListening: false,
+  setIsListening: (listening) => set({ isListening: listening }),
+  isSpeaking: false,
+  voiceResponseEnabled: typeof window !== 'undefined' && localStorage.getItem('genie-voice-response') === 'true',
+  voiceLanguage: (typeof window !== 'undefined' && (localStorage.getItem('genie-voice-lang') as any)) || 'en-US',
+  setVoiceLanguage: (lang) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('genie-voice-lang', lang)
+    }
+    set({ voiceLanguage: lang })
+  },
+  toggleVoiceLanguage: () => {
+    const next = get().voiceLanguage === 'en-US' ? 'ur-PK' : 'en-US'
+    get().setVoiceLanguage(next)
+  },
+  shouldStartListening: false,
+  setShouldStartListening: (val) => set({ shouldStartListening: val }),
+  openWithVoice: () => set({ isOpen: true, shouldStartListening: true }),
+
+  toggleVoiceResponse: () => {
+    const next = !get().voiceResponseEnabled
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('genie-voice-response', String(next))
+    }
+    if (!next) {
+      get().stopSpeaking()
+    }
+    set({ voiceResponseEnabled: next })
+  },
+
+  speakText: (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+
+    const clean = cleanMarkdownForSpeech(text)
+    if (!clean) return
+
+    const utterance = new SpeechSynthesisUtterance(clean)
+    const isUrdu = /[\u0600-\u06FF]/.test(clean)
+
+    if (isUrdu) {
+      utterance.lang = 'ur-PK'
+      const voices = window.speechSynthesis.getVoices()
+      const urduVoice = voices.find((v) => v.lang.startsWith('ur'))
+      if (urduVoice) {
+        utterance.voice = urduVoice
+      }
+      utterance.rate = 0.95 // Natural cadence for Urdu speech
+    } else {
+      utterance.lang = 'en-US'
+      utterance.rate = 1.02
+    }
+
+    utterance.pitch = 1.0
+
+    utterance.onstart = () => set({ isSpeaking: true })
+    utterance.onend = () => set({ isSpeaking: false })
+    utterance.onerror = () => set({ isSpeaking: false })
+
+    window.speechSynthesis.speak(utterance)
+  },
+
+  stopSpeaking: () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      set({ isSpeaking: false })
+    }
+  },
 
   loadStatus: async () => {
     try {
@@ -177,6 +274,11 @@ export const useGenieStore = create<GenieState>((set, get) => ({
         messages: [...state.messages, assistantMessage],
         isLoading: false,
       }))
+
+      // Speak response aloud if voice response is enabled
+      if (get().voiceResponseEnabled && responseData.content) {
+        get().speakText(responseData.content)
+      }
 
       // Refresh conversations list in background
       get().loadConversations()
