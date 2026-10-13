@@ -18,6 +18,7 @@ import {
   Volume2,
   VolumeX,
   Mic,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -52,7 +53,13 @@ export const GenieAssistantDrawer: React.FC = () => {
     isSpeaking,
     voiceLanguage,
     voiceResponseEnabled,
+    preferredVoiceUri,
+    availableMaleVoices,
+    activeVoiceName,
     toggleVoiceResponse,
+    setPreferredVoiceUri,
+    refreshAvailableVoices,
+    testVoiceSample,
     stopSpeaking,
     sendMessage,
     uploadAttachment,
@@ -71,8 +78,9 @@ export const GenieAssistantDrawer: React.FC = () => {
   useEffect(() => {
     if (isOpen) {
       loadConversations()
+      refreshAvailableVoices()
     }
-  }, [isOpen, loadConversations])
+  }, [isOpen, loadConversations, refreshAvailableVoices])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -161,24 +169,79 @@ export const GenieAssistantDrawer: React.FC = () => {
             <span className="hidden sm:inline text-[11px] font-medium">Quick Actions</span>
           </Button>
 
-          {/* Voice Speech Response Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 transition-colors ${
-              voiceResponseEnabled
-                ? 'text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={toggleVoiceResponse}
-            title={voiceResponseEnabled ? 'Voice responses active (Click to mute)' : 'Voice responses muted (Click to enable audio speech)'}
-          >
-            {voiceResponseEnabled ? (
-              <Volume2 className="h-4 w-4" />
-            ) : (
-              <VolumeX className="h-4 w-4" />
-            )}
-          </Button>
+          {/* Voice Speech Response Menu & Toggle */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-8 gap-1.5 px-2 text-xs transition-colors ${
+                  voiceResponseEnabled
+                    ? 'text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-400 font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Voice playback options (Click to open menu)"
+              >
+                {voiceResponseEnabled ? (
+                  <Volume2 className="h-4 w-4 text-purple-600" />
+                ) : (
+                  <VolumeX className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline text-[11px]">
+                  {voiceResponseEnabled ? 'Voice' : 'Muted'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs">
+                <span>Voice Playback</span>
+                <Badge variant={voiceResponseEnabled ? 'default' : 'secondary'} className="text-[10px] h-4">
+                  {voiceResponseEnabled ? 'Enabled' : 'Muted'}
+                </Badge>
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={toggleVoiceResponse}
+                className="text-xs cursor-pointer flex items-center justify-between font-medium"
+              >
+                <span>{voiceResponseEnabled ? 'Disable Audio Playback' : 'Enable Audio Playback'}</span>
+                {voiceResponseEnabled ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => testVoiceSample(voiceLanguage === 'ur-PK' ? 'ur' : 'en')}
+                className="text-xs cursor-pointer flex items-center justify-between text-purple-600 dark:text-purple-400"
+              >
+                <span>Listen to Voice Sample</span>
+                <Sparkles className="h-3.5 w-3.5" />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] text-muted-foreground">
+                Male Voice Profile
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => setPreferredVoiceUri(null)}
+                className="text-xs cursor-pointer flex items-center justify-between"
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium text-[11px]">✨ Smart Human Male (Auto)</span>
+                  <span className="text-[10px] text-muted-foreground">Highest-quality neural male voice</span>
+                </div>
+                {!preferredVoiceUri && <Check className="h-3.5 w-3.5 text-purple-600 ml-1" />}
+              </DropdownMenuItem>
+              {availableMaleVoices.slice(0, 6).map((v) => (
+                <DropdownMenuItem
+                  key={v.voiceURI}
+                  onClick={() => setPreferredVoiceUri(v.voiceURI)}
+                  className="text-xs cursor-pointer flex items-center justify-between"
+                >
+                  <div className="flex flex-col truncate max-w-[210px]">
+                    <span className="truncate font-medium text-[11px]">{v.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{v.lang}</span>
+                  </div>
+                  {preferredVoiceUri === v.voiceURI && <Check className="h-3.5 w-3.5 text-purple-600 ml-1 shrink-0" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* History dropdown */}
           <DropdownMenu>
@@ -494,15 +557,21 @@ export const GenieAssistantDrawer: React.FC = () => {
 
         {/* Active Speaking Indicator */}
         {isSpeaking && (
-          <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-3.5 w-3.5 animate-bounce text-indigo-600" />
-              <span className="font-medium text-[11px]">Genie is reading response aloud...</span>
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800 animate-in fade-in">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+              </span>
+              <Volume2 className="h-3.5 w-3.5 text-indigo-600 animate-pulse shrink-0" />
+              <span className="font-medium text-[11px] truncate max-w-[280px]">
+                {activeVoiceName ? `Speaking (${activeVoiceName})...` : 'Genie is reading response aloud (Human Male)...'}
+              </span>
             </div>
             <button
               type="button"
               onClick={stopSpeaking}
-              className="text-[10px] font-medium text-indigo-600 hover:text-indigo-800 dark:hover:text-indigo-200 underline"
+              className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 dark:hover:text-indigo-200 px-2 py-0.5 rounded bg-indigo-100/80 hover:bg-indigo-200/80 transition-colors shrink-0"
             >
               Stop
             </button>

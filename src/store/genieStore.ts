@@ -13,6 +13,7 @@ import {
   type GenieStatus,
 } from '@/api/genie'
 import { toast } from 'sonner'
+import { genieVoicePlayer, getCandidateMaleVoices } from '@/utils/genieVoice'
 
 interface GenieState {
   isOpen: boolean
@@ -51,26 +52,20 @@ interface GenieState {
   isSpeaking: boolean
   voiceResponseEnabled: boolean
   voiceLanguage: 'en-US' | 'ur-PK'
+  preferredVoiceUri: string | null
+  availableMaleVoices: SpeechSynthesisVoice[]
+  activeVoiceName: string | null
   setVoiceLanguage: (lang: 'en-US' | 'ur-PK') => void
   toggleVoiceLanguage: () => void
   toggleVoiceResponse: () => void
+  setPreferredVoiceUri: (uri: string | null) => void
+  refreshAvailableVoices: () => Promise<void>
+  testVoiceSample: (lang?: 'en' | 'ur') => void
   speakText: (text: string) => void
   stopSpeaking: () => void
   shouldStartListening: boolean
   setShouldStartListening: (val: boolean) => void
   openWithVoice: () => void
-}
-
-function cleanMarkdownForSpeech(text: string): string {
-  return text
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\|[^\n]+\|/g, '')
-    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Strip emojis
-    .replace(/[#*_~>\[\]\(\)]/g, '')
-    .replace(/[-•–]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 export const useGenieStore = create<GenieState>((set, get) => ({
@@ -92,16 +87,46 @@ export const useGenieStore = create<GenieState>((set, get) => ({
   isSpeaking: false,
   voiceResponseEnabled: typeof window !== 'undefined' && localStorage.getItem('genie-voice-response') === 'true',
   voiceLanguage: (typeof window !== 'undefined' && (localStorage.getItem('genie-voice-lang') as any)) || 'en-US',
+  preferredVoiceUri: typeof window !== 'undefined' ? localStorage.getItem('genie-voice-uri') : null,
+  availableMaleVoices: [],
+  activeVoiceName: null,
+
   setVoiceLanguage: (lang) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('genie-voice-lang', lang)
     }
     set({ voiceLanguage: lang })
   },
+
   toggleVoiceLanguage: () => {
     const next = get().voiceLanguage === 'en-US' ? 'ur-PK' : 'en-US'
     get().setVoiceLanguage(next)
   },
+
+  setPreferredVoiceUri: (uri) => {
+    if (typeof window !== 'undefined') {
+      if (uri) {
+        localStorage.setItem('genie-voice-uri', uri)
+      } else {
+        localStorage.removeItem('genie-voice-uri')
+      }
+    }
+    set({ preferredVoiceUri: uri })
+  },
+
+  refreshAvailableVoices: async () => {
+    const list = await getCandidateMaleVoices()
+    set({ availableMaleVoices: list })
+  },
+
+  testVoiceSample: (lang = 'en') => {
+    const isUrdu = lang === 'ur' || get().voiceLanguage === 'ur-PK'
+    const sampleText = isUrdu
+      ? 'ہیلو، میں جینی ہوں، آپ کا ای آر پی کلاؤڈ اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟'
+      : 'Hello! I am Genie, your ERP cloud assistant. How can I help you today?'
+    get().speakText(sampleText)
+  },
+
   shouldStartListening: false,
   setShouldStartListening: (val) => set({ shouldStartListening: val }),
   openWithVoice: () => set({ isOpen: true, shouldStartListening: true }),
@@ -119,41 +144,21 @@ export const useGenieStore = create<GenieState>((set, get) => ({
 
   speakText: (text: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
 
-    const clean = cleanMarkdownForSpeech(text)
-    if (!clean) return
+    genieVoicePlayer.setStateListener((speaking) => {
+      const activeVoice = genieVoicePlayer.getActiveVoice()
+      set({
+        isSpeaking: speaking,
+        activeVoiceName: speaking && activeVoice ? activeVoice.name : null,
+      })
+    })
 
-    const utterance = new SpeechSynthesisUtterance(clean)
-    const isUrdu = /[\u0600-\u06FF]/.test(clean)
-
-    if (isUrdu) {
-      utterance.lang = 'ur-PK'
-      const voices = window.speechSynthesis.getVoices()
-      const urduVoice = voices.find((v) => v.lang.startsWith('ur'))
-      if (urduVoice) {
-        utterance.voice = urduVoice
-      }
-      utterance.rate = 0.95 // Natural cadence for Urdu speech
-    } else {
-      utterance.lang = 'en-US'
-      utterance.rate = 1.02
-    }
-
-    utterance.pitch = 1.0
-
-    utterance.onstart = () => set({ isSpeaking: true })
-    utterance.onend = () => set({ isSpeaking: false })
-    utterance.onerror = () => set({ isSpeaking: false })
-
-    window.speechSynthesis.speak(utterance)
+    genieVoicePlayer.speak(text, get().preferredVoiceUri)
   },
 
   stopSpeaking: () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      set({ isSpeaking: false })
-    }
+    genieVoicePlayer.stop()
+    set({ isSpeaking: false, activeVoiceName: null })
   },
 
   loadStatus: async () => {

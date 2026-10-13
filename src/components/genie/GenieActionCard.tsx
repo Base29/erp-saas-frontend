@@ -11,6 +11,7 @@ import {
   Receipt,
   ArrowRightLeft,
   UploadCloud,
+  Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,6 +47,7 @@ export const GenieActionCard: React.FC<GenieActionCardProps> = ({ action }) => {
   }
 
   const getActionIcon = (type: string) => {
+    if (type.includes('cost_center') || type.includes('cost-center')) return <Building2 className="h-4 w-4 text-emerald-600" />
     if (type.includes('customer')) return <UserCheck className="h-4 w-4 text-blue-600" />
     if (type.includes('quotation') || type.includes('order')) return <Receipt className="h-4 w-4 text-amber-600" />
     if (type.includes('journal')) return <FileCheck2 className="h-4 w-4 text-emerald-600" />
@@ -59,6 +61,24 @@ export const GenieActionCard: React.FC<GenieActionCardProps> = ({ action }) => {
   const isFailed = action.status === 'failed'
 
   const payload = action.payload || {}
+
+  const isCostCenter =
+    action.action_type.includes('cost_center') ||
+    action.action_type.includes('cost-center') ||
+    action.title?.toLowerCase().includes('cost center') ||
+    action.title?.includes('کاسٹ سینٹر') ||
+    Boolean(payload.code && String(payload.code).toUpperCase().startsWith('CC-'))
+
+  const isCustomer =
+    !isCostCenter && (action.action_type.includes('customer') || action.title?.toLowerCase().includes('customer'))
+
+  const getNameLabel = () => {
+    if (isCostCenter) return 'Cost Center Name:'
+    if (action.action_type.includes('supplier')) return 'Supplier Name:'
+    if (action.action_type.includes('item')) return 'Item Name:'
+    if (isCustomer) return 'Customer Name:'
+    return 'Name:'
+  }
 
   return (
     <div className="my-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md">
@@ -112,14 +132,18 @@ export const GenieActionCard: React.FC<GenieActionCardProps> = ({ action }) => {
       <div className="my-3 space-y-2 text-xs">
         {payload.name && (
           <div className="flex justify-between py-0.5 border-b border-muted/50">
-            <span className="text-muted-foreground font-medium">Customer Name:</span>
+            <span className="text-muted-foreground font-medium">
+              {getNameLabel()}
+            </span>
             <span className="font-semibold text-foreground">{payload.name}</span>
           </div>
         )}
-        {payload.customer_code && (
+        {(payload.code || payload.customer_code) && (
           <div className="flex justify-between py-0.5 border-b border-muted/50">
-            <span className="text-muted-foreground font-medium">Code:</span>
-            <span className="font-mono text-foreground">{payload.customer_code}</span>
+            <span className="text-muted-foreground font-medium">
+              {isCostCenter ? 'Cost Center Code:' : 'Code:'}
+            </span>
+            <span className="font-mono text-foreground">{payload.code || payload.customer_code}</span>
           </div>
         )}
         {payload.credit_limit !== undefined && (
