@@ -57,3 +57,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .font-urdu {
+    font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', 'Pak Nastaleeq', 'Nafees Web Naskh', system-ui, -apple-system, sans-serif;
+  }
+}
+

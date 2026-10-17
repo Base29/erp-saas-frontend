@@ -48,6 +48,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useTheme } from '@/components/ThemeProvider'
+import { GenieHeaderButton, GenieFloatingTrigger } from '@/components/genie/GenieTrigger'
+import { GenieAssistantDrawer } from '@/components/genie/GenieAssistantDrawer'
 
 const navSections = [
   {
@@ -428,6 +430,7 @@ export default function TenantLayout() {
           </div>
 
           <div className="flex items-center gap-2 lg:gap-3">
+            <GenieHeaderButton />
             <ThemeToggle />
             <NotificationBell />
             <div className="flex items-center gap-2">
@@ -446,6 +449,10 @@ export default function TenantLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Genie AI Assistant Floating Trigger & Drawer */}
+      <GenieFloatingTrigger />
+      <GenieAssistantDrawer />
     </div>
   )
 }
