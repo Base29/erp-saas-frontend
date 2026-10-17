@@ -288,11 +288,18 @@ export const useGenieStore = create<GenieState>((set, get) => ({
       // Refresh conversations list in background
       get().loadConversations()
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message ||
-        err.message ||
-        'Could not reach Genie. Please ensure the AI service is active.'
-      toast.error(errorMsg)
+      const rawError = err.response?.data?.message || err.message || ''
+      const isUnavailable =
+        err.response?.status === 502 ||
+        err.response?.status === 503 ||
+        err.response?.status === 504 ||
+        /network error|econnrefused|failed to fetch|cluster|unavailable|timed out/i.test(rawError)
+
+      const displayMessage = isUnavailable
+        ? '⚠️ **The AI cluster is not available at the moment.** Please try again in a few moments, or contact your system administrator if the issue persists.'
+        : `⚠️ **Error communicating with Genie Cloud**: ${rawError || 'Please try again in a few moments.'}`
+
+      toast.error(isUnavailable ? 'The AI cluster is not available at the moment.' : (rawError || 'Could not reach Genie'))
 
       set((state) => ({
         messages: [
@@ -300,7 +307,7 @@ export const useGenieStore = create<GenieState>((set, get) => ({
           {
             id: `err-${Date.now()}`,
             role: 'assistant',
-            content: `⚠️ **Error communicating with Genie Cloud**: ${errorMsg}`,
+            content: displayMessage,
             created_at: new Date().toISOString(),
           },
         ],
