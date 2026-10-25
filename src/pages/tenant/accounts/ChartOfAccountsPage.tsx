@@ -55,11 +55,16 @@ export default function ChartOfAccountsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['accounts', page, selectedCategoryId],
-    queryFn: () => fetchAccounts({ page, ...(selectedCategoryId ? { category_id: selectedCategoryId } : {}) }).then((r) => r.data),
+    queryKey: ['accounts', page, selectedCategoryId, search],
+    queryFn: () => fetchAccounts({ 
+      page, 
+      ...(selectedCategoryId ? { category_id: selectedCategoryId } : {}),
+      ...(search ? { search } : {}),
+    }).then((r) => r.data),
   })
 
   const accounts = data?.data ?? []
@@ -193,8 +198,12 @@ export default function ChartOfAccountsPage() {
         isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
         onPageChange={setPage}
-        filterKey="account_code"
-        filterPlaceholder="Search by code…"
+        filterKey="search"
+        filterPlaceholder="Search accounts by name or code…"
+        onFilterChange={(f) => {
+          setSearch(f.search || '')
+          setPage(1)
+        }}
       />
 
       {/* Account Modal */}

@@ -42,8 +42,8 @@ export default function SupplierPaymentFormPage() {
 
   // We only want Bank/Cash accounts for payments
   const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['accounts-all-active'],
+    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
   })
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({

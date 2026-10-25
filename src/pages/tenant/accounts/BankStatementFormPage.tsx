@@ -42,8 +42,8 @@ export default function BankStatementFormPage() {
   const qc = useQueryClient()
 
   const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts', { type: 'bank' }],
-    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['accounts-all-active', { type: 'bank' }],
+    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
   })
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({

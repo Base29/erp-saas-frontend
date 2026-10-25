@@ -52,8 +52,8 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
   const isEdit = !!supplier
 
   const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts', { type: 'liability' }], // Ideally filter by liability
-    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['accounts-all-active', { type: 'liability' }], // Ideally filter by liability
+    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
     enabled: open,
   })
 

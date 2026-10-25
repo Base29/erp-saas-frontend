@@ -1,7 +1,7 @@
 import { useRef, useState, DragEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Paperclip, Trash2, Upload } from 'lucide-react'
-import { uploadAttachment, deleteAttachment, fetchAttachments } from '@/api/tenant'
+import { Download, Paperclip, Trash2, Upload } from 'lucide-react'
+import { uploadAttachment, deleteAttachment, fetchAttachments, downloadAttachment } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -107,18 +107,31 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
                 <span className="truncate">{a.original_filename}</span>
                 <span className="text-xs text-muted-foreground shrink-0">{formatBytes(a.file_size_bytes)}</span>
               </div>
-              {!readonly && (
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => remove.mutate(a.id)}
-                  disabled={remove.isPending}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                  title="Download attachment"
+                  onClick={() => downloadAttachment(a.id, a.original_filename)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="sr-only">Delete</span>
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="sr-only">Download</span>
                 </Button>
-              )}
+                {!readonly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    title="Delete attachment"
+                    onClick={() => remove.mutate(a.id)}
+                    disabled={remove.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

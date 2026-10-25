@@ -56,8 +56,8 @@ export default function BudgetModal({ budget, open, onOpenChange, defaultPeriodI
   })
 
   const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => fetchAccounts({ is_active: 1 }).then((r) => r.data.data),
+    queryKey: ['accounts-all-active'],
+    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
     enabled: open,
   })
 
