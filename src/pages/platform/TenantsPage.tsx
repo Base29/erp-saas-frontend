@@ -5,6 +5,7 @@ import { Plus, ExternalLink, Loader2 } from 'lucide-react'
 import { fetchTenants, type Tenant } from '@/api/platform'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateTenantDialog } from '@/components/platform/CreateTenantDialog'
 import DataTable from '@/components/DataTable'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -23,11 +24,22 @@ export default function TenantsPage() {
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<string>('')
+
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (status && status !== '__all__') queryParams.status = status
 
   const { data, isLoading } = useQuery({
-    queryKey: ['platform', 'tenants', page, search],
-    queryFn: () => fetchTenants({ page, search }).then((r) => r.data),
+    queryKey: ['platform', 'tenants', queryParams],
+    queryFn: () => fetchTenants(queryParams).then((r) => r.data),
   })
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatus('')
+    setPage(1)
+  }
 
   const columns: ColumnDef<Tenant>[] = [
     { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
@@ -86,10 +98,33 @@ export default function TenantsPage() {
         onPageChange={setPage}
         filterPlaceholder="Search by name or subdomain…"
         filterKey="search"
-        onFilterChange={(filters) => {
-          setSearch(filters.search || '')
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
           setPage(1)
         }}
+        hasActiveFilters={Boolean(search || status)}
+        onClearFilters={clearFilters}
+        toolbarExtra={
+          <Select
+            value={status || '__all__'}
+            onValueChange={(val) => {
+              setStatus(val === '__all__' ? '' : val)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-40 text-sm">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="provisioning_failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+        }
       />
 
       <CreateTenantDialog open={open} onOpenChange={setOpen} />

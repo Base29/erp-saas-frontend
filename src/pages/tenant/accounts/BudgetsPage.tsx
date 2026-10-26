@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchBudgets, fetchFiscalPeriods, type Budget } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
-import { Plus, PieChart, TrendingUp, Edit2 } from 'lucide-react'
+import { Plus, PieChart, Edit2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import BudgetModal from './BudgetModal'
+import DataTable from '@/components/DataTable'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Select,
   SelectContent,
@@ -16,6 +18,8 @@ import {
 export default function BudgetsPage() {
   const navigate = useNavigate()
   const [fiscalPeriodId, setFiscalPeriodId] = useState<string>('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null)
   
@@ -24,11 +28,22 @@ export default function BudgetsPage() {
     queryFn: () => fetchFiscalPeriods().then((r) => r.data.data),
   })
 
-  const { data: budgets, isLoading } = useQuery({
-    queryKey: ['budgets', { fiscalPeriodId }],
-    queryFn: () => fetchBudgets({ fiscal_period_id: fiscalPeriodId }),
-    enabled: !!fiscalPeriodId,
+  const queryParams = useMemo(() => {
+    const params: Record<string, string | number> = { page }
+    if (fiscalPeriodId && fiscalPeriodId !== '__all__') params.fiscal_period_id = fiscalPeriodId
+    if (search.trim()) params.search = search.trim()
+    return params
+  }, [fiscalPeriodId, search, page])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['budgets', queryParams],
+    queryFn: () => fetchBudgets(queryParams).then((r) => r.data),
   })
+
+  const budgets = data?.data ?? []
+  const pagination = data
+    ? { page: data.current_page, per_page: data.per_page, total: data.total }
+    : undefined
 
   const handleAdd = () => {
     setSelectedBudget(null)
@@ -39,6 +54,66 @@ export default function BudgetsPage() {
     setSelectedBudget(budget)
     setModalOpen(true)
   }
+
+  const clearFilters = () => {
+    setFiscalPeriodId('')
+    setSearch('')
+    setPage(1)
+  }
+
+  const columns = useMemo<ColumnDef<Budget>[]>(() => [
+    {
+      id: 'account',
+      header: 'Account',
+      cell: ({ row }) => (
+        <div>
+          <span className="font-medium text-foreground">{row.original.account?.account_name}</span>
+          {row.original.account?.account_code && (
+            <span className="text-xs text-muted-foreground ml-2 font-mono">({row.original.account.account_code})</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'cost_center',
+      header: 'Cost Center',
+      cell: ({ row }) => <span>{row.original.cost_center?.name || '—'}</span>,
+    },
+    {
+      id: 'period',
+      header: 'Fiscal Period',
+      cell: ({ row }) => <span>{row.original.fiscal_period?.name || '—'}</span>,
+    },
+    {
+      accessorKey: 'amount',
+      header: () => <div className="text-right">Budgeted Amount</div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono font-bold text-foreground">
+          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(row.original.amount)}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(row.original)}>
+            <Edit2 size={14} />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => navigate(`/accounts/budgets/${row.original.id}/report`)}
+          >
+            <PieChart size={14} />
+            Performance
+          </Button>
+        </div>
+      ),
+    },
+  ], [navigate])
 
   return (
     <div className="p-6 space-y-6">
@@ -53,72 +128,43 @@ export default function BudgetsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4 bg-muted/50 p-4 rounded-lg">
-        <div className="w-64">
-          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Fiscal Period</label>
-          <Select value={fiscalPeriodId} onValueChange={setFiscalPeriodId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              {periods.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {!fiscalPeriodId ? (
-        <div className="flex flex-col items-center justify-center py-20 border rounded-xl bg-card">
-          <TrendingUp size={48} className="text-muted-foreground mb-4 opacity-20" />
-          <p className="text-muted-foreground">Select a fiscal period to view budgets</p>
-        </div>
-      ) : (
-        <div className="border rounded-lg bg-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="h-10 px-4 text-left font-medium">Account</th>
-                <th className="h-10 px-4 text-left font-medium">Cost Center</th>
-                <th className="h-10 px-4 text-right font-medium">Budgeted Amount</th>
-                <th className="h-10 px-4 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={4} className="h-24 text-center">Loading budgets...</td></tr>
-              ) : budgets?.data?.data?.length ? (
-                budgets.data.data.map((b) => (
-                  <tr key={b.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 font-medium">{b.account?.account_name}</td>
-                    <td className="px-4 py-3">{b.cost_center?.name || '-'}</td>
-                    <td className="px-4 py-3 text-right font-mono font-bold">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(b.amount)}
-                    </td>
-                    <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(b)}>
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 gap-2"
-                        onClick={() => navigate(`/accounts/budgets/${b.id}/report`)}
-                      >
-                        <PieChart size={14} />
-                        Performance
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr><td colSpan={4} className="h-24 text-center text-muted-foreground">No budgets set for this period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={budgets}
+        isLoading={isLoading}
+        pagination={pagination}
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search by account or cost center…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (fiscalPeriodId && fiscalPeriodId !== '__all__'))}
+        onClearFilters={clearFilters}
+        toolbarExtra={
+          <div className="w-56">
+            <Select
+              value={fiscalPeriodId || '__all__'}
+              onValueChange={(val) => {
+                setFiscalPeriodId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="All Fiscal Periods" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Fiscal Periods</SelectItem>
+                {periods.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       <BudgetModal
         open={modalOpen}

@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Search, AlertCircle, Upload } from 'lucide-react'
+import { Plus, AlertCircle, Upload } from 'lucide-react'
 import BulkImportModal from '@/components/import/BulkImportModal'
 import { useQueryClient } from '@tanstack/react-query'
 import { fetchSuppliers, type Supplier } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import SupplierModal from './SupplierModal'
 import { useAuthStore } from '@/store/authStore'
@@ -129,19 +128,6 @@ export default function SuppliersPage() {
         )}
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-        <div className="relative w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, code or email…"
-            className="pl-9 h-9"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          />
-        </div>
-      </div>
-
       {isError && (
         <div className="flex items-center gap-2 p-4 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
           <AlertCircle className="h-4 w-4" />
@@ -155,6 +141,18 @@ export default function SuppliersPage() {
         isLoading={isLoading}
         pagination={pagination}
         onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search by name, code or email…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search)}
+        onClearFilters={() => {
+          setSearch('')
+          setPage(1)
+        }}
       />
 
       <SupplierModal

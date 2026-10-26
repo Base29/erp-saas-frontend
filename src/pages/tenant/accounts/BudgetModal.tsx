@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +10,7 @@ import {
   fetchFiscalPeriods,
   fetchCostCenters,
   type Budget,
+  type Account,
 } from '@/api/tenant'
 import {
   Dialog,
@@ -55,11 +56,18 @@ export default function BudgetModal({ budget, open, onOpenChange, defaultPeriodI
     enabled: open,
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts-all-active'],
-    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
     enabled: open,
   })
+
+  const accounts: Account[] = useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const { data: costCenters = [] } = useQuery({
     queryKey: ['cost-centers'],

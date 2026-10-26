@@ -47,7 +47,7 @@ const TABS: { id: VoucherTab; label: string }[] = [
 export default function JournalVouchersPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
   const [importOpen, setImportOpen] = useState(false)
@@ -63,7 +63,7 @@ export default function JournalVouchersPage() {
   // Build query params
   const queryParams: Record<string, string | number> = { page }
   if (activeTab !== 'all') queryParams.voucher_type = activeTab
-  if (search)              queryParams.search        = search
+  if (search.trim())       queryParams.search        = search.trim()
   if (dateFrom)            queryParams.date_from     = dateFrom
   if (dateTo)              queryParams.date_to       = dateTo
   if (approvalFilter)      queryParams.approval_status = approvalFilter
@@ -95,6 +95,7 @@ export default function JournalVouchersPage() {
     setDateTo('')
     setApprovalFilter('')
     setPostingFilter('')
+    setSearchParams({})
     setPage(1)
   }
 
@@ -208,8 +209,18 @@ export default function JournalVouchersPage() {
               placeholder="Voucher # or narration…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              className="pl-8 h-8 text-sm"
+              className="pl-8 pr-8 h-8 text-sm"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setPage(1); setSearchParams({}) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-full"
+                title="Clear search"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -238,7 +249,7 @@ export default function JournalVouchersPage() {
         {/* Approval status */}
         <div className="space-y-1">
           <Label className="text-xs">Approval</Label>
-          <Select value={approvalFilter} onValueChange={(v) => { setApprovalFilter(v === '__all__' ? '' : v); setPage(1) }}>
+          <Select value={approvalFilter || '__all__'} onValueChange={(v) => { setApprovalFilter(v === '__all__' ? '' : v); setPage(1) }}>
             <SelectTrigger className="h-8 text-sm w-36">
               <SelectValue placeholder="Any" />
             </SelectTrigger>
@@ -255,7 +266,7 @@ export default function JournalVouchersPage() {
         {/* Posting status */}
         <div className="space-y-1">
           <Label className="text-xs">Posting</Label>
-          <Select value={postingFilter} onValueChange={(v) => { setPostingFilter(v === '__all__' ? '' : v); setPage(1) }}>
+          <Select value={postingFilter || '__all__'} onValueChange={(v) => { setPostingFilter(v === '__all__' ? '' : v); setPage(1) }}>
             <SelectTrigger className="h-8 text-sm w-32">
               <SelectValue placeholder="Any" />
             </SelectTrigger>
@@ -287,6 +298,8 @@ export default function JournalVouchersPage() {
         isLoading={isLoading}
         pagination={pagination}
         onPageChange={setPage}
+        hasActiveFilters={Boolean(hasFilters)}
+        onClearFilters={clearFilters}
       />
 
       <BulkImportModal

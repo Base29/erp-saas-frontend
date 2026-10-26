@@ -4,6 +4,7 @@ import { fetchStockBalance, fetchStockLedger, fetchItems, fetchWarehouses, type 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/utils/format'
 
@@ -51,7 +52,24 @@ function StockBalanceTab() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setSubmitted(true)}>Run Report</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setSubmitted(true)}>Run Report</Button>
+          {(itemId || warehouseId) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setItemId('')
+                setWarehouseId('')
+                setSubmitted(false)
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {submitted && (
@@ -125,7 +143,25 @@ function StockLedgerTab() {
           <Label>To</Label>
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!itemId || !dateFrom || !dateTo}>Run Report</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setSubmitted(true)} disabled={!itemId || !dateFrom || !dateTo}>Run Report</Button>
+          {(itemId || dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setItemId('')
+                setDateFrom('')
+                setDateTo('')
+                setSubmitted(false)
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {submitted && (

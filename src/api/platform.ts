@@ -68,7 +68,7 @@ export interface PaginatedResponse<T> {
 }
 
 // Tenants
-export const fetchTenants = (params?: Record<string, string | number>) =>
+export const fetchTenants = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Tenant>>('/platform/v1/tenants', { params })
 
 export const fetchTenant = (id: string) =>

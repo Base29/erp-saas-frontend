@@ -63,12 +63,22 @@ export default function SaleOrdersPage() {
   const canEdit = canWrite(role, 'sales')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [approvalStatus, setApprovalStatus] = useState('')
+  const [fulfillmentStatus, setFulfillmentStatus] = useState('')
+  const [customerId, setCustomerId] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
 
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (approvalStatus && approvalStatus !== '__all__') queryParams.approval_status = approvalStatus
+  if (fulfillmentStatus && fulfillmentStatus !== '__all__') queryParams.fulfillment_status = fulfillmentStatus
+  if (customerId && customerId !== '__all__') queryParams.customer_id = customerId
+
   const { data, isLoading } = useQuery({
-    queryKey: ['sale-orders', page],
-    queryFn: () => fetchSaleOrders({ page }).then((r) => r.data),
+    queryKey: ['sale-orders', queryParams],
+    queryFn: () => fetchSaleOrders(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -131,9 +141,91 @@ export default function SaleOrdersPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Order</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search orders by # or customer…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(
+          search ||
+          (approvalStatus && approvalStatus !== '__all__') ||
+          (fulfillmentStatus && fulfillmentStatus !== '__all__') ||
+          (customerId && customerId !== '__all__')
+        )}
+        onClearFilters={() => {
+          setSearch('')
+          setApprovalStatus('')
+          setFulfillmentStatus('')
+          setCustomerId('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={customerId || '__all__'}
+              onValueChange={(val) => {
+                setCustomerId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-40 text-sm">
+                <SelectValue placeholder="All Customers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Customers</SelectItem>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={approvalStatus || '__all__'}
+              onValueChange={(val) => {
+                setApprovalStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Approvals" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Approvals</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending_approval">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={fulfillmentStatus || '__all__'}
+              onValueChange={(val) => {
+                setFulfillmentStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Fulfillments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Fulfillments</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="partially_fulfilled">Partially</SelectItem>
+                <SelectItem value="fulfilled">Fulfilled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

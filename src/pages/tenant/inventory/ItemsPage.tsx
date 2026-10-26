@@ -55,10 +55,20 @@ export default function ItemsPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Item | null>(null)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [status, setStatus] = useState('')
+
+  const queryParams: Record<string, string | number | boolean> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (filterType && filterType !== '__all__') queryParams.item_type = filterType
+  if (categoryId && categoryId !== '__all__') queryParams.category_id = categoryId
+  if (status && status !== '__all__') queryParams.is_active = status === 'active'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['items', page],
-    queryFn: () => fetchItems({ page }).then((r) => r.data),
+    queryKey: ['items', queryParams],
+    queryFn: () => fetchItems(queryParams).then((r) => r.data),
   })
 
   const { data: categories = [] } = useQuery({
@@ -163,8 +173,82 @@ export default function ItemsPage() {
         isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
         onPageChange={setPage}
-        filterKey="item_code"
-        filterPlaceholder="Search by code…"
+        filterKey="search"
+        filterPlaceholder="Search items by code or name…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(
+          search ||
+          (filterType && filterType !== '__all__') ||
+          (categoryId && categoryId !== '__all__') ||
+          (status && status !== '__all__')
+        )}
+        onClearFilters={() => {
+          setSearch('')
+          setFilterType('')
+          setCategoryId('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={filterType || '__all__'}
+              onValueChange={(val) => {
+                setFilterType(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Types</SelectItem>
+                <SelectItem value="stock">Stock</SelectItem>
+                <SelectItem value="service">Service</SelectItem>
+                <SelectItem value="bundle">Bundle</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={categoryId || '__all__'}
+              onValueChange={(val) => {
+                setCategoryId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={status || '__all__'}
+              onValueChange={(val) => {
+                setStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

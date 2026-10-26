@@ -41,13 +41,21 @@ export default function CustomersPage() {
   const canEdit = canWrite(role, 'sales')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [status, setStatus] = useState('')
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<CustomerFull | null>(null)
 
+  const queryParams: Record<string, string | number | boolean> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (categoryId && categoryId !== '__all__') queryParams.customer_category_id = categoryId
+  if (status && status !== '__all__') queryParams.is_active = status === 'active'
+
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', page],
-    queryFn: () => fetchCustomersFull({ page, per_page: 100 }).then((r) => r.data),
+    queryKey: ['customers', queryParams],
+    queryFn: () => fetchCustomersFull(queryParams).then((r) => r.data),
   })
 
   const { data: categories = [] } = useQuery({
@@ -132,9 +140,65 @@ export default function CustomersPage() {
         )}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} filterKey="name" filterPlaceholder="Search by name…" />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search customers by name, code or tax #…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (categoryId && categoryId !== '__all__') || (status && status !== '__all__'))}
+        onClearFilters={() => {
+          setSearch('')
+          setCategoryId('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2">
+            <Select
+              value={categoryId || '__all__'}
+              onValueChange={(val) => {
+                setCategoryId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-40 text-sm">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={status || '__all__'}
+              onValueChange={(val) => {
+                setStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

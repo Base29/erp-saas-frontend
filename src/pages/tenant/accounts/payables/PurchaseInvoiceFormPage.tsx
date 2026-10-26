@@ -11,6 +11,7 @@ import {
   fetchCostCenters,
   createPurchaseInvoice,
   uploadAttachment,
+  type Account,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,10 +51,17 @@ export default function PurchaseInvoiceFormPage() {
     queryFn: () => fetchSuppliers({ is_active: 1 }).then((r) => r.data.data),
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts-all-active'],
-    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
+
+  const accounts: Account[] = useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const filteredAccounts = useMemo(() => {
     if (!accountFilter.trim()) return accounts

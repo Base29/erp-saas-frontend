@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -32,10 +33,16 @@ export default function WarehousesPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Warehouse | null>(null)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+
+  const queryParams: Record<string, string | number | boolean> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (status && status !== '__all__') queryParams.is_active = status === 'active'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['warehouses', page],
-    queryFn: () => fetchWarehouses({ page }).then((r) => r.data),
+    queryKey: ['warehouses', queryParams],
+    queryFn: () => fetchWarehouses(queryParams).then((r) => r.data),
   })
 
   const warehouses = data?.data ?? []
@@ -93,8 +100,37 @@ export default function WarehousesPage() {
         isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
         onPageChange={setPage}
-        filterKey="warehouse_code"
-        filterPlaceholder="Search by code…"
+        filterKey="search"
+        filterPlaceholder="Search warehouses by code, name or location…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (status && status !== '__all__'))}
+        onClearFilters={() => {
+          setSearch('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <Select
+            value={status || '__all__'}
+            onValueChange={(val) => {
+              setStatus(val === '__all__' ? '' : val)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-32 text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        }
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

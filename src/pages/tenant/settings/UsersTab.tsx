@@ -54,10 +54,18 @@ export default function UsersTab() {
   const [roleValue, setRoleValue] = useState<string>('')
   const [editRoleValue, setEditRoleValue] = useState<string>('')
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [filterRole, setFilterRole] = useState('')
+  const [status, setStatus] = useState('')
+
+  const queryParams: Record<string, string | number | boolean> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (filterRole && filterRole !== '__all__') queryParams.role = filterRole
+  if (status && status !== '__all__') queryParams.is_active = status === 'active'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tenant-users', page],
-    queryFn: () => fetchUsers({ page }).then((r) => r.data),
+    queryKey: ['tenant-users', queryParams],
+    queryFn: () => fetchUsers(queryParams).then((r) => r.data),
   })
 
   const users = data?.data ?? []
@@ -146,8 +154,58 @@ export default function UsersTab() {
         isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
         onPageChange={setPage}
-        filterKey="name"
-        filterPlaceholder="Search by name…"
+        filterKey="search"
+        filterPlaceholder="Search by name or email…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (filterRole && filterRole !== '__all__') || (status && status !== '__all__'))}
+        onClearFilters={() => {
+          setSearch('')
+          setFilterRole('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={filterRole || '__all__'}
+              onValueChange={(val) => {
+                setFilterRole(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-40 text-sm">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Roles</SelectItem>
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>{ROLE_LABELS[r] || r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={status || '__all__'}
+              onValueChange={(val) => {
+                setStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
       />
 
       {/* Create dialog */}

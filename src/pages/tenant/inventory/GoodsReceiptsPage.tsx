@@ -52,12 +52,22 @@ export default function GoodsReceiptsPage() {
   const canEdit = canWrite(role, 'inventory')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [approvalStatus, setApprovalStatus] = useState('')
+  const [postingStatus, setPostingStatus] = useState('')
+  const [warehouseId, setWarehouseId] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
 
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (approvalStatus && approvalStatus !== '__all__') queryParams.approval_status = approvalStatus
+  if (postingStatus && postingStatus !== '__all__') queryParams.posting_status = postingStatus
+  if (warehouseId && warehouseId !== '__all__') queryParams.warehouse_id = warehouseId
+
   const { data, isLoading } = useQuery({
-    queryKey: ['goods-receipts', page],
-    queryFn: () => fetchGoodsReceipts({ page }).then((r) => r.data),
+    queryKey: ['goods-receipts', queryParams],
+    queryFn: () => fetchGoodsReceipts(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -116,9 +126,90 @@ export default function GoodsReceiptsPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New GRN</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search GRN by #, reference or warehouse…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(
+          search ||
+          (approvalStatus && approvalStatus !== '__all__') ||
+          (postingStatus && postingStatus !== '__all__') ||
+          (warehouseId && warehouseId !== '__all__')
+        )}
+        onClearFilters={() => {
+          setSearch('')
+          setApprovalStatus('')
+          setPostingStatus('')
+          setWarehouseId('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={warehouseId || '__all__'}
+              onValueChange={(val) => {
+                setWarehouseId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-40 text-sm">
+                <SelectValue placeholder="All Warehouses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Warehouses</SelectItem>
+                {(warehouses as Warehouse[]).map((w) => (
+                  <SelectItem key={w.id} value={String(w.id)}>{w.warehouse_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={approvalStatus || '__all__'}
+              onValueChange={(val) => {
+                setApprovalStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending_approval">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={postingStatus || '__all__'}
+              onValueChange={(val) => {
+                setPostingStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Postings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Postings</SelectItem>
+                <SelectItem value="unposted">Unposted</SelectItem>
+                <SelectItem value="posted">Posted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

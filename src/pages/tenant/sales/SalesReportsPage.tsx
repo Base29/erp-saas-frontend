@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/utils/format'
+import { X } from 'lucide-react'
 
 type ReportTab = 'sales-register' | 'receivables-aging'
 
@@ -107,7 +108,25 @@ export default function SalesReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => { setRunRegister(true); setRegisterPage(1) }}>Run Report</Button>
+            <div className="flex gap-2">
+              <Button onClick={() => { setRunRegister(true); setRegisterPage(1) }}>Run Report</Button>
+              {(customerId || dateFrom || dateTo) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomerId('')
+                    setDateFrom('')
+                    setDateTo('')
+                    setRunRegister(false)
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
 
           {registerLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -170,7 +189,23 @@ export default function SalesReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => setRunAging(true)}>Run Report</Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setRunAging(true)}>Run Report</Button>
+              {agingCustomerId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setAgingCustomerId('')
+                    setRunAging(false)
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
 
           {agingLoading && <p className="text-sm text-muted-foreground">Loading…</p>}

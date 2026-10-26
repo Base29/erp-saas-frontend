@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
@@ -8,6 +9,7 @@ import {
   fetchSuppliers,
   fetchAccounts,
   createSupplierPayment,
+  type Account,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,10 +43,17 @@ export default function SupplierPaymentFormPage() {
   })
 
   // We only want Bank/Cash accounts for payments
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts-all-active'],
-    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
+
+  const accounts: Account[] = useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),

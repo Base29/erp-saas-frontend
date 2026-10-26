@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Printer } from 'lucide-react'
+import { Printer, X } from 'lucide-react'
 import { fetchCustomers, fetchCustomerStatement } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -130,9 +130,25 @@ export default function CustomerStatementPage() {
             className="w-40"
           />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!canRun}>
-          Run Report
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setSubmitted(true)} disabled={!canRun}>
+            Run Report
+          </Button>
+          {(params.customer_id || params.date_from || params.date_to) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setParams({ customer_id: '', date_from: '', date_to: '' })
+                setSubmitted(false)
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading && (

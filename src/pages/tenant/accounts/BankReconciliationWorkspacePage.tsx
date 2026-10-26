@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -10,6 +10,7 @@ import {
   createJournalVoucherForStatementLine,
   invertBankStatementSigns,
   VOUCHER_TYPE_LABELS,
+  type Account,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,10 +62,17 @@ export default function BankReconciliationWorkspacePage() {
     enabled: !!statement?.bank_account_id,
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts', 'active-all'],
-    queryFn: () => fetchAccounts({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
+
+  const accounts: Account[] = useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const { data: costCenters = [] } = useQuery({
     queryKey: ['cost-centers', 'active-all'],

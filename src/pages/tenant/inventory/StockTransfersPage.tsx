@@ -52,12 +52,20 @@ export default function StockTransfersPage() {
   const canEdit = canWrite(role, 'inventory')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [approvalStatus, setApprovalStatus] = useState('')
+  const [postingStatus, setPostingStatus] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
 
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (approvalStatus && approvalStatus !== '__all__') queryParams.approval_status = approvalStatus
+  if (postingStatus && postingStatus !== '__all__') queryParams.posting_status = postingStatus
+
   const { data, isLoading } = useQuery({
-    queryKey: ['stock-transfers', page],
-    queryFn: () => fetchStockTransfers({ page }).then((r) => r.data),
+    queryKey: ['stock-transfers', queryParams],
+    queryFn: () => fetchStockTransfers(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -122,9 +130,70 @@ export default function StockTransfersPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Transfer</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search transfers by # or reference…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(
+          search ||
+          (approvalStatus && approvalStatus !== '__all__') ||
+          (postingStatus && postingStatus !== '__all__')
+        )}
+        onClearFilters={() => {
+          setSearch('')
+          setApprovalStatus('')
+          setPostingStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={approvalStatus || '__all__'}
+              onValueChange={(val) => {
+                setApprovalStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending_approval">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={postingStatus || '__all__'}
+              onValueChange={(val) => {
+                setPostingStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Postings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Postings</SelectItem>
+                <SelectItem value="unposted">Unposted</SelectItem>
+                <SelectItem value="posted">Posted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

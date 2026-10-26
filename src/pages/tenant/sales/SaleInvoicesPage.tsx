@@ -61,12 +61,22 @@ export default function SaleInvoicesPage() {
   const canEdit = canWrite(role, 'sales')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [approvalStatus, setApprovalStatus] = useState('')
+  const [postingStatus, setPostingStatus] = useState('')
+  const [customerId, setCustomerId] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
 
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (approvalStatus && approvalStatus !== '__all__') queryParams.approval_status = approvalStatus
+  if (postingStatus && postingStatus !== '__all__') queryParams.posting_status = postingStatus
+  if (customerId && customerId !== '__all__') queryParams.customer_id = customerId
+
   const { data, isLoading } = useQuery({
-    queryKey: ['sale-invoices', page],
-    queryFn: () => fetchSaleInvoices({ page }).then((r) => r.data),
+    queryKey: ['sale-invoices', queryParams],
+    queryFn: () => fetchSaleInvoices(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -146,9 +156,90 @@ export default function SaleInvoicesPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Invoice</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search invoices by # or customer…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(
+          search ||
+          (approvalStatus && approvalStatus !== '__all__') ||
+          (postingStatus && postingStatus !== '__all__') ||
+          (customerId && customerId !== '__all__')
+        )}
+        onClearFilters={() => {
+          setSearch('')
+          setApprovalStatus('')
+          setPostingStatus('')
+          setCustomerId('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              value={customerId || '__all__'}
+              onValueChange={(val) => {
+                setCustomerId(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-40 text-sm">
+                <SelectValue placeholder="All Customers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Customers</SelectItem>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={approvalStatus || '__all__'}
+              onValueChange={(val) => {
+                setApprovalStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue placeholder="All Approvals" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Approvals</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending_approval">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={postingStatus || '__all__'}
+              onValueChange={(val) => {
+                setPostingStatus(val === '__all__' ? '' : val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue placeholder="All Postings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Postings</SelectItem>
+                <SelectItem value="unposted">Unposted</SelectItem>
+                <SelectItem value="posted">Posted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

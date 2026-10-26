@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Search, Check, ChevronDown, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   fetchJournalVoucher,
   fetchAccounts,
@@ -13,10 +14,16 @@ import {
   createJournalVoucher,
   updateJournalVoucher,
   matchBankStatementLine,
+  type Account,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -52,6 +59,141 @@ const VOUCHER_TYPES = [
   { value: 'bank_payment', label: 'Bank Payment' },
 ]
 
+function AccountCombobox({
+  value,
+  onChange,
+  accounts,
+  disabled,
+  isLoading,
+}: {
+  value?: string
+  onChange: (val: string) => void
+  accounts: Account[]
+  disabled?: boolean
+  isLoading?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const selectedAccount = useMemo(
+    () => accounts.find((a) => String(a.id) === String(value)),
+    [accounts, value]
+  )
+
+  const filteredAccounts = useMemo(() => {
+    if (!search.trim()) return accounts
+    const q = search.toLowerCase().trim()
+    return accounts.filter(
+      (a) =>
+        a.account_name.toLowerCase().includes(q) ||
+        a.account_code.toLowerCase().includes(q)
+    )
+  }, [accounts, search])
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        <button
+          type="button"
+          className={cn(
+            'flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-2.5 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-left',
+            !selectedAccount && 'text-muted-foreground'
+          )}
+        >
+          <span className="truncate">
+            {isLoading
+              ? 'Loading accounts...'
+              : selectedAccount
+              ? `${selectedAccount.account_code} — ${selectedAccount.account_name}`
+              : 'Select account…'}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-80 p-2 bg-popover shadow-lg border rounded-md"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {/* Search Input Header */}
+        <div className="flex items-center border-b pb-2 px-1 mb-1 gap-1.5">
+          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search by code or name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSearch('')
+              }}
+              className="text-muted-foreground hover:text-foreground text-xs p-0.5"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Results count indicator when searching */}
+        {search.trim() && (
+          <div className="px-1 py-0.5 text-[10px] text-muted-foreground font-medium">
+            {filteredAccounts.length} {filteredAccounts.length === 1 ? 'account' : 'accounts'} found
+          </div>
+        )}
+
+        {/* Scrollable Account List */}
+        <div className="max-h-60 overflow-y-auto space-y-0.5 mt-0.5">
+          {isLoading ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              Loading accounts...
+            </div>
+          ) : filteredAccounts.length === 0 ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              No accounts match "{search}"
+            </div>
+          ) : (
+            filteredAccounts.map((a) => {
+              const isSelected = String(a.id) === String(value)
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => {
+                    onChange(String(a.id))
+                    setOpen(false)
+                    setSearch('')
+                  }}
+                  className={cn(
+                    'flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer select-none transition-colors',
+                    isSelected
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-accent hover:text-accent-foreground text-foreground'
+                  )}
+                >
+                  <div className="truncate mr-2">
+                    <span className="font-mono font-medium text-foreground mr-1.5">
+                      {a.account_code}
+                    </span>
+                    <span className="text-muted-foreground">—</span>{' '}
+                    <span>{a.account_name}</span>
+                  </div>
+                  {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export default function JournalVoucherFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEdit = !!id && id !== 'new'
@@ -65,23 +207,36 @@ export default function JournalVoucherFormPage() {
     enabled: isEdit,
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts', isEdit ? 'all' : 'active'],
-    queryFn: () =>
-      fetchAccounts({
-        ...(isEdit ? {} : { is_active: 1 }),
-        per_page: -1,
-      }).then((r) => r.data.data),
+  const { data: accountsData, isLoading: accountsLoading } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
+
+  const accounts: Account[] = useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const { data: periods = [] } = useQuery({
     queryKey: ['fiscal-periods', 'all'],
-    queryFn: () => fetchFiscalPeriods({ per_page: -1 }).then((r) => r.data.data),
+    queryFn: () =>
+      fetchFiscalPeriods({ per_page: -1 }).then((r) => {
+        if (Array.isArray(r.data)) return r.data
+        if (Array.isArray(r.data?.data)) return r.data.data
+        return []
+      }),
   })
 
   const { data: costCenters = [] } = useQuery({
     queryKey: ['cost-centers', 'all-active'],
-    queryFn: () => fetchCostCenters({ is_active: 1, per_page: -1 }).then((r) => r.data.data),
+    queryFn: () =>
+      fetchCostCenters({ is_active: 1, per_page: -1 }).then((r) => {
+        if (Array.isArray(r.data)) return r.data
+        if (Array.isArray(r.data?.data)) return r.data.data
+        return []
+      }),
   })
 
   const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
@@ -267,7 +422,7 @@ export default function JournalVoucherFormPage() {
               control={control}
               name="fiscal_period_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isReadOnly}>
+                <Select value={field.value || undefined} onValueChange={field.onChange} disabled={isReadOnly}>
                   <SelectTrigger><SelectValue placeholder="Select period…" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {periods.filter((p) => p.status === 'open').map((p) => (
@@ -325,18 +480,13 @@ export default function JournalVoucherFormPage() {
                         control={control}
                         name={`lines.${i}.account_id`}
                         render={({ field: f }) => (
-                          <Select value={f.value} onValueChange={f.onChange} disabled={isReadOnly}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select account…" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-72 min-w-[20rem]">
-                              {accounts.map((a) => (
-                                <SelectItem key={a.id} value={String(a.id)}>
-                                  {a.account_code} — {a.account_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <AccountCombobox
+                            value={f.value}
+                            onChange={f.onChange}
+                            accounts={accounts}
+                            disabled={isReadOnly}
+                            isLoading={accountsLoading}
+                          />
                         )}
                       />
                     </td>
@@ -345,7 +495,11 @@ export default function JournalVoucherFormPage() {
                         control={control}
                         name={`lines.${i}.cost_center_id`}
                         render={({ field: f }) => (
-                          <Select value={f.value || ''} onValueChange={f.onChange} disabled={isReadOnly}>
+                          <Select 
+                            value={f.value || 'none'} 
+                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)} 
+                            disabled={isReadOnly}
+                          >
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="No cost center" />
                             </SelectTrigger>

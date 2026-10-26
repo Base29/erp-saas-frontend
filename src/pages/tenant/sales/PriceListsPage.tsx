@@ -43,13 +43,19 @@ export default function PriceListsPage() {
   const canEdit = canWrite(role, 'sales')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<PriceList | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
 
+  const queryParams: Record<string, string | number | boolean> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (status && status !== '__all__') queryParams.is_active = status === 'active'
+
   const { data, isLoading } = useQuery({
-    queryKey: ['price-lists', page],
-    queryFn: () => fetchPriceLists({ page }).then((r) => r.data),
+    queryKey: ['price-lists', queryParams],
+    queryFn: () => fetchPriceLists(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -123,9 +129,44 @@ export default function PriceListsPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Price List</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search price lists by name or currency…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (status && status !== '__all__'))}
+        onClearFilters={() => {
+          setSearch('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <Select
+            value={status || '__all__'}
+            onValueChange={(val) => {
+              setStatus(val === '__all__' ? '' : val)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-32 text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {/* Create/Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>

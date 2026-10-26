@@ -49,7 +49,7 @@ export interface Activity {
 export const fetchDashboardSummary = () =>
   apiClient.get<DashboardSummary>('/v1/dashboard/summary')
 
-export const fetchActivities = (params?: Record<string, string | number>) =>
+export const fetchActivities = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Activity>>('/v1/activities', { params })
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ export interface TaxSetting {
   is_active: boolean
 }
 
-export const fetchTaxSettings = (params?: Record<string, string | number>) =>
+export const fetchTaxSettings = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<TaxSetting>>('/v1/settings/tax', { params })
 
 export const upsertTaxSetting = (payload: Omit<TaxSetting, 'id'>) =>
@@ -121,7 +121,7 @@ export interface Sequence {
   reset_rule: 'never' | 'yearly' | 'monthly'
 }
 
-export const fetchSequences = (params?: Record<string, string | number>) =>
+export const fetchSequences = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Sequence>>('/v1/settings/sequences', { params })
 
 export const updateSequence = (id: string, payload: Partial<Sequence>) =>
@@ -137,7 +137,7 @@ export interface TenantUser {
   created_at: string
 }
 
-export const fetchUsers = (params?: Record<string, string | number>) =>
+export const fetchUsers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<TenantUser>>('/v1/settings/users', { params })
 
 export const createUser = (payload: { name: string; email: string; password: string; role: string }) =>
@@ -163,7 +163,7 @@ export interface Company {
   is_active: boolean
 }
 
-export const fetchCompanies = (params?: Record<string, string | number>) =>
+export const fetchCompanies = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Company>>('/v1/settings/companies', { params })
 
 export const createCompany = (payload: Omit<Company, 'id' | 'logo_url'>) =>
@@ -258,7 +258,7 @@ export interface Account {
   has_data?: boolean
 }
 
-export const fetchAccountGroups = (params?: Record<string, string | number>) =>
+export const fetchAccountGroups = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<AccountGroup>>('/v1/accounts/groups', { params })
 
 export const createAccountGroup = (payload: { name: string }) =>
@@ -270,7 +270,7 @@ export const updateAccountGroup = (id: string, payload: { name: string }) =>
 export const deleteAccountGroup = (id: string) =>
   apiClient.delete(`/v1/accounts/groups/${id}`)
 
-export const fetchAccountTypes = (params?: Record<string, string | number>) =>
+export const fetchAccountTypes = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<AccountType>>('/v1/accounts/types', { params })
 
 export const createAccountType = (payload: { name: string; account_group_id: string }) =>
@@ -361,7 +361,7 @@ export interface PaginatedResponse<T> {
   last_page: number
 }
 
-export const fetchJournalVouchers = (params?: Record<string, string | number>) =>
+export const fetchJournalVouchers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<JournalVoucher>>('/v1/accounts/journal-vouchers', { params })
 
 export const fetchJournalVoucher = (id: string) =>
@@ -462,7 +462,7 @@ export interface Customer {
   is_active: boolean
 }
 
-export const fetchCustomers = (params?: Record<string, string | number>) =>
+export const fetchCustomers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<{ data: Customer[] }>('/v1/sales/customers', { params })
 
 // ── Inventory — Master Data ───────────────────────────────────────────────────
@@ -521,13 +521,13 @@ export interface Warehouse {
   is_active: boolean
 }
 
-export const fetchUoms = (params?: Record<string, string | number>) =>
+export const fetchUoms = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<UnitOfMeasure>>('/v1/inventory/uoms', { params })
 
-export const fetchItemCategories = (params?: Record<string, string | number>) =>
+export const fetchItemCategories = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<ItemCategory>>('/v1/inventory/item-categories', { params })
 
-export const fetchProductCategories = (params?: Record<string, string | number>) =>
+export const fetchProductCategories = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<ItemCategory>>('/v1/settings/product-categories', { params })
 
 export const createItemCategory = (payload: Omit<ItemCategory, 'id'>) =>
@@ -539,7 +539,7 @@ export const updateItemCategory = (id: string, payload: Partial<ItemCategory>) =
 export const deleteItemCategory = (id: string) =>
   apiClient.delete(`/v1/settings/product-categories/${id}`)
 
-export const fetchItems = (params?: Record<string, string | number>) =>
+export const fetchItems = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Item>>('/v1/inventory/items', { params })
 
 export const fetchItem = (id: string) =>
@@ -551,7 +551,7 @@ export const createItem = (payload: Omit<Item, 'id' | 'category' | 'base_uom' | 
 export const updateItem = (id: string, payload: Partial<Parameters<typeof createItem>[0]>) =>
   apiClient.patch<{ data: Item }>(`/v1/inventory/items/${id}`, payload)
 
-export const fetchWarehouses = (params?: Record<string, string | number>) =>
+export const fetchWarehouses = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Warehouse>>('/v1/inventory/warehouses', { params })
 
 export const createWarehouse = (payload: Omit<Warehouse, 'id'>) =>
@@ -632,7 +632,7 @@ export interface StockTransfer {
 }
 
 // Goods Receipts
-export const fetchGoodsReceipts = (params?: Record<string, string | number>) =>
+export const fetchGoodsReceipts = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<GoodsReceipt>>('/v1/inventory/goods-receipts', { params })
 
 export const fetchGoodsReceipt = (id: string) =>
@@ -654,7 +654,7 @@ export const postGoodsReceipt = (id: string) =>
   apiClient.post(`/v1/inventory/goods-receipts/${id}/post`)
 
 // Goods Issues
-export const fetchGoodsIssues = (params?: Record<string, string | number>) =>
+export const fetchGoodsIssues = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<GoodsIssue>>('/v1/inventory/goods-issues', { params })
 
 export const fetchGoodsIssue = (id: string) =>
@@ -676,7 +676,7 @@ export const postGoodsIssue = (id: string) =>
   apiClient.post(`/v1/inventory/goods-issues/${id}/post`)
 
 // Stock Transfers
-export const fetchStockTransfers = (params?: Record<string, string | number>) =>
+export const fetchStockTransfers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<StockTransfer>>('/v1/inventory/stock-transfers', { params })
 
 export const fetchStockTransfer = (id: string) =>
@@ -731,7 +731,7 @@ export interface CustomerFull {
   assigned_salesperson?: TenantUser
 }
 
-export const fetchCustomerCategories = (params?: Record<string, string | number>) =>
+export const fetchCustomerCategories = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<CustomerCategory>>('/v1/settings/customer-categories', { params })
 
 export const createCustomerCategory = (payload: Omit<CustomerCategory, 'id'>) =>
@@ -746,7 +746,7 @@ export const deleteCustomerCategory = (id: string) =>
 export const fetchCustomerGroups = () =>
   apiClient.get<{ data: CustomerGroup[] }>('/v1/sales/customer-groups')
 
-export const fetchCustomersFull = (params?: Record<string, string | number>) =>
+export const fetchCustomersFull = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<CustomerFull>>('/v1/sales/customers', { params })
 
 export const fetchCustomerFull = (id: string) =>
@@ -778,7 +778,7 @@ export interface PriceList {
   items?: PriceListItem[]
 }
 
-export const fetchPriceLists = (params?: Record<string, string | number>) =>
+export const fetchPriceLists = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<PriceList>>('/v1/sales/price-lists', { params })
 
 export const fetchPriceList = (id: string) =>
@@ -821,7 +821,7 @@ export interface Quotation {
   lines?: QuotationLine[]
 }
 
-export const fetchQuotations = (params?: Record<string, string | number>) =>
+export const fetchQuotations = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Quotation>>('/v1/sales/quotations', { params })
 
 export const fetchQuotation = (id: string) =>
@@ -880,7 +880,7 @@ export interface SaleOrder {
   lines?: SaleOrderLine[]
 }
 
-export const fetchSaleOrders = (params?: Record<string, string | number>) =>
+export const fetchSaleOrders = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<SaleOrder>>('/v1/sales/orders', { params })
 
 export const fetchSaleOrder = (id: string) =>
@@ -941,7 +941,7 @@ export interface SaleInvoice {
   lines?: SaleInvoiceLine[]
 }
 
-export const fetchSaleInvoices = (params?: Record<string, string | number>) =>
+export const fetchSaleInvoices = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<SaleInvoice>>('/v1/sales/invoices', { params })
 
 export const fetchSaleInvoice = (id: string) =>
@@ -995,7 +995,7 @@ export interface SaleReceipt {
   allocations?: ReceiptAllocation[]
 }
 
-export const fetchSaleReceipts = (params?: Record<string, string | number>) =>
+export const fetchSaleReceipts = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<SaleReceipt>>('/v1/sales/receipts', { params })
 
 export const fetchSaleReceipt = (id: string) =>
@@ -1031,7 +1031,7 @@ export interface CreditNote {
   source_invoice?: SaleInvoice
 }
 
-export const fetchCreditNotes = (params?: Record<string, string | number>) =>
+export const fetchCreditNotes = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<CreditNote>>('/v1/sales/credit-notes', { params })
 
 export const fetchCreditNote = (id: string) =>
@@ -1082,7 +1082,7 @@ export interface OutwardGatePass {
   lines?: GatePassLine[]
 }
 
-export const fetchGatePasses = (params?: Record<string, string | number>) =>
+export const fetchGatePasses = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<OutwardGatePass>>('/v1/sales/gate-passes', { params })
 
 export const fetchGatePass = (id: string) =>
@@ -1154,7 +1154,7 @@ export interface SupplierPayment {
   bank_account?: Account
 }
 
-export const fetchSuppliers = (params?: Record<string, string | number>) =>
+export const fetchSuppliers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Supplier>>('/v1/accounts/suppliers', { params })
 
 export const createSupplier = (payload: Omit<Supplier, 'id' | 'default_payable_account'>) =>
@@ -1166,7 +1166,7 @@ export const updateSupplier = (id: string, payload: Partial<Supplier>) =>
 export const deleteSupplier = (id: string) =>
   apiClient.delete(`/v1/accounts/suppliers/${id}`)
 
-export const fetchPurchaseInvoices = (params?: Record<string, string | number>) =>
+export const fetchPurchaseInvoices = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<PurchaseInvoice>>('/v1/accounts/purchase-invoices', { params })
 
 export const createPurchaseInvoice = (payload: {
@@ -1174,7 +1174,7 @@ export const createPurchaseInvoice = (payload: {
   total_amount: number; tax_amount?: number; expense_account_id: string; cost_center_id?: string | null;
 }) => apiClient.post<{ data: PurchaseInvoice }>('/v1/accounts/purchase-invoices', payload)
 
-export const fetchSupplierPayments = (params?: Record<string, string | number>) =>
+export const fetchSupplierPayments = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<SupplierPayment>>('/v1/accounts/supplier-payments', { params })
 
 export const createSupplierPayment = (payload: {
@@ -1230,7 +1230,7 @@ export interface BankStatement {
   lines?: BankStatementLine[]
 }
 
-export const fetchBankStatements = (params?: Record<string, string | number>) =>
+export const fetchBankStatements = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<BankStatement>>('/v1/accounts/bank-statements', { params })
 
 export const fetchBankStatement = (id: string) =>
@@ -1281,7 +1281,7 @@ export interface Budget {
   cost_center?: CostCenter
 }
 
-export const fetchBudgets = (params?: Record<string, string | number>) =>
+export const fetchBudgets = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Budget>>('/v1/accounts/budgets', { params })
 
 export const fetchBudgetPerformance = (id: string) =>

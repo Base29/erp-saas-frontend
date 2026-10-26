@@ -10,15 +10,14 @@ import {
   DollarSign, 
   FileText, 
   Search,
-  Filter,
   ArrowLeft,
-  Calendar
+  X
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { 
   Table, 
   TableBody, 
@@ -27,16 +26,46 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function RecentActivitiesPage() {
   const [page, setPage] = useState(1)
-  
+  const [search, setSearch] = useState('')
+  const [event, setEvent] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string | number> = { page, per_page: 20 }
+    if (search.trim()) params.search = search.trim()
+    if (event && event !== '__all__') params.event = event
+    if (dateFrom) params.date_from = dateFrom
+    if (dateTo) params.date_to = dateTo
+    return params
+  }, [page, search, event, dateFrom, dateTo])
+
   const { data, isLoading } = useQuery({
-    queryKey: ['activities', page],
-    queryFn: () => fetchActivities({ page, per_page: 20 }).then(res => res.data)
+    queryKey: ['activities', queryParams],
+    queryFn: () => fetchActivities(queryParams).then(res => res.data)
   })
 
   const activities = data?.data || []
+
+  const hasFilters = Boolean(search || (event && event !== '__all__') || dateFrom || dateTo)
+
+  const clearFilters = () => {
+    setSearch('')
+    setEvent('')
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -58,23 +87,74 @@ export default function RecentActivitiesPage() {
 
       <Card>
         <CardHeader className="border-b bg-muted/50 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="relative w-full lg:w-80">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by reference or description..."
-                className="pl-9 bg-background"
+                placeholder="Search reference, description..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                className="pl-8 pr-8 bg-background h-9 text-sm"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); setPage(1) }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-full"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Date Range
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-              </Button>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select
+                value={event || '__all__'}
+                onValueChange={(val) => {
+                  setEvent(val === '__all__' ? '' : val)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="h-9 w-36 text-sm bg-background">
+                  <SelectValue placeholder="All Actions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Actions</SelectItem>
+                  <SelectItem value="created">Created</SelectItem>
+                  <SelectItem value="updated">Updated</SelectItem>
+                  <SelectItem value="deleted">Deleted</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(1) }}
+                  className="h-9 w-36 text-sm bg-background"
+                  title="Date From"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1) }}
+                  className="h-9 w-36 text-sm bg-background"
+                  title="Date To"
+                />
+              </div>
+
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-9 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -122,11 +202,11 @@ export default function RecentActivitiesPage() {
                     <TableCell className="font-mono text-xs font-semibold">
                       {activity.reference}
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {activity.description}
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Triggered by {activity.causer_name || 'System'}
+                    <TableCell className="text-sm">
+                      <div className="max-w-[400px]">
+                        <p className="truncate text-xs font-medium">{activity.description}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          By: {activity.causer_name || 'System'}
                         </p>
                       </div>
                     </TableCell>
@@ -155,7 +235,12 @@ export default function RecentActivitiesPage() {
                       <div className="p-3 bg-secondary rounded-full">
                         <FileText className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <p className="text-muted-foreground">No activities found for this period.</p>
+                      <p className="text-muted-foreground font-medium">No activities found.</p>
+                      {hasFilters && (
+                        <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs gap-1.5">
+                          <X className="h-3.5 w-3.5" /> Clear all filters
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

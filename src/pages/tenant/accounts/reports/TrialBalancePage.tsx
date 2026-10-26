@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, ArrowRight } from 'lucide-react'
+import { Printer, ArrowRight, X } from 'lucide-react'
 import { fetchFiscalPeriods, fetchTrialBalance } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -102,9 +102,25 @@ export default function TrialBalancePage() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!periodId}>
-          Run Report
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setSubmitted(true)} disabled={!periodId}>
+            Run Report
+          </Button>
+          {periodId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setPeriodId('')
+                setSubmitted(false)
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading && (

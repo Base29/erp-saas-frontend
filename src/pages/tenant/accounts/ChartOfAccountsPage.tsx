@@ -163,22 +163,6 @@ export default function ChartOfAccountsPage() {
           <p className="text-sm text-muted-foreground">Manage your ledger accounts</p>
         </div>
         <div className="flex gap-2">
-          <Select
-            value={selectedCategoryId || 'all'}
-            onValueChange={(v) => setSelectedCategoryId(v === 'all' ? null : v)}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {flatCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {canEdit && (
             <>
               <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
@@ -200,10 +184,38 @@ export default function ChartOfAccountsPage() {
         onPageChange={setPage}
         filterKey="search"
         filterPlaceholder="Search accounts by name or code…"
-        onFilterChange={(f) => {
-          setSearch(f.search || '')
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
           setPage(1)
         }}
+        hasActiveFilters={Boolean(search || selectedCategoryId)}
+        onClearFilters={() => {
+          setSearch('')
+          setSelectedCategoryId(null)
+          setPage(1)
+        }}
+        toolbarExtra={
+          <Select
+            value={selectedCategoryId || 'all'}
+            onValueChange={(v) => {
+              setSelectedCategoryId(v === 'all' ? null : v)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-[220px] text-sm">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {flatCategories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
       />
 
       {/* Account Modal */}

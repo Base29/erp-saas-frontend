@@ -1,19 +1,69 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSupplierPayments } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
-import { Plus, Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import DataTable from '@/components/DataTable'
+import type { ColumnDef } from '@tanstack/react-table'
 
 export default function SupplierPaymentsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ['supplier-payments', { search }],
-    queryFn: () => fetchSupplierPayments({ search }),
+  const [page, setPage] = useState(1)
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string | number> = { page }
+    if (search.trim()) params.search = search.trim()
+    return params
+  }, [search, page])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['supplier-payments', queryParams],
+    queryFn: () => fetchSupplierPayments(queryParams).then((r) => r.data),
   })
+
+  const payments = data?.data ?? []
+  const pagination = data
+    ? { page: data.current_page, per_page: data.per_page, total: data.total }
+    : undefined
+
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'payment_date',
+      header: 'Date',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.payment_date ? format(new Date(row.original.payment_date), 'MMM d, yyyy') : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'supplier',
+      header: 'Supplier',
+      cell: ({ row }) => <span className="font-medium">{row.original.supplier?.name ?? '—'}</span>,
+    },
+    {
+      accessorKey: 'payment_reference',
+      header: 'Reference',
+      cell: ({ row }) => <span>{row.original.payment_reference || '—'}</span>,
+    },
+    {
+      id: 'account',
+      header: 'Bank / Cash Account',
+      cell: ({ row }) => <span>{row.original.bank_account?.account_name ?? '—'}</span>,
+    },
+    {
+      accessorKey: 'amount',
+      header: () => <div className="text-right">Amount</div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono font-semibold text-foreground">
+          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(row.original.amount)}
+        </div>
+      ),
+    },
+  ], [])
 
   return (
     <div className="p-6 space-y-6">
@@ -28,52 +78,25 @@ export default function SupplierPaymentsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search payments..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50">
-            <tr>
-              <th className="h-10 px-4 text-left font-medium">Date</th>
-              <th className="h-10 px-4 text-left font-medium">Supplier</th>
-              <th className="h-10 px-4 text-left font-medium">Reference</th>
-              <th className="h-10 px-4 text-left font-medium">Account</th>
-              <th className="h-10 px-4 text-right font-medium">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={5} className="h-24 text-center">Loading...</td></tr>
-            ) : payments?.data?.data?.length ? (
-              payments.data.data.map((p) => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {p.payment_date ? format(new Date(p.payment_date), 'MMM d, yyyy') : '-'}
-                  </td>
-                  <td className="px-4 py-3 font-medium">{p.supplier?.name}</td>
-                  <td className="px-4 py-3">{p.payment_reference || '-'}</td>
-                  <td className="px-4 py-3">{p.bank_account?.account_name}</td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-red-600">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p.amount)}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr><td colSpan={5} className="h-24 text-center text-muted-foreground">No payments found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={payments}
+        isLoading={isLoading}
+        pagination={pagination}
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search payments by reference or supplier…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search)}
+        onClearFilters={() => {
+          setSearch('')
+          setPage(1)
+        }}
+      />
     </div>
   )
 }

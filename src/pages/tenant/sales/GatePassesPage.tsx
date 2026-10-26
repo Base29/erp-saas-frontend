@@ -55,13 +55,19 @@ export default function GatePassesPage() {
   const canEdit = canWrite(role, 'sales')
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<SaleInvoice | null>(null)
 
+  const queryParams: Record<string, string | number> = { page }
+  if (search.trim()) queryParams.search = search.trim()
+  if (status && status !== '__all__') queryParams.status = status
+
   const { data, isLoading } = useQuery({
-    queryKey: ['gate-passes', page],
-    queryFn: () => fetchGatePasses({ page }).then((r) => r.data),
+    queryKey: ['gate-passes', queryParams],
+    queryFn: () => fetchGatePasses(queryParams).then((r) => r.data),
   })
 
   const { data: detail } = useQuery({
@@ -147,9 +153,45 @@ export default function GatePassesPage() {
         {canEdit && <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Gate Pass</Button>}
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} isLoading={isLoading}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
         pagination={data ? { page, per_page: data.per_page, total: data.total } : undefined}
-        onPageChange={setPage} />
+        onPageChange={setPage}
+        filterKey="search"
+        filterPlaceholder="Search gate passes by #, warehouse or customer…"
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        hasActiveFilters={Boolean(search || (status && status !== '__all__'))}
+        onClearFilters={() => {
+          setSearch('')
+          setStatus('')
+          setPage(1)
+        }}
+        toolbarExtra={
+          <Select
+            value={status || '__all__'}
+            onValueChange={(val) => {
+              setStatus(val === '__all__' ? '' : val)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-36 text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="dispatched">Dispatched</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
