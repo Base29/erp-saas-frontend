@@ -42,6 +42,7 @@ import BalanceSheetPage from '@/pages/tenant/accounts/reports/BalanceSheetPage'
 import CashFlowPage from '@/pages/tenant/accounts/reports/CashFlowPage'
 import EquityChangesPage from '@/pages/tenant/accounts/reports/EquityChangesPage'
 import CustomerStatementPage from '@/pages/tenant/accounts/reports/CustomerStatementPage'
+import SupplierStatementPage from '@/pages/tenant/accounts/reports/SupplierStatementPage'
 import SuppliersPage from '@/pages/tenant/accounts/payables/SuppliersPage'
 import PurchaseInvoicesPage from '@/pages/tenant/accounts/payables/PurchaseInvoicesPage'
 import PurchaseInvoiceFormPage from '@/pages/tenant/accounts/payables/PurchaseInvoiceFormPage'
@@ -210,6 +211,7 @@ export const router = createBrowserRouter([
               { path: 'reports/cash-flow',          element: <CashFlowPage /> },
               { path: 'reports/equity-changes',     element: <EquityChangesPage /> },
               { path: 'reports/customer-statement', element: <CustomerStatementPage /> },
+              { path: 'reports/supplier-statement', element: <SupplierStatementPage /> },
             ],
           },
           // Inventory module

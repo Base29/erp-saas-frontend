@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
 
 const schema = z.object({
   supplier_id: z.string().min(1, 'Supplier is required'),
@@ -42,7 +43,6 @@ export default function PurchaseInvoiceFormPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
-  const [accountFilter, setAccountFilter] = useState('')
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -51,7 +51,7 @@ export default function PurchaseInvoiceFormPage() {
     queryFn: () => fetchSuppliers({ is_active: 1 }).then((r) => r.data.data),
   })
 
-  const { data: accountsData } = useQuery({
+  const { data: accountsData, isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts-all'],
     queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
@@ -62,14 +62,6 @@ export default function PurchaseInvoiceFormPage() {
     if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
     return []
   }, [accountsData])
-
-  const filteredAccounts = useMemo(() => {
-    if (!accountFilter.trim()) return accounts
-    const q = accountFilter.toLowerCase()
-    return accounts.filter(
-      (a) => a.account_name.toLowerCase().includes(q) || a.account_code.toLowerCase().includes(q)
-    )
-  }, [accounts, accountFilter])
 
   const { data: costCenters = [] } = useQuery({
     queryKey: ['cost-centers'],
@@ -173,50 +165,21 @@ export default function PurchaseInvoiceFormPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Expense/Asset Account</Label>
-                  {accountFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setAccountFilter('')}
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
-                    >
-                      Clear filter
-                    </button>
+                <Label>Expense/Asset Account</Label>
+                <Controller
+                  control={control}
+                  name="expense_account_id"
+                  render={({ field }) => (
+                    <AccountCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      accounts={accounts}
+                      isLoading={accountsLoading}
+                      filterType="expense"
+                      placeholder="Search expense account by name or code…"
+                    />
                   )}
-                </div>
-                <div className="space-y-1.5">
-                  <Input
-                    placeholder="Search expense by name/code (e.g. 5210, Utilities)..."
-                    className="h-8 text-xs"
-                    value={accountFilter}
-                    onChange={(e) => setAccountFilter(e.target.value)}
-                  />
-                  <Controller
-                    control={control}
-                    name="expense_account_id"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-72">
-                          {filteredAccounts.length === 0 ? (
-                            <div className="p-2 text-xs text-muted-foreground text-center">
-                              No matching accounts found
-                            </div>
-                          ) : (
-                            filteredAccounts.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.account_code} - {a.account_name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
+                />
                 {errors.expense_account_id && <p className="text-xs text-destructive">{errors.expense_account_id.message}</p>}
               </div>
 

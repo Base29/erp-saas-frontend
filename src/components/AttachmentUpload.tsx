@@ -1,9 +1,10 @@
 import { useRef, useState, DragEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Download, Paperclip, Trash2, Upload } from 'lucide-react'
-import { uploadAttachment, deleteAttachment, fetchAttachments, downloadAttachment } from '@/api/tenant'
+import { Download, Eye, Paperclip, Trash2, Upload } from 'lucide-react'
+import { uploadAttachment, deleteAttachment, fetchAttachments, downloadAttachment, type Attachment } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import AttachmentPreviewModal from '@/components/AttachmentPreviewModal'
 
 const ALLOWED_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv']
 const MAX_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
@@ -25,6 +26,7 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [previewItem, setPreviewItem] = useState<Attachment | null>(null)
 
   const queryKey = ['attachments', attachableType, attachableId]
 
@@ -112,6 +114,16 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                  title="Preview attachment"
+                  onClick={() => setPreviewItem(a)}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span className="sr-only">Preview</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                   title="Download attachment"
                   onClick={() => downloadAttachment(a.id, a.original_filename)}
                 >
@@ -135,6 +147,16 @@ export default function AttachmentUpload({ attachableType, attachableId, readonl
             </li>
           ))}
         </ul>
+      )}
+
+      {previewItem && (
+        <AttachmentPreviewModal
+          open={!!previewItem}
+          onOpenChange={(o) => !o && setPreviewItem(null)}
+          attachmentId={previewItem.id}
+          filename={previewItem.original_filename}
+          mimeType={previewItem.mime_type}
+        />
       )}
     </div>
   )

@@ -215,6 +215,16 @@ export const downloadAttachment = async (id: string, filename: string) => {
   window.URL.revokeObjectURL(url)
 }
 
+export const previewAttachment = async (id: string): Promise<{ blob: Blob; contentType: string }> => {
+  const response = await apiClient.get(`/v1/attachments/${id}/preview`, {
+    responseType: 'blob',
+  })
+  return {
+    blob: response.data,
+    contentType: response.headers['content-type'] || 'application/octet-stream',
+  }
+}
+
 export const fetchAttachments = (attachableType: string, attachableId: string) =>
   apiClient.get<{ data: Attachment[] }>(
     `/v1/attachments?attachable_type=${attachableType}&attachable_id=${attachableId}`
@@ -1124,6 +1134,7 @@ export interface Supplier {
   address?: string
   default_payable_account_id?: string
   is_active: boolean
+  current_balance?: number
   default_payable_account?: Account
 }
 
@@ -1136,10 +1147,23 @@ export interface PurchaseInvoice {
   total_amount: number
   tax_amount: number
   status: string
+  posting_status?: string
+  posted_at?: string | null
+  amount_paid?: number
+  balance_due?: number
   journal_voucher_id: string | null
   created_by: string
   supplier?: Supplier
   journal_voucher?: JournalVoucher
+  allocations?: SupplierPaymentAllocation[]
+}
+
+export interface SupplierPaymentAllocation {
+  id: string
+  supplier_payment_id: string
+  purchase_invoice_id: string
+  allocated_amount: number
+  invoice?: PurchaseInvoice
 }
 
 export interface SupplierPayment {
@@ -1149,13 +1173,19 @@ export interface SupplierPayment {
   payment_reference: string | null
   amount: number
   bank_account_id: string
+  posting_status?: string
+  posted_at?: string | null
   journal_voucher_id: string | null
   supplier?: Supplier
   bank_account?: Account
+  allocations?: SupplierPaymentAllocation[]
 }
 
 export const fetchSuppliers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Supplier>>('/v1/accounts/suppliers', { params })
+
+export const fetchSupplier = (id: string) =>
+  apiClient.get<{ data: Supplier }>(`/v1/accounts/suppliers/${id}`)
 
 export const createSupplier = (payload: Omit<Supplier, 'id' | 'default_payable_account'>) =>
   apiClient.post<{ data: Supplier }>('/v1/accounts/suppliers', payload)
@@ -1169,18 +1199,62 @@ export const deleteSupplier = (id: string) =>
 export const fetchPurchaseInvoices = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<PurchaseInvoice>>('/v1/accounts/purchase-invoices', { params })
 
+export const fetchPurchaseInvoice = (id: string) =>
+  apiClient.get<{ data: PurchaseInvoice }>(`/v1/accounts/purchase-invoices/${id}`)
+
 export const createPurchaseInvoice = (payload: {
   supplier_id: string; invoice_number: string; invoice_date: string; due_date?: string | null;
   total_amount: number; tax_amount?: number; expense_account_id: string; cost_center_id?: string | null;
 }) => apiClient.post<{ data: PurchaseInvoice }>('/v1/accounts/purchase-invoices', payload)
 
+export const postPurchaseInvoice = (id: string) =>
+  apiClient.post<{ data: PurchaseInvoice; message: string }>(`/v1/accounts/purchase-invoices/${id}/post`)
+
+export const fetchUnpaidPurchaseInvoices = (supplierId: string) =>
+  apiClient.get<{ data: PurchaseInvoice[] }>(`/v1/accounts/suppliers/${supplierId}/unpaid-invoices`)
+
 export const fetchSupplierPayments = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<SupplierPayment>>('/v1/accounts/supplier-payments', { params })
+
+export const fetchSupplierPayment = (id: string) =>
+  apiClient.get<{ data: SupplierPayment }>(`/v1/accounts/supplier-payments/${id}`)
 
 export const createSupplierPayment = (payload: {
   supplier_id: string; payment_date: string; payment_reference?: string | null;
   amount: number; bank_account_id: string;
+  allocations?: Array<{ purchase_invoice_id: string; allocated_amount: number }>;
 }) => apiClient.post<{ data: SupplierPayment }>('/v1/accounts/supplier-payments', payload)
+
+export const postSupplierPayment = (id: string) =>
+  apiClient.post<{ data: SupplierPayment; message: string }>(`/v1/accounts/supplier-payments/${id}/post`)
+
+// ── Accounts — Supplier Statement ─────────────────────────────────────────────
+export interface SupplierStatementRow {
+  type: 'invoice' | 'payment'
+  reference: string
+  date: string
+  debit: number
+  credit: number
+  balance: number
+}
+
+export interface SupplierStatementResponse {
+  supplier: {
+    id: string
+    name: string
+    supplier_code: string
+    email?: string
+    phone?: string
+  }
+  opening_balance: number
+  total_debit: number
+  total_credit: number
+  closing_balance: number
+  rows: SupplierStatementRow[]
+}
+
+export const fetchSupplierStatement = (params: { supplier_id: string; date_from: string; date_to: string }) =>
+  apiClient.get<SupplierStatementResponse>('/v1/accounts/reports/supplier-statement', { params })
 
 // ── Accounts — Cost Centers ───────────────────────────────────────────────────
 export interface CostCenter {
