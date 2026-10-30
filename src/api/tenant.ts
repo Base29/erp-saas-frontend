@@ -411,7 +411,7 @@ export const fetchGeneralLedger = (params: { account_id: string; date_from: stri
 export const fetchTrialBalance = (params: { fiscal_period_id: string }) =>
   apiClient.get('/v1/accounts/reports/trial-balance', { params })
 
-export const fetchProfitAndLoss = (params: { date_from: string; date_to: string }) =>
+export const fetchProfitAndLoss = (params: { date_from?: string; date_to?: string; fiscal_period_id?: string }) =>
   apiClient.get<{
     revenue: { sales: number; other: number; total: number }
     cogs: number
@@ -423,7 +423,7 @@ export const fetchProfitAndLoss = (params: { date_from: string; date_to: string 
     details: any[]
   }>('/v1/accounts/reports/profit-and-loss', { params })
 
-export const fetchBalanceSheet = (params: { as_of_date: string }) =>
+export const fetchBalanceSheet = (params: { as_of_date?: string; fiscal_period_id?: string }) =>
   apiClient.get<{
     assets: { current: any[]; non_current: any[]; total: number }
     liabilities: { current: any[]; non_current: any[]; total: number }

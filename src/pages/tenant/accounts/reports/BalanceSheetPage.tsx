@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
-import { fetchBalanceSheet } from '@/api/tenant'
+import { fetchBalanceSheet, fetchFiscalPeriods } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 type BSRow = {
   account_code: string
@@ -61,13 +68,39 @@ function BSSection({
 }
 
 export default function BalanceSheetPage() {
-  const [asOfDate, setAsOfDate] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [periodId, setPeriodId] = useState<string>('')
+  const [asOfDate, setAsOfDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [submitted, setSubmitted] = useState<boolean>(true)
+
+  const { data: periods = [] } = useQuery({
+    queryKey: ['fiscal-periods'],
+    queryFn: () => fetchFiscalPeriods({ per_page: 100 }).then((r) => r.data.data),
+  })
+
+  // Auto-select active fiscal period if none selected
+  useEffect(() => {
+    if (!periodId && periods.length > 0) {
+      const activePeriod = periods.find((p) => p.status === 'open') ?? periods[0]
+      if (activePeriod) {
+        setPeriodId(activePeriod.id)
+        setAsOfDate(activePeriod.end_date)
+      }
+    }
+  }, [periods, periodId])
+
+  const handlePeriodChange = (selectedId: string) => {
+    setPeriodId(selectedId)
+    const selected = periods.find((p) => p.id === selectedId)
+    if (selected) {
+      setAsOfDate(selected.end_date)
+    }
+    setSubmitted(true)
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['report-bs', asOfDate],
-    queryFn: () => fetchBalanceSheet({ as_of_date: asOfDate }).then((r) => r.data),
-    enabled: submitted && !!asOfDate,
+    queryKey: ['report-bs', asOfDate, periodId],
+    queryFn: () => fetchBalanceSheet({ as_of_date: asOfDate, fiscal_period_id: periodId || undefined }).then((r) => r.data),
+    enabled: submitted && (!!asOfDate || !!periodId),
   })
 
   const assets = data?.assets
@@ -102,7 +135,25 @@ export default function BalanceSheetPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex gap-4 items-end p-4 rounded-xl border bg-card shadow-sm print:hidden">
+      <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border bg-card shadow-sm print:hidden">
+        {periods.length > 0 && (
+          <div className="space-y-1.5 min-w-56">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">Fiscal Period</Label>
+            <Select value={periodId} onValueChange={handlePeriodChange}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select period…" />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                    <span className="ml-2 text-xs text-muted-foreground capitalize">({p.status})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label className="text-xs font-bold uppercase text-muted-foreground">As of Date</Label>
           <Input
@@ -112,7 +163,7 @@ export default function BalanceSheetPage() {
             className="w-48 h-9"
           />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!asOfDate} size="sm" className="h-9 px-6">
+        <Button onClick={() => setSubmitted(true)} disabled={!asOfDate && !periodId} size="sm" className="h-9 px-6">
           Run Report
         </Button>
       </div>
