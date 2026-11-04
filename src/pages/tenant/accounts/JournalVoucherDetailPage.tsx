@@ -1,12 +1,13 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Printer } from 'lucide-react'
+import { ArrowLeft, Pencil, Printer, RotateCcw } from 'lucide-react'
 import {
   fetchJournalVoucher,
   submitJournalVoucherForApproval,
   approveJournalVoucher,
   rejectJournalVoucher,
   postJournalVoucher,
+  unpostJournalVoucher,
   VOUCHER_TYPE_LABELS,
 } from '@/api/tenant'
 import ApprovalActions from '@/components/ApprovalActions'
@@ -49,6 +50,7 @@ export default function JournalVoucherDetailPage() {
   const approveMut = useMutation({ mutationFn: (comments?: string) => approveJournalVoucher(id!, comments), onSuccess: invalidate })
   const rejectMut  = useMutation({ mutationFn: (comments?: string) => rejectJournalVoucher(id!, comments), onSuccess: invalidate })
   const postMut    = useMutation({ mutationFn: () => postJournalVoucher(id!), onSuccess: invalidate })
+  const unpostMut  = useMutation({ mutationFn: () => unpostJournalVoucher(id!), onSuccess: invalidate })
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>
   if (!jv)       return <div className="p-6 text-destructive">Voucher not found</div>
@@ -59,8 +61,12 @@ export default function JournalVoucherDetailPage() {
   const canEditDoc =
     canEdit &&
     !jv.is_auto_generated &&
-    jv.posting_status !== 'posted' &&
-    jv.approval_status === 'draft'
+    jv.posting_status !== 'posted'
+
+  const canUnpostDoc =
+    canEdit &&
+    !jv.is_auto_generated &&
+    jv.posting_status === 'posted'
 
   return (
     <>
@@ -97,6 +103,22 @@ export default function JournalVoucherDetailPage() {
                 onClick={() => navigate(`/accounts/journal-vouchers/${id}/edit`)}
               >
                 <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+              </Button>
+            )}
+            {canUnpostDoc && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                disabled={unpostMut.isPending}
+                onClick={() => {
+                  if (confirm('Unposting will reverse the general ledger entries for this voucher. Continue?')) {
+                    unpostMut.mutate()
+                  }
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                {unpostMut.isPending ? 'Unposting…' : 'Unpost Voucher'}
               </Button>
             )}
             <Button

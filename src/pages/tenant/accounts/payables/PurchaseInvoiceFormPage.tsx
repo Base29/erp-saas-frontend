@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,7 +9,9 @@ import {
   fetchSuppliers,
   fetchAccounts,
   fetchCostCenters,
+  fetchPurchaseInvoice,
   createPurchaseInvoice,
+  updatePurchaseInvoice,
   uploadAttachment,
   type Account,
 } from '@/api/tenant'
@@ -32,6 +34,7 @@ const schema = z.object({
   invoice_date: z.string().min(1, 'Date is required'),
   due_date: z.string().optional().nullable(),
   expense_account_id: z.string().min(1, 'Expense account is required'),
+  tax_account_id: z.string().optional().nullable(),
   cost_center_id: z.string().optional().nullable(),
   total_amount: z.string().min(1, 'Amount is required'),
   tax_amount: z.string().default('0'),
@@ -40,6 +43,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export default function PurchaseInvoiceFormPage() {
+  const { id } = useParams<{ id: string }>()
+  const isEdit = Boolean(id)
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -68,7 +73,13 @@ export default function PurchaseInvoiceFormPage() {
     queryFn: () => fetchCostCenters({ is_active: 1 }).then((r) => r.data.data),
   })
 
-  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { data: existingInvoice } = useQuery({
+    queryKey: ['purchase-invoice', id],
+    queryFn: () => fetchPurchaseInvoice(id!).then((r) => r.data.data),
+    enabled: isEdit,
+  })
+
+  const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       invoice_date: new Date().toISOString().split('T')[0],
@@ -77,14 +88,47 @@ export default function PurchaseInvoiceFormPage() {
     },
   })
 
+  const watchedTaxAmount = parseFloat(watch('tax_amount') || '0')
+
+  useEffect(() => {
+    if (existingInvoice) {
+      // Find expense and tax accounts from JV lines if available
+      const jvLines = existingInvoice.journal_voucher?.lines ?? []
+      const taxLine = jvLines.find((l: any) =>
+        l.account?.account_name?.toLowerCase().includes('vat') ||
+        l.account?.account_name?.toLowerCase().includes('tax')
+      )
+      const expenseLine = jvLines.find((l: any) =>
+        Number(l.debit_amount) > 0 && l !== taxLine
+      )
+
+      reset({
+        supplier_id: existingInvoice.supplier_id,
+        invoice_number: existingInvoice.invoice_number,
+        invoice_date: existingInvoice.invoice_date ? existingInvoice.invoice_date.slice(0, 10) : '',
+        due_date: existingInvoice.due_date ? existingInvoice.due_date.slice(0, 10) : null,
+        expense_account_id: expenseLine ? String(expenseLine.account_id) : '',
+        tax_account_id: taxLine ? String(taxLine.account_id) : null,
+        cost_center_id: expenseLine?.cost_center_id ?? 'none',
+        total_amount: String(existingInvoice.total_amount),
+        tax_amount: String(existingInvoice.tax_amount || 0),
+      })
+    }
+  }, [existingInvoice, reset])
+
   const save = useMutation({
     mutationFn: async (v: FormValues) => {
-      const res = await createPurchaseInvoice({
+      const payload = {
         ...v,
         total_amount: parseFloat(v.total_amount),
         tax_amount: parseFloat(v.tax_amount) || 0,
+        tax_account_id: v.tax_account_id && v.tax_account_id !== 'default' ? v.tax_account_id : null,
         cost_center_id: v.cost_center_id === 'none' ? null : v.cost_center_id,
-      })
+      }
+
+      const res = isEdit
+        ? await updatePurchaseInvoice(id!, payload)
+        : await createPurchaseInvoice(payload)
 
       const invoiceId = res.data?.data?.id
       if (invoiceId && attachmentFile) {
@@ -99,6 +143,9 @@ export default function PurchaseInvoiceFormPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
+      if (id) {
+        qc.invalidateQueries({ queryKey: ['purchase-invoice', id] })
+      }
       navigate('/accounts/purchase-invoices')
     },
   })
@@ -109,7 +156,9 @@ export default function PurchaseInvoiceFormPage() {
         <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/purchase-invoices')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Record Purchase Invoice</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isEdit ? 'Edit Purchase Invoice' : 'Record Purchase Invoice'}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-6">
@@ -208,15 +257,37 @@ export default function PurchaseInvoiceFormPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Total Amount (Inc. Tax)</Label>
-                <Input type="number" step="0.01" {...register('total_amount')} />
+                <Input type="number" step="0.01" min="0" {...register('total_amount')} />
                 {errors.total_amount && <p className="text-xs text-destructive">{errors.total_amount.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label>Tax Amount (Optional)</Label>
-                <Input type="number" step="0.01" {...register('tax_amount')} />
+                <Input type="number" step="0.01" min="0" {...register('tax_amount')} />
               </div>
             </div>
+
+            {watchedTaxAmount > 0 && (
+              <div className="space-y-2 pt-1 border-t">
+                <Label>Purchases VAT / Input Tax Account</Label>
+                <Controller
+                  control={control}
+                  name="tax_account_id"
+                  render={({ field }) => (
+                    <AccountCombobox
+                      value={field.value ?? undefined}
+                      onChange={field.onChange}
+                      accounts={accounts}
+                      isLoading={accountsLoading}
+                      placeholder="Default: Auto-resolve Purchases VAT (Input Tax) account"
+                    />
+                  )}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to automatically link to the standard Purchases VAT (Input Tax) account.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -281,7 +352,7 @@ export default function PurchaseInvoiceFormPage() {
           </Button>
           <Button type="submit" className="gap-2" disabled={isSubmitting || save.isPending}>
             <Save size={16} />
-            {isSubmitting ? 'Saving...' : 'Save Invoice'}
+            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Save Invoice'}
           </Button>
         </div>
       </form>

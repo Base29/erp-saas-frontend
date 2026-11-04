@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, ArrowLeft, Search, Check, ChevronDown, X } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Search, Check, ChevronDown, X, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   fetchJournalVoucher,
@@ -13,6 +13,7 @@ import {
   fetchCostCenters,
   createJournalVoucher,
   updateJournalVoucher,
+  unpostJournalVoucher,
   matchBankStatementLine,
   type Account,
 } from '@/api/tenant'
@@ -386,8 +387,28 @@ export default function JournalVoucherFormPage() {
       </div>
 
       {isReadOnly && (
-        <div className="rounded-md bg-muted px-4 py-2 text-sm text-muted-foreground">
-          This voucher is read-only ({jv?.is_auto_generated ? 'auto-generated' : 'posted'}).
+        <div className="rounded-md bg-muted px-4 py-3 text-sm flex items-center justify-between border">
+          <span className="text-muted-foreground">
+            This voucher is read-only ({jv?.is_auto_generated ? 'auto-generated from transaction' : 'currently posted'}).
+          </span>
+          {!jv?.is_auto_generated && jv?.posting_status === 'posted' && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-amber-700 dark:text-amber-300 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+              onClick={() => {
+                if (confirm('Unposting will reverse the general ledger entries for this voucher so you can edit it. Continue?')) {
+                  unpostJournalVoucher(id!).then(() => {
+                    qc.invalidateQueries({ queryKey: ['journal-voucher', id] })
+                    qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
+                  })
+                }
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Unpost to Edit
+            </Button>
+          )}
         </div>
       )}
 

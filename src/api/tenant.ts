@@ -404,6 +404,9 @@ export const rejectJournalVoucher = (id: string, comments?: string) =>
 export const postJournalVoucher = (id: string) =>
   apiClient.post(`/v1/accounts/journal-vouchers/${id}/post`)
 
+export const unpostJournalVoucher = (id: string) =>
+  apiClient.post<{ data: JournalVoucher; message: string }>(`/v1/accounts/journal-vouchers/${id}/unpost`)
+
 // ── Accounts — Reports ────────────────────────────────────────────────────────
 export const fetchGeneralLedger = (params: { account_id: string; date_from: string; date_to: string; page?: number; per_page?: number }) =>
   apiClient.get('/v1/accounts/reports/general-ledger', { params })
@@ -978,6 +981,9 @@ export const rejectSaleInvoice = (id: string, comments?: string) =>
 export const postSaleInvoice = (id: string) =>
   apiClient.post(`/v1/sales/invoices/${id}/post`)
 
+export const unpostSaleInvoice = (id: string) =>
+  apiClient.post<{ data: SaleInvoice; message: string }>(`/v1/sales/invoices/${id}/unpost`)
+
 export const downloadInvoicePdf = (id: string) =>
   apiClient.get(`/v1/sales/invoices/${id}/pdf`, { responseType: 'blob' })
 
@@ -1204,11 +1210,20 @@ export const fetchPurchaseInvoice = (id: string) =>
 
 export const createPurchaseInvoice = (payload: {
   supplier_id: string; invoice_number: string; invoice_date: string; due_date?: string | null;
-  total_amount: number; tax_amount?: number; expense_account_id: string; cost_center_id?: string | null;
+  total_amount: number; tax_amount?: number; expense_account_id: string; tax_account_id?: string | null; cost_center_id?: string | null;
 }) => apiClient.post<{ data: PurchaseInvoice }>('/v1/accounts/purchase-invoices', payload)
+
+export const updatePurchaseInvoice = (id: string, payload: Partial<Parameters<typeof createPurchaseInvoice>[0]>) =>
+  apiClient.patch<{ data: PurchaseInvoice }>(`/v1/accounts/purchase-invoices/${id}`, payload)
+
+export const deletePurchaseInvoice = (id: string) =>
+  apiClient.delete(`/v1/accounts/purchase-invoices/${id}`)
 
 export const postPurchaseInvoice = (id: string) =>
   apiClient.post<{ data: PurchaseInvoice; message: string }>(`/v1/accounts/purchase-invoices/${id}/post`)
+
+export const unpostPurchaseInvoice = (id: string) =>
+  apiClient.post<{ data: PurchaseInvoice; message: string }>(`/v1/accounts/purchase-invoices/${id}/unpost`)
 
 export const fetchUnpaidPurchaseInvoices = (supplierId: string) =>
   apiClient.get<{ data: PurchaseInvoice[] }>(`/v1/accounts/suppliers/${supplierId}/unpaid-invoices`)

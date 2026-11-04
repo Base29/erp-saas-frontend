@@ -184,6 +184,7 @@ export const router = createBrowserRouter([
               { path: 'suppliers', element: <SuppliersPage /> },
               { path: 'purchase-invoices', element: <PurchaseInvoicesPage /> },
               { path: 'purchase-invoices/new', element: <PurchaseInvoiceFormPage /> },
+              { path: 'purchase-invoices/:id/edit', element: <PurchaseInvoiceFormPage /> },
               { path: 'supplier-payments', element: <SupplierPaymentsPage /> },
               { path: 'supplier-payments/new', element: <SupplierPaymentFormPage /> },
               

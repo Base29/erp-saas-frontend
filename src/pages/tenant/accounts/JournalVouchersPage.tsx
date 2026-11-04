@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Eye, Search, X, Upload } from 'lucide-react'
+import { Plus, Eye, Search, X, Upload, Pencil, RotateCcw } from 'lucide-react'
 import BulkImportModal from '@/components/import/BulkImportModal'
-import { fetchJournalVouchers, type JournalVoucher, VOUCHER_TYPE_LABELS } from '@/api/tenant'
+import { fetchJournalVouchers, unpostJournalVoucher, type JournalVoucher, VOUCHER_TYPE_LABELS } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -101,6 +101,15 @@ export default function JournalVouchersPage() {
 
   const hasFilters = search || dateFrom || dateTo || approvalFilter || postingFilter
 
+  const unpostMutation = useMutation({
+    mutationFn: (id: string) => unpostJournalVoucher(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
+      qc.invalidateQueries({ queryKey: ['general-ledger'] })
+      qc.invalidateQueries({ queryKey: ['trial-balance'] })
+    },
+  })
+
   const columns: ColumnDef<JournalVoucher>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #', enableSorting: true },
     {
@@ -148,15 +157,52 @@ export default function JournalVouchersPage() {
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => navigate(`/accounts/journal-vouchers/${row.original.id}`)}
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const jv = row.original
+        const isPosted = jv.posting_status === 'posted'
+        const canModify = !jv.is_auto_generated
+
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              title="View Voucher"
+              onClick={() => navigate(`/accounts/journal-vouchers/${jv.id}`)}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            {canEdit && canModify && !isPosted && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                title="Edit Voucher"
+                onClick={() => navigate(`/accounts/journal-vouchers/${jv.id}/edit`)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {canEdit && canModify && isPosted && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                title="Unpost Voucher"
+                disabled={unpostMutation.isPending}
+                onClick={() => {
+                  if (confirm('Unposting will reverse the ledger entries for this voucher. Continue?')) {
+                    unpostMutation.mutate(jv.id)
+                  }
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        )
+      },
     },
   ]
 

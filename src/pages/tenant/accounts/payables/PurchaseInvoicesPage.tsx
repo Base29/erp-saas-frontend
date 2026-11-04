@@ -1,9 +1,14 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchPurchaseInvoices, postPurchaseInvoice, type PurchaseInvoice } from '@/api/tenant'
+import {
+  fetchPurchaseInvoices,
+  postPurchaseInvoice,
+  unpostPurchaseInvoice,
+  type PurchaseInvoice,
+} from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Eye, Plus, Send, CheckCircle2 } from 'lucide-react'
+import { Eye, Plus, Send, CheckCircle2, Pencil, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -41,6 +46,19 @@ export default function PurchaseInvoicesPage() {
 
   const postMutation = useMutation({
     mutationFn: (id: string) => postPurchaseInvoice(id),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
+      qc.invalidateQueries({ queryKey: ['suppliers'] })
+      qc.invalidateQueries({ queryKey: ['general-ledger'] })
+      qc.invalidateQueries({ queryKey: ['trial-balance'] })
+      if (selectedInvoice && res.data?.data) {
+        setSelectedInvoice(res.data.data)
+      }
+    },
+  })
+
+  const unpostMutation = useMutation({
+    mutationFn: (id: string) => unpostPurchaseInvoice(id),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
       qc.invalidateQueries({ queryKey: ['suppliers'] })
@@ -126,9 +144,30 @@ export default function PurchaseInvoicesPage() {
       cell: ({ row }) => {
         const inv = row.original
         const isUnposted = inv.posting_status !== 'posted'
+        const canModify = inv.status !== 'paid' && inv.status !== 'partially_paid'
 
         return (
           <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              title="View Invoice"
+              onClick={() => setSelectedInvoice(inv)}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            {canEdit && canModify && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                title="Edit Invoice"
+                onClick={() => navigate(`/accounts/purchase-invoices/${inv.id}/edit`)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {canEdit && isUnposted && (
               <Button
                 variant="outline"
@@ -142,19 +181,27 @@ export default function PurchaseInvoicesPage() {
                 Post
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => setSelectedInvoice(inv)}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
+            {canEdit && !isUnposted && canModify && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                title="Unpost Invoice"
+                disabled={unpostMutation.isPending}
+                onClick={() => {
+                  if (confirm('Unposting will reverse the ledger journal entries for this invoice. Continue?')) {
+                    unpostMutation.mutate(inv.id)
+                  }
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         )
       },
     },
-  ], [canEdit, postMutation])
+  ], [canEdit, postMutation, unpostMutation, navigate])
 
   return (
     <div className="p-6 space-y-6">
@@ -194,15 +241,29 @@ export default function PurchaseInvoicesPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between pb-2 border-b">
             <DialogTitle>Purchase Invoice #{selectedInvoice?.invoice_number}</DialogTitle>
-            {selectedInvoice?.posting_status === 'posted' ? (
-              <Badge variant="success" className="gap-1 text-xs">
-                <CheckCircle2 className="h-3 w-3" /> Posted
-              </Badge>
-            ) : (
-              <Badge variant="warning" className="text-xs">
-                Unposted
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {canEdit && selectedInvoice && selectedInvoice.status !== 'paid' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-7 text-xs"
+                  onClick={() => {
+                    navigate(`/accounts/purchase-invoices/${selectedInvoice.id}/edit`)
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
+              )}
+              {selectedInvoice?.posting_status === 'posted' ? (
+                <Badge variant="success" className="gap-1 text-xs">
+                  <CheckCircle2 className="h-3 w-3" /> Posted
+                </Badge>
+              ) : (
+                <Badge variant="warning" className="text-xs">
+                  Unposted
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedInvoice && (
@@ -252,6 +313,29 @@ export default function PurchaseInvoicesPage() {
                   >
                     <Send className="h-3.5 w-3.5" />
                     {postMutation.isPending ? 'Posting…' : 'Post to Ledger'}
+                  </Button>
+                </div>
+              )}
+
+              {selectedInvoice.posting_status === 'posted' && canEdit && selectedInvoice.status !== 'paid' && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
+                  <div className="text-xs text-amber-800 dark:text-amber-200">
+                    <p className="font-medium">This invoice is posted to the ledger.</p>
+                    <p className="text-muted-foreground mt-0.5">Need to make adjustments? Unpost the invoice to modify or delete it.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-amber-700 dark:text-amber-300 border-amber-300 hover:bg-amber-100"
+                    onClick={() => {
+                      if (confirm('Unposting will reverse the ledger journal entries for this invoice. Continue?')) {
+                        unpostMutation.mutate(selectedInvoice.id)
+                      }
+                    }}
+                    disabled={unpostMutation.isPending}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    {unpostMutation.isPending ? 'Unposting…' : 'Unpost Invoice'}
                   </Button>
                 </div>
               )}
