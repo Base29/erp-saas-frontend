@@ -79,6 +79,9 @@ jobs:
     needs: build-and-push
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Install cloudflared
         run: |
@@ -101,8 +104,23 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no -o "ProxyCommand=$PROXY_CMD" -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ~/genie-erp
-            docker compose pull frontend
-            docker compose up -d frontend
+
+            echo "Logging in to GitHub Container Registry..."
+            echo "${{ secrets.CR_PAT || secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "Pulling latest frontend image from GHCR..."
+            if ! docker compose pull frontend; then
+              echo "::error::DEPLOYMENT FAILED: Could not pull frontend image from GHCR."
+              exit 1
+            fi
+
+            echo "Starting frontend container..."
+            docker compose up -d --force-recreate frontend
+
+            echo "Deployment complete. Checking logs..."
+            sleep 5
+            docker compose logs --tail=20 frontend
+
             docker system prune -f
           EOF
 
