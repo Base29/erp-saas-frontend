@@ -11,6 +11,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Check, X, Send, Lock, Loader2 } from 'lucide-react'
 
 export type ApprovalStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected'
 
@@ -26,7 +28,16 @@ interface ApprovalActionsProps {
 
 type ActionType = 'submit' | 'approve' | 'reject' | 'post'
 
-const ACTION_CONFIG: Record<ActionType, { label: string; variant: 'default' | 'destructive' | 'outline'; title: string; description: string; requiresComments: boolean }> = {
+const ACTION_CONFIG: Record<
+  ActionType,
+  {
+    label: string
+    variant: 'default' | 'destructive' | 'outline'
+    title: string
+    description: string
+    requiresComments: boolean
+  }
+> = {
   submit: {
     label: 'Submit for Approval',
     variant: 'default',
@@ -112,28 +123,44 @@ export default function ApprovalActions({
             variant="outline"
             disabled={disabled}
             onClick={() => open('submit')}
+            className="gap-1.5 shadow-xs hover:border-primary/40 text-xs"
           >
-            Submit for Approval
+            <Send className="h-3.5 w-3.5 text-primary" />
+            <span>Submit for Approval</span>
           </Button>
         )}
         {approvalStatus === 'pending_approval' && canApprove(role) && (
           <>
-            <Button size="sm" disabled={disabled} onClick={() => open('approve')}>
-              Approve
+            <Button
+              size="sm"
+              disabled={disabled}
+              onClick={() => open('approve')}
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_14px_0_rgba(16,185,129,0.3)] text-xs"
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>Approve</span>
             </Button>
             <Button
               size="sm"
               variant="destructive"
               disabled={disabled}
               onClick={() => open('reject')}
+              className="gap-1.5 shadow-[0_4px_14px_0_rgba(239,68,68,0.3)] text-xs"
             >
-              Reject
+              <X className="h-3.5 w-3.5" />
+              <span>Reject</span>
             </Button>
           </>
         )}
         {approvalStatus === 'approved' && postingStatus === 'unposted' && onPost && (
-          <Button size="sm" disabled={disabled} onClick={() => open('post')}>
-            Post
+          <Button
+            size="sm"
+            disabled={disabled}
+            onClick={() => open('post')}
+            className="gap-1.5 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] text-xs"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span>Post</span>
           </Button>
         )}
       </div>
@@ -146,31 +173,37 @@ export default function ApprovalActions({
           </DialogHeader>
 
           <div className="space-y-3 py-2">
-            <div className="space-y-1">
-              <Label htmlFor="comments">
+            <div className="space-y-1.5">
+              <Label htmlFor="comments" className="text-xs font-medium text-foreground/80">
                 Comments{config?.requiresComments ? ' (required)' : ' (optional)'}
               </Label>
-              <textarea
+              <Textarea
                 id="comments"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 rows={3}
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 placeholder="Add comments…"
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="p-2 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium">
+                {error}
+              </p>
+            )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveAction(null)} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setActiveAction(null)} disabled={loading}>
               Cancel
             </Button>
             <Button
               variant={config?.variant ?? 'default'}
+              size="sm"
               onClick={handleConfirm}
               disabled={loading || (config?.requiresComments && !comments.trim())}
+              className="gap-1.5"
             >
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {loading ? 'Processing…' : 'Confirm'}
             </Button>
           </DialogFooter>

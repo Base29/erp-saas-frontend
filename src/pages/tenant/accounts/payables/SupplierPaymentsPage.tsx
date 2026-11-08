@@ -127,8 +127,8 @@ export default function SupplierPaymentsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Supplier Payments</h1>
           <p className="text-muted-foreground">Record, allocate, and post payments made to vendors.</p>
         </div>
-        <Button className="gap-2" onClick={() => navigate('/accounts/supplier-payments/new')}>
-          <Plus size={16} />
+        <Button size="sm" className="gap-1.5" onClick={() => navigate('/accounts/supplier-payments/new')}>
+          <Plus className="h-4 w-4" />
           Record Payment
         </Button>
       </div>

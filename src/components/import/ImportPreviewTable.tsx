@@ -2,6 +2,7 @@ import React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { ImportError, ImportWarning } from '@/api/import'
+import { cn } from '@/lib/utils'
 
 interface Props {
   headers: string[]
@@ -37,41 +38,41 @@ export default function ImportPreviewTable({ headers, rows, errors, warnings }: 
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
         <span>Showing preview of up to {rows.length} rows</span>
         <div className="flex gap-2">
           {errors.length > 0 && (
-            <Badge variant="destructive" className="gap-1">
+            <Badge variant="destructive" className="gap-1 rounded-full shadow-2xs">
               <AlertCircle className="h-3 w-3" /> {errors.length} error{errors.length > 1 ? 's' : ''}
             </Badge>
           )}
           {warnings.length > 0 && (
-            <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 dark:text-amber-400">
+            <Badge variant="outline" className="gap-1 rounded-full border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-2xs">
               <AlertTriangle className="h-3 w-3" /> {warnings.length} warning{warnings.length > 1 ? 's' : ''}
             </Badge>
           )}
           {errors.length === 0 && (
-            <Badge variant="success" className="gap-1">
+            <Badge variant="success" className="gap-1 rounded-full shadow-2xs">
               <CheckCircle2 className="h-3 w-3" /> Ready to Import
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="max-h-[320px] overflow-auto border rounded-md">
-        <table className="w-full text-xs text-left">
-          <thead className="bg-muted sticky top-0 border-b">
+      <div className="max-h-[320px] overflow-auto border border-border/70 rounded-xl bg-card/70 backdrop-blur-md shadow-subtle">
+        <table className="w-full text-xs text-left border-collapse">
+          <thead className="bg-muted/60 backdrop-blur-md sticky top-0 border-b border-border/70">
             <tr>
-              <th className="p-2 w-12 text-center text-muted-foreground font-semibold">#</th>
-              <th className="p-2 w-20 text-center text-muted-foreground font-semibold">Status</th>
+              <th className="p-2.5 w-12 text-center text-muted-foreground font-semibold uppercase text-[10px] tracking-wider">#</th>
+              <th className="p-2.5 w-20 text-center text-muted-foreground font-semibold uppercase text-[10px] tracking-wider">Status</th>
               {visibleHeaders.map((h) => (
-                <th key={h} className="p-2 whitespace-nowrap font-medium text-foreground">
+                <th key={h} className="p-2.5 whitespace-nowrap font-semibold text-foreground/90 uppercase text-[11px] tracking-wider">
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-border/40">
             {rows.map((row, idx) => {
               const lineNum = row._line_number ?? (idx + 2)
               const rowErrors = errorsByRow.get(lineNum) || []
@@ -82,16 +83,17 @@ export default function ImportPreviewTable({ headers, rows, errors, warnings }: 
               return (
                 <tr
                   key={idx}
-                  className={
+                  className={cn(
+                    "transition-colors duration-150",
                     hasErrors
-                      ? 'bg-destructive/10'
+                      ? 'bg-destructive/10 hover:bg-destructive/15'
                       : hasWarnings
-                      ? 'bg-amber-50/50 dark:bg-amber-950/20'
-                      : 'hover:bg-muted/50'
-                  }
+                      ? 'bg-amber-500/10 hover:bg-amber-500/15'
+                      : 'hover:bg-primary/[0.03]'
+                  )}
                 >
-                  <td className="p-2 text-center font-mono text-muted-foreground">{lineNum}</td>
-                  <td className="p-2 text-center">
+                  <td className="p-2.5 text-center font-mono text-muted-foreground text-[11px]">{lineNum}</td>
+                  <td className="p-2.5 text-center">
                     {hasErrors ? (
                       <span title={rowErrors.map((e) => `${e.field}: ${e.message}`).join(' | ')}>
                         <AlertCircle className="h-4 w-4 text-destructive mx-auto inline" />
@@ -105,8 +107,8 @@ export default function ImportPreviewTable({ headers, rows, errors, warnings }: 
                     )}
                   </td>
                   {visibleHeaders.map((h) => (
-                    <td key={h} className="p-2 whitespace-nowrap max-w-[200px] truncate" title={String(row[h] ?? '')}>
-                      {String(row[h] ?? '')}
+                    <td key={h} className="p-2.5 whitespace-nowrap text-foreground/90 tabular-nums">
+                      {row[h] !== undefined && row[h] !== null ? String(row[h]) : ''}
                     </td>
                   ))}
                 </tr>
@@ -115,22 +117,6 @@ export default function ImportPreviewTable({ headers, rows, errors, warnings }: 
           </tbody>
         </table>
       </div>
-
-      {errors.length > 0 && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 max-h-40 overflow-y-auto text-xs space-y-1">
-          <div className="font-semibold text-destructive flex items-center gap-1">
-            <AlertCircle className="h-3.5 w-3.5" /> Please fix the following errors before proceeding:
-          </div>
-          {errors.map((err, i) => {
-            const isRowNumeric = !isNaN(Number(err.row))
-            return (
-              <div key={i} className="text-destructive/90 pl-4">
-                • {isRowNumeric ? <span className="font-mono font-semibold">Row {err.row}</span> : <span className="font-semibold">[{err.row}]</span>} ({err.field}): {err.message}
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }

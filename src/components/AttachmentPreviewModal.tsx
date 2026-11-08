@@ -68,32 +68,34 @@ export default function AttachmentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-6">
-        <DialogHeader className="flex flex-row items-center justify-between pb-2 border-b">
-          <div className="flex items-center gap-2 overflow-hidden mr-4">
-            <FileText className="h-5 w-5 text-primary shrink-0" />
-            <DialogTitle className="truncate text-base">{filename}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-6 rounded-2xl border-border/70 bg-card/95 backdrop-blur-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]">
+        <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/70">
+          <div className="flex items-center gap-2.5 overflow-hidden mr-4">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <FileText className="h-4 w-4" />
+            </div>
+            <DialogTitle className="truncate text-base font-semibold text-foreground">{filename}</DialogTitle>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5" />
+          <Button variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs rounded-xl" onClick={handleDownload}>
+            <Download className="h-3.5 w-3.5 text-primary" />
             Download
           </Button>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto my-3 min-h-[400px] flex items-center justify-center bg-muted/20 rounded-md border">
+        <div className="flex-1 overflow-auto my-3 min-h-[400px] flex items-center justify-center bg-muted/20 backdrop-blur-md rounded-xl border border-border/60">
           {loading && (
             <div className="flex flex-col items-center gap-2 text-muted-foreground p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm">Loading document preview…</p>
+              <p className="text-xs font-medium">Loading document preview…</p>
             </div>
           )}
 
           {error && !loading && (
             <div className="flex flex-col items-center gap-3 text-destructive p-8 text-center max-w-md">
               <AlertCircle className="h-8 w-8" />
-              <p className="text-sm font-medium">{error}</p>
-              <Button variant="secondary" size="sm" onClick={handleDownload} className="gap-1.5">
-                <Download className="h-4 w-4" />
+              <p className="text-xs font-medium">{error}</p>
+              <Button variant="secondary" size="sm" onClick={handleDownload} className="gap-1.5 text-xs">
+                <Download className="h-3.5 w-3.5" />
                 Download file directly
               </Button>
             </div>
@@ -105,7 +107,7 @@ export default function AttachmentPreviewModal({
                 <iframe
                   src={objectUrl}
                   title={filename}
-                  className="w-full h-[72vh] rounded border-none"
+                  className="w-full h-[72vh] rounded-xl border-none"
                 />
               )}
 
@@ -114,21 +116,23 @@ export default function AttachmentPreviewModal({
                   <img
                     src={objectUrl}
                     alt={filename}
-                    className="max-h-[70vh] max-w-full object-contain rounded shadow-sm"
+                    className="max-h-[70vh] max-w-full object-contain rounded-xl shadow-elevated"
                   />
                 </div>
               )}
 
               {!isPdf && !isImage && (
                 <div className="flex flex-col items-center gap-3 p-8 text-center max-w-md">
-                  <FileText className="h-12 w-12 text-muted-foreground/60" />
+                  <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+                    <FileText className="h-7 w-7" />
+                  </div>
                   <div>
-                    <h3 className="font-medium text-foreground">In-system preview not available</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Spreadsheets and other binary documents must be opened in their respective desktop applications.
+                    <h3 className="font-semibold text-sm text-foreground">In-system preview not available</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Spreadsheets and binary files must be opened in their respective desktop applications.
                     </p>
                   </div>
-                  <Button onClick={handleDownload} className="gap-2 mt-2">
+                  <Button onClick={handleDownload} size="sm" className="gap-2 mt-2">
                     <Download className="h-4 w-4" />
                     Download {filename}
                   </Button>
@@ -138,8 +142,8 @@ export default function AttachmentPreviewModal({
           )}
         </div>
 
-        <DialogFooter className="pt-2 border-t flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="pt-2 border-t border-border/70 flex justify-end">
+          <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </DialogFooter>

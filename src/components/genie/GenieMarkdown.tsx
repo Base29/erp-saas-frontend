@@ -30,7 +30,7 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
           h1: ({ children }) => (
             <h1
               dir="auto"
-              className={`text-base font-bold text-foreground mt-3 mb-2 flex items-center gap-1.5 ${
+              className={`text-base font-bold text-foreground mt-3.5 mb-2 flex items-center gap-1.5 tracking-tight ${
                 isUrdu ? 'text-right justify-start' : 'text-left'
               }`}
             >
@@ -40,7 +40,7 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
           h2: ({ children }) => (
             <h2
               dir="auto"
-              className={`text-sm font-semibold text-foreground mt-3 mb-1.5 flex items-center gap-1.5 ${
+              className={`text-sm font-semibold text-foreground mt-3 mb-1.5 flex items-center gap-1.5 tracking-tight ${
                 isUrdu ? 'text-right justify-start' : 'text-left'
               }`}
             >
@@ -58,29 +58,29 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
             </h3>
           ),
           p: ({ children }) => (
-            <p dir="auto" className={`mb-2 last:mb-0 leading-[1.85] ${isUrdu ? 'text-right' : 'text-left'}`}>
+            <p dir="auto" className={`mb-2 last:mb-0 leading-[1.8] text-foreground/90 ${isUrdu ? 'text-right' : 'text-left'}`}>
               {children}
             </p>
           ),
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           em: ({ children }) => <em className="italic text-muted-foreground">{children}</em>,
           ul: ({ children }) => (
-            <ul className={`my-1.5 list-disc space-y-1 ${isUrdu ? 'mr-4 ml-0 text-right pr-1' : 'ml-3 text-left'}`}>
+            <ul className={`my-2 list-disc space-y-1 ${isUrdu ? 'mr-4 ml-0 text-right pr-1' : 'ml-3.5 text-left'}`}>
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className={`my-1.5 list-decimal space-y-1 ${isUrdu ? 'mr-4 ml-0 text-right pr-1' : 'ml-3 text-left'}`}>
+            <ol className={`my-2 list-decimal space-y-1 ${isUrdu ? 'mr-4 ml-0 text-right pr-1' : 'ml-3.5 text-left'}`}>
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li dir="auto" className={`leading-[1.85] ${isUrdu ? 'text-right' : 'text-left'}`}>
+            <li dir="auto" className={`leading-[1.8] text-foreground/90 ${isUrdu ? 'text-right' : 'text-left'}`}>
               {children}
             </li>
           ),
           table: ({ children }) => (
-            <div className="my-2.5 overflow-x-auto rounded-lg border border-border/60 bg-card shadow-xs">
+            <div className="my-3 overflow-x-auto rounded-xl border border-border/70 bg-card/70 backdrop-blur-md shadow-subtle">
               <table
                 dir={isUrdu ? 'rtl' : 'ltr'}
                 className={`w-full border-collapse text-xs ${isUrdu ? 'text-right' : 'text-left'}`}
@@ -90,15 +90,15 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="border-b border-border/80 bg-muted/60 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <thead className="border-b border-border/70 bg-muted/60 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               {children}
             </thead>
           ),
-          tbody: ({ children }) => <tbody className="divide-y divide-border/40 bg-card/40">{children}</tbody>,
-          tr: ({ children }) => <tr className="transition-colors hover:bg-muted/30">{children}</tr>,
+          tbody: ({ children }) => <tbody className="divide-y divide-border/40 bg-card/30">{children}</tbody>,
+          tr: ({ children }) => <tr className="transition-colors hover:bg-muted/40">{children}</tr>,
           th: ({ children }) => (
             <th
-              className={`px-3 py-2 font-medium text-foreground whitespace-nowrap ${
+              className={`px-3 py-2.5 font-semibold text-foreground/90 whitespace-nowrap ${
                 isUrdu ? 'text-right' : 'text-left'
               }`}
             >
@@ -117,10 +117,10 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
           blockquote: ({ children }) => (
             <blockquote
               dir="auto"
-              className={`my-2 py-1 px-3 text-xs italic text-muted-foreground ${
+              className={`my-2.5 py-1.5 px-3.5 text-xs italic text-muted-foreground ${
                 isUrdu
-                  ? 'border-r-2 border-l-0 border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 rounded-l text-right'
-                  : 'border-l-2 border-r-0 border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 rounded-r text-left'
+                  ? 'border-r-2 border-l-0 border-primary bg-primary/5 rounded-l text-right'
+                  : 'border-l-2 border-r-0 border-primary bg-primary/5 rounded-r text-left'
               }`}
             >
               {children}
@@ -132,7 +132,7 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
               return (
                 <code
                   dir="ltr"
-                  className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-purple-700 dark:text-purple-300 inline-block align-baseline unicode-bidi-isolate"
+                  className="rounded-md bg-muted/70 px-1.5 py-0.5 font-mono text-[11px] font-medium text-primary border border-border/40 inline-block align-baseline unicode-bidi-isolate"
                   {...props}
                 >
                   {children}
@@ -142,13 +142,13 @@ export const GenieMarkdown: React.FC<GenieMarkdownProps> = ({ content, className
             return (
               <pre
                 dir="ltr"
-                className="my-2 overflow-x-auto rounded-lg bg-slate-900 dark:bg-slate-950 p-3 font-mono text-[11px] text-slate-100 border border-border/50 text-left"
+                className="my-2.5 overflow-x-auto rounded-xl bg-zinc-950/95 dark:bg-zinc-950 p-3.5 font-mono text-[11px] text-zinc-100 border border-zinc-800 shadow-elevated text-left"
               >
                 <code {...props}>{children}</code>
               </pre>
             )
           },
-          hr: () => <hr className="my-3 border-border/60" />,
+          hr: () => <hr className="my-3.5 border-border/60" />,
         }}
       >
         {content}

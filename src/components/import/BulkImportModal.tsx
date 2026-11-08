@@ -127,7 +127,7 @@ export default function BulkImportModal({
     try {
       await downloadImportTemplate(type)
       toast.success('Template downloaded successfully')
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to download template')
     } finally {
       setIsDownloading(false)
@@ -162,11 +162,11 @@ export default function BulkImportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center justify-between pr-4">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border-border/80 bg-card/95 backdrop-blur-2xl shadow-elevated">
+        <DialogHeader className="pb-3 border-b border-border/50">
+          <div className="flex items-center justify-between pr-4 gap-4">
             <div>
-              <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight">{title}</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-1">
                 {description || 'Upload a CSV or Excel file to bulk insert or update records.'}
               </DialogDescription>
@@ -174,24 +174,28 @@ export default function BulkImportModal({
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs h-8"
+              className="gap-1.5 text-xs h-8.5 rounded-xl border-border/70 hover:bg-muted/60 active:scale-95"
               onClick={handleDownloadTemplate}
               disabled={isDownloading}
             >
               {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download Template
+              <span>Download Template</span>
             </Button>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
-          {extraFields && <div className="p-3 bg-muted/40 rounded-lg border">{extraFields}</div>}
+        <div className="flex-1 overflow-y-auto space-y-4 py-3 pr-1">
+          {extraFields && (
+            <div className="p-3.5 bg-muted/40 rounded-xl border border-border/60 backdrop-blur-sm">
+              {extraFields}
+            </div>
+          )}
 
           {/* Upload Drop Area */}
           {!file ? (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-all text-center group"
+              className="border-2 border-dashed border-border/80 rounded-2xl p-7 flex flex-col items-center justify-center cursor-pointer hover:border-primary/60 hover:bg-primary/[0.03] transition-all duration-300 text-center group"
             >
               <input
                 ref={fileInputRef}
@@ -200,18 +204,20 @@ export default function BulkImportModal({
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="p-3 rounded-full bg-primary/10 text-primary group-hover:scale-105 transition-transform mb-2">
+              <div className="p-3.5 rounded-2xl bg-primary/10 text-primary group-hover:scale-110 group-hover:shadow-glow-primary transition-all duration-300 mb-2.5">
                 <UploadCloud className="h-6 w-6" />
               </div>
-              <p className="text-sm font-medium">Click or drag & drop file to upload</p>
+              <p className="text-sm font-semibold text-foreground">Click or drag & drop file to upload</p>
               <p className="text-xs text-muted-foreground mt-1">Supports .csv and .xlsx files (up to 20MB)</p>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-3 bg-muted/60 border rounded-lg">
+            <div className="flex items-center justify-between p-3.5 bg-muted/50 border border-border/70 rounded-xl backdrop-blur-md shadow-2xs">
               <div className="flex items-center gap-3">
-                <FileSpreadsheet className="h-6 w-6 text-primary" />
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium">{file.name}</p>
+                  <p className="text-sm font-semibold text-foreground">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB • {isValidating ? 'Validating…' : 'Ready'}
                   </p>
@@ -220,7 +226,7 @@ export default function BulkImportModal({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 rounded-lg hover:bg-muted active:scale-95"
                 onClick={() => {
                   setFile(null)
                   setValidationResult(null)
@@ -233,7 +239,7 @@ export default function BulkImportModal({
           )}
 
           {isValidating && (
-            <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-8 gap-2.5 text-sm text-muted-foreground font-medium">
               <Loader2 className="h-4 w-4 animate-spin text-primary" /> Validating file rows and columns…
             </div>
           )}
@@ -248,23 +254,23 @@ export default function BulkImportModal({
           )}
         </div>
 
-        <DialogFooter className="border-t pt-3 flex items-center justify-between sm:justify-between">
-          <div className="text-xs text-muted-foreground">
+        <DialogFooter className="border-t border-border/50 pt-3.5 flex items-center justify-between sm:justify-between">
+          <div className="text-xs text-muted-foreground font-medium">
             {validationResult && (
               <span>
-                Total Rows: <strong>{validationResult.total_rows}</strong> | Valid: <strong>{validationResult.valid_rows}</strong>
+                Total Rows: <strong className="text-foreground">{validationResult.total_rows}</strong> | Valid: <strong className="text-foreground">{validationResult.valid_rows}</strong>
               </span>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isCommitting}>
+          <div className="flex gap-2.5">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isCommitting} className="rounded-xl text-xs h-9">
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleCommit}
               disabled={!canCommit}
-              className="gap-1.5"
+              className="gap-1.5 rounded-xl text-xs h-9 shadow-glow-primary active:scale-[0.97]"
             >
               {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {isCommitting ? 'Importing…' : 'Start Import'}

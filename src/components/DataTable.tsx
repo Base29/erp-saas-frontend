@@ -8,7 +8,17 @@ import {
   type ColumnFiltersState,
 } from '@tanstack/react-table'
 import React, { useState, useEffect, useRef } from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Search, X, SearchX } from 'lucide-react'
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  X,
+  SearchX,
+  Inbox,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -53,12 +63,13 @@ export default function DataTable<TData>({
   toolbarExtra,
   hasActiveFilters,
   onClearFilters,
-  emptyMessage = 'No results found.',
+  emptyMessage = 'No records found.',
 }: DataTableProps<TData>) {
   const isServerFiltered = Boolean(onFilterChange || onSearchChange)
-  const totalPages = pagination && pagination.per_page > 0
-    ? Math.ceil(pagination.total / pagination.per_page)
-    : 1
+  const totalPages =
+    pagination && pagination.per_page > 0
+      ? Math.ceil(pagination.total / pagination.per_page)
+      : 1
   const currentPage = pagination?.page ?? 1
 
   const [sorting, setSorting] = useState<SortingState>([])
@@ -144,27 +155,27 @@ export default function DataTable<TData>({
   const isFiltered = Boolean(hasActiveFilters || localSearch.trim())
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {(filterKey || toolbarExtra || onClearFilters) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1">
             {filterKey && (
-              <div className="relative w-full max-w-xs min-w-[200px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <div className="relative w-full max-w-xs min-w-[220px] group">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none transition-colors group-focus-within:text-primary" />
                 <Input
                   placeholder={filterPlaceholder}
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
-                  className="pl-8 pr-8 h-9 text-sm"
+                  className="pl-9 pr-8 h-9 text-xs rounded-xl bg-card/70 border-border/70 backdrop-blur-md shadow-2xs focus-visible:ring-primary/25"
                 />
                 {localSearch && (
                   <button
                     type="button"
                     onClick={handleClear}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted/80 transition-all active:scale-95"
                     title="Clear search"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
@@ -177,7 +188,7 @@ export default function DataTable<TData>({
               variant="ghost"
               size="sm"
               onClick={onClearFilters}
-              className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5 rounded-lg active:scale-[0.97]"
             >
               <X className="h-3.5 w-3.5" />
               Clear filters
@@ -186,116 +197,137 @@ export default function DataTable<TData>({
         </div>
       )}
 
-      <div className="rounded-md border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((header) => {
-                  const canSort = header.column.getCanSort()
-                  const sorted = header.column.getIsSorted()
-                  return (
-                    <th
-                      key={header.id}
-                      className={cn(
-                        'px-4 py-3 text-left font-medium text-muted-foreground',
-                        canSort && 'cursor-pointer select-none hover:text-foreground'
-                      )}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                    >
-                      <div className="flex items-center gap-1">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {canSort && (
-                          <span className="ml-1">
-                            {sorted === 'asc' ? (
-                              <ChevronUp className="h-3 w-3" />
-                            ) : sorted === 'desc' ? (
-                              <ChevronDown className="h-3 w-3" />
-                            ) : (
-                              <ChevronsUpDown className="h-3 w-3 opacity-40" />
-                            )}
-                          </span>
+      {/* Table Glass Container with Diffused Ambient Shadow */}
+      <div className="rounded-2xl border border-border/70 overflow-hidden bg-card/85 backdrop-blur-xl shadow-elevated transition-shadow duration-300">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm border-collapse">
+            <thead className="bg-muted/40 backdrop-blur-md border-b border-border/70">
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {hg.headers.map((header) => {
+                    const canSort = header.column.getCanSort()
+                    const sorted = header.column.getIsSorted()
+                    return (
+                      <th
+                        key={header.id}
+                        className={cn(
+                          'px-4 py-3.5 text-left font-semibold text-[11px] uppercase tracking-wider text-muted-foreground/80 select-none transition-colors',
+                          canSort && 'cursor-pointer hover:text-foreground'
+                        )}
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {canSort && (
+                            <span className="shrink-0 transition-transform duration-200">
+                              {sorted === 'asc' ? (
+                                <ChevronUp className="h-3.5 w-3.5 text-primary" />
+                              ) : sorted === 'desc' ? (
+                                <ChevronDown className="h-3.5 w-3.5 text-primary" />
+                              ) : (
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-30 hover:opacity-70 transition-opacity" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {isLoading ? (
+                // Smooth pulsating glass skeletons
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    {columns.map((_, cIdx) => (
+                      <td key={cIdx} className="px-4 py-4">
+                        <div className="h-4 bg-muted/60 rounded-md w-3/4 backdrop-blur-sm" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : table.getRowModel().rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-16 text-center text-muted-foreground">
+                    {isFiltered ? (
+                      <div className="flex flex-col items-center justify-center gap-2.5 max-w-sm mx-auto">
+                        <div className="h-11 w-11 rounded-2xl bg-muted/60 border border-border/70 flex items-center justify-center text-muted-foreground shadow-subtle mb-1">
+                          <SearchX className="h-5 w-5" />
+                        </div>
+                        <p className="font-semibold text-sm text-foreground">No matching results found</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Try adjusting your search terms or clearing active filters.
+                        </p>
+                        {onClearFilters && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onClearFilters}
+                            className="mt-2 text-xs gap-1.5 rounded-xl border-border/70 hover:bg-muted/60"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Clear all filters
+                          </Button>
                         )}
                       </div>
-                    </th>
-                  )
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>Loading…</span>
-                  </div>
-                </td>
-              </tr>
-            ) : table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
-                  {isFiltered ? (
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <SearchX className="h-8 w-8 text-muted-foreground/40" />
-                      <p className="font-medium text-foreground">No matching results found</p>
-                      <p className="text-xs text-muted-foreground">
-                        Try adjusting your search terms or clearing active filters.
-                      </p>
-                      {onClearFilters && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={onClearFilters}
-                          className="mt-2 text-xs gap-1.5"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Clear all filters
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <span>{emptyMessage}</span>
-                  )}
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t hover:bg-muted/30 transition-colors">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                        <div className="h-11 w-11 rounded-2xl bg-muted/50 border border-border/60 flex items-center justify-center text-muted-foreground/60 shadow-subtle mb-1">
+                          <Inbox className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-medium">{emptyMessage}</p>
+                      </div>
+                    )}
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-primary/[0.03] transition-colors duration-200 group"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-3.5 text-foreground/90 tabular-nums">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* Pagination Footer with Ambient Pill Contrast */}
       {pagination && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Page {currentPage} of {totalPages} ({pagination.total} total)
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1.5">
+          <span className="font-medium">
+            Page <span className="text-foreground font-semibold">{currentPage}</span> of{' '}
+            <span className="text-foreground font-semibold">{totalPages}</span> ({pagination.total} total)
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-border/70 active:scale-[0.97]"
               disabled={currentPage <= 1}
               onClick={() => onPageChange?.(currentPage - 1)}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Previous</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-border/70 active:scale-[0.97]"
               disabled={currentPage >= totalPages}
               onClick={() => onPageChange?.(currentPage + 1)}
             >
-              <ChevronRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>

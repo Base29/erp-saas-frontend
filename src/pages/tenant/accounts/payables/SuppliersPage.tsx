@@ -148,13 +148,13 @@ export default function SuppliersPage() {
           <p className="text-muted-foreground">Manage vendor profiles, ledger balances, and payment terms.</p>
         </div>
         {canEdit && (
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-              <Upload size={16} />
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4" />
               Bulk Upload Suppliers
             </Button>
-            <Button className="gap-2" onClick={handleAdd}>
-              <Plus size={16} />
+            <Button size="sm" className="gap-1.5" onClick={handleAdd}>
+              <Plus className="h-4 w-4" />
               Add Supplier
             </Button>
           </div>
