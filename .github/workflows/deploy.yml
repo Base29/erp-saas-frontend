@@ -88,7 +88,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Deploy to Raspberry Pi via Cloudflare Tunnel
+      - name: Deploy to Server via Cloudflare Tunnel
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
@@ -102,8 +102,12 @@ jobs:
             PROXY_CMD="$PROXY_CMD --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}"
           fi
 
+          # Ensure target directory exists on server
+          ssh -o StrictHostKeyChecking=no -o "ProxyCommand=$PROXY_CMD" -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/genie-cloud"
+
           ssh -o StrictHostKeyChecking=no -o "ProxyCommand=$PROXY_CMD" -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ~/genie-erp
+            set -e
+            cd ~/genie-cloud
 
             echo "Logging in to GitHub Container Registry..."
             echo "${{ secrets.CR_PAT || secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
