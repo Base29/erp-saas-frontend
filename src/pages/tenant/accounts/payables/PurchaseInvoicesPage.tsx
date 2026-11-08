@@ -210,8 +210,8 @@ export default function PurchaseInvoicesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Purchase Invoices</h1>
           <p className="text-muted-foreground">Track bills received from suppliers and post them to ledgers.</p>
         </div>
-        <Button className="gap-2" onClick={() => navigate('/accounts/purchase-invoices/new')}>
-          <Plus size={16} />
+        <Button size="sm" className="gap-1.5" onClick={() => navigate('/accounts/purchase-invoices/new')}>
+          <Plus className="h-4 w-4" />
           New Invoice
         </Button>
       </div>

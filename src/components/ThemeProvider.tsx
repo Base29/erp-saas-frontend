@@ -36,17 +36,21 @@ export function ThemeProvider({
     root.classList.remove('light', 'dark')
 
     if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const hasMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      const mediaQuery = hasMatchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
       
       const applySystemTheme = () => {
         root.classList.remove('light', 'dark')
-        root.classList.add(mediaQuery.matches ? 'dark' : 'light')
+        root.classList.add(mediaQuery?.matches ? 'dark' : 'light')
       }
 
       applySystemTheme()
       
-      mediaQuery.addEventListener('change', applySystemTheme)
-      return () => mediaQuery.removeEventListener('change', applySystemTheme)
+      if (mediaQuery) {
+        mediaQuery.addEventListener('change', applySystemTheme)
+        return () => mediaQuery.removeEventListener('change', applySystemTheme)
+      }
+      return
     }
 
     root.classList.add(theme)

@@ -17,7 +17,6 @@ import {
   ArrowRight,
   Volume2,
   VolumeX,
-  Mic,
   Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,7 +35,6 @@ import { GenieActionCard } from './GenieActionCard'
 import { GenieThinkingAccordion } from './GenieThinkingAccordion'
 import { GenieMarkdown, isUrduOrArabic } from './GenieMarkdown'
 import { GenieReasoningState } from './GenieReasoningState'
-import { GenieVoiceInput } from './GenieVoiceInput'
 import { useNavigate } from 'react-router-dom'
 
 export const GenieAssistantDrawer: React.FC = () => {
@@ -92,15 +90,6 @@ export const GenieAssistantDrawer: React.FC = () => {
     setInput('')
   }
 
-  const handleTranscript = React.useCallback((text: string) => {
-    setInput(text)
-  }, [])
-
-  const handleVoiceSend = React.useCallback((text: string) => {
-    setInput('')
-    sendMessage(text)
-  }, [sendMessage])
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -136,7 +125,14 @@ export const GenieAssistantDrawer: React.FC = () => {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border bg-background shadow-2xl transition-all duration-300 sm:max-w-xl md:max-w-2xl">
+    <>
+      {/* Antigravity Spatial Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity animate-fade-in"
+        onClick={() => setIsOpen(false)}
+      />
+
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border/70 bg-card/95 backdrop-blur-2xl shadow-[-20px_0_50px_rgba(0,0,0,0.25)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.6)] transition-all duration-300 sm:max-w-xl md:max-w-2xl">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/20 backdrop-blur-xs">
         <div className="flex items-center gap-3">
@@ -156,19 +152,6 @@ export const GenieAssistantDrawer: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Quick Action Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-purple-600 hover:bg-purple-50/50 dark:hover:text-purple-400 dark:hover:bg-purple-950/30"
-            onClick={() => sendMessage("Show me the quick action menu")}
-            disabled={isLoading}
-            title="Open Quick Action Menu"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-            <span className="hidden sm:inline text-[11px] font-medium">Quick Actions</span>
-          </Button>
-
           {/* Voice Speech Response Menu & Toggle */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -313,17 +296,6 @@ export const GenieAssistantDrawer: React.FC = () => {
             <p className="mt-1 text-xs text-muted-foreground max-w-sm">
               I am Genie, your conversational assistant for Genie Cloud. Ask me anything about accounts, sales, inventory, or let me draft actions for you.
             </p>
-
-            {/* Voice Prompt Tip Banner */}
-            <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-purple-200/80 bg-purple-50/70 p-2.5 text-xs text-purple-900 dark:border-purple-805/60 dark:bg-purple-950/40 dark:text-purple-300 max-w-md w-full">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
-                <Mic className="h-4 w-4" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="font-medium text-[11px] text-foreground">Voice Prompts Enabled</div>
-                <div className="text-[10px] text-muted-foreground">Click the microphone icon below or speak prompts naturally.</div>
-              </div>
-            </div>
 
             {/* Quick Action Prompts */}
             <div className="mt-5 w-full max-w-md space-y-2 text-left">
@@ -604,59 +576,6 @@ export const GenieAssistantDrawer: React.FC = () => {
             )}
           </Button>
 
-          {/* Voice Input Microphone */}
-          <GenieVoiceInput
-            disabled={isLoading}
-            onTranscript={handleTranscript}
-            onSend={handleVoiceSend}
-            autoSend={true}
-          />
-
-          {/* Quick Actions Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-purple-600 hover:bg-purple-50/50 dark:hover:text-purple-400 dark:hover:bg-purple-950/30"
-                disabled={isLoading}
-                title="Quick Action Menu"
-              >
-                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-72 p-1.5 shadow-xl">
-              <DropdownMenuLabel className="flex items-center justify-between text-xs px-2 py-1">
-                <span className="font-semibold text-foreground">Genie Quick Actions</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Instant Prompts</span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {(status?.quick_prompts || []).map((qp, idx) => (
-                <DropdownMenuItem
-                  key={idx}
-                  onClick={() => sendMessage(qp.prompt)}
-                  className="flex items-center gap-2.5 p-2 text-xs cursor-pointer rounded-lg hover:bg-purple-50/60 dark:hover:bg-purple-950/30"
-                >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/70">
-                    {getQuickIcon(qp.icon)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-[11px] text-foreground">{qp.label}</div>
-                    <div className="text-[10px] text-muted-foreground truncate">{qp.prompt}</div>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => sendMessage("Show me the quick action menu")}
-                className="text-[11px] text-purple-600 dark:text-purple-400 justify-center font-medium cursor-pointer py-1.5 hover:bg-purple-50 dark:hover:bg-purple-950/40"
-              >
-                Post Menu in Chat Stream
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <Textarea
             dir="auto"
             value={input}
@@ -696,6 +615,7 @@ export const GenieAssistantDrawer: React.FC = () => {
           Genie AI Assistant with Human-In-The-Loop action approvals. Press <kbd className="font-mono">Enter</kbd> to send.
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

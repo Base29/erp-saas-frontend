@@ -122,8 +122,8 @@ export default function BudgetsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Budgeting</h1>
           <p className="text-muted-foreground">Set and monitor financial targets for your accounts.</p>
         </div>
-        <Button className="gap-2" onClick={handleAdd}>
-          <Plus size={16} />
+        <Button size="sm" className="gap-1.5" onClick={handleAdd}>
+          <Plus className="h-4 w-4" />
           Set Budget
         </Button>
       </div>

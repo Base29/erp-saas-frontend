@@ -98,8 +98,8 @@ export default function CostCentersPage() {
           <p className="text-muted-foreground">Define departments, projects, or branches for granular financial tracking.</p>
         </div>
         {canEdit && (
-          <Button className="gap-2" onClick={handleAdd}>
-            <Plus size={16} />
+          <Button size="sm" className="gap-1.5" onClick={handleAdd}>
+            <Plus className="h-4 w-4" />
             Add Cost Center
           </Button>
         )}

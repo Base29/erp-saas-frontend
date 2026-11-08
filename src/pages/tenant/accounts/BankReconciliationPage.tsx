@@ -45,13 +45,13 @@ export default function BankReconciliationPage() {
           <h1 className="text-2xl font-bold tracking-tight">Bank Reconciliation</h1>
           <p className="text-muted-foreground">Match your bank statements with internal accounting records.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-            <Upload size={16} />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
             Bulk Upload Statement CSV
           </Button>
-          <Button className="gap-2" onClick={() => navigate('/accounts/bank-reconciliation/new')}>
-            <Plus size={16} />
+          <Button size="sm" className="gap-1.5" onClick={() => navigate('/accounts/bank-reconciliation/new')}>
+            <Plus className="h-4 w-4" />
             New Statement
           </Button>
         </div>

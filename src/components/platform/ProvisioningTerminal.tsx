@@ -103,8 +103,6 @@ export function ProvisioningTerminal({ logs, className, title = 'System Provisio
       const isNewStep = !displayedLogs.find(d => d.step === nextLog.step)
       const isFinishing = nextLog.status === 'completed' || nextLog.status === 'failed'
 
-      // Only show the "executing" typing animation for completely new steps 
-      // or when a step starts running. Skip for completions to avoid "double-running" feel.
       if (isNewStep || nextLog.status === 'running') {
         setActiveStepText(`$ executing ${nextLog.step}...`)
         await new Promise(resolve => setTimeout(resolve, isNewStep ? 800 : 400))
@@ -120,7 +118,6 @@ export function ProvisioningTerminal({ logs, className, title = 'System Provisio
         return [...prev, nextLog]
       })
 
-      // Shorter pause after status update
       if (isFinishing) {
         await new Promise(resolve => setTimeout(resolve, 200))
       }
@@ -142,60 +139,62 @@ export function ProvisioningTerminal({ logs, className, title = 'System Provisio
   const runningLog = displayedLogs.find(l => l.status === 'running')
 
   return (
-    <div className={cn("bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden shadow-2xl flex flex-col", className)}>
-      <div className="bg-zinc-900 px-4 py-2 flex items-center justify-between border-b border-zinc-800 shrink-0">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-4 w-4 text-zinc-400" />
-          <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
-            {title} {tenantName && <span className="text-zinc-600">—</span>} {tenantName && <span className="text-emerald-500/80">{tenantName}</span>}
+    <div className={cn("bg-zinc-950/95 backdrop-blur-2xl rounded-2xl border border-zinc-800/80 overflow-hidden shadow-2xl flex flex-col transition-all duration-300", className)}>
+      {/* Sleek Obsidian Header */}
+      <div className="bg-zinc-900/80 px-4 py-2.5 flex items-center justify-between border-b border-zinc-800/80 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <Terminal className="h-4 w-4 text-emerald-400" />
+          <span className="text-xs font-mono text-zinc-300 uppercase tracking-wider font-semibold">
+            {title} {tenantName && <span className="text-zinc-600">—</span>} {tenantName && <span className="text-emerald-400 font-bold">{tenantName}</span>}
           </span>
         </div>
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
-          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
+        <div className="flex gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80 shadow-xs" />
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80 shadow-xs" />
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 shadow-xs" />
         </div>
       </div>
 
+      {/* Terminal Viewport */}
       <div 
         ref={scrollRef}
-        className="p-4 font-mono text-sm h-[320px] overflow-y-auto custom-scrollbar bg-black/40 scroll-smooth flex flex-col"
+        className="p-4 font-mono text-xs sm:text-sm h-[320px] overflow-y-auto custom-scrollbar bg-black/60 scroll-smooth flex flex-col"
       >
-        <div className="space-y-1.5 pb-2">
+        <div className="space-y-2 pb-2">
           {displayedLogs.map((log) => (
             <div 
               key={log.id} 
               className={cn(
-                "flex items-start gap-3 animate-in fade-in slide-in-from-left-1",
-                log.status === 'running' ? "opacity-100" : "opacity-70"
+                "flex items-start gap-3 transition-opacity duration-200",
+                log.status === 'running' ? "opacity-100" : "opacity-80"
               )}
             >
-              <span className="text-zinc-600 shrink-0 text-[10px] pt-1 w-16">
+              <span className="text-zinc-500 shrink-0 text-[10px] pt-0.5 w-16 select-none font-mono">
                 [{new Date(log.created_at).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
               </span>
               
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <div className="shrink-0 flex items-center justify-center w-4 h-4">
                   {log.status === 'running' && <Loader2 className="h-3.5 w-3.5 text-blue-400 animate-spin" />}
-                  {log.status === 'completed' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-                  {log.status === 'failed' && <XCircle className="h-3.5 w-3.5 text-rose-500" />}
-                  {log.status === 'pending' && <Clock className="h-3.5 w-3.5 text-zinc-600" />}
+                  {log.status === 'completed' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+                  {log.status === 'failed' && <XCircle className="h-3.5 w-3.5 text-rose-400" />}
+                  {log.status === 'pending' && <Clock className="h-3.5 w-3.5 text-zinc-500" />}
                 </div>
 
                 <span className={cn(
-                  "font-bold uppercase text-[9px] px-1.5 py-0.5 rounded-sm shrink-0 border",
-                  log.status === 'completed' && "text-emerald-500 border-emerald-500/20 bg-emerald-500/5",
-                  log.status === 'running' && "text-blue-400 border-blue-400/20 bg-blue-400/5",
-                  log.status === 'failed' && "text-rose-500 border-rose-500/20 bg-rose-500/5",
-                  log.status === 'pending' && "text-zinc-500 border-zinc-500/20 bg-zinc-500/5"
+                  "font-bold uppercase text-[9px] px-1.5 py-0.5 rounded-md shrink-0 border select-none tracking-wider",
+                  log.status === 'completed' && "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+                  log.status === 'running' && "text-blue-400 border-blue-400/30 bg-blue-400/10",
+                  log.status === 'failed' && "text-rose-400 border-rose-500/30 bg-rose-500/10",
+                  log.status === 'pending' && "text-zinc-400 border-zinc-500/30 bg-zinc-500/10"
                 )}>
                   {log.status}
                 </span>
 
-                <span className="text-zinc-200 font-medium tracking-tight truncate">{log.step}</span>
+                <span className="text-zinc-100 font-medium tracking-tight truncate">{log.step}</span>
                 
                 {log.message && (
-                  <span className="text-zinc-500 text-xs truncate italic border-l border-zinc-800 pl-2">
+                  <span className="text-zinc-400 text-xs truncate italic border-l border-zinc-800 pl-2">
                     {log.message}
                   </span>
                 )}
@@ -203,23 +202,25 @@ export function ProvisioningTerminal({ logs, className, title = 'System Provisio
             </div>
           ))}
 
-          <div className="flex items-center gap-2 pt-2 text-emerald-500 text-xs">
-            <span className="shrink-0">$</span>
-            <span className="font-bold">
+          <div className="flex items-center gap-2 pt-2 text-emerald-400 text-xs">
+            <span className="shrink-0 font-bold">$</span>
+            <span className="font-semibold tracking-wide">
               {activeStepText || (runningLog ? `awaiting ${runningLog.step}...` : "ready")}
-              <span className="ml-1 inline-block w-2 h-4 bg-emerald-500/60 animate-pulse align-middle" />
+              <span className="ml-1 inline-block w-2 h-4 bg-emerald-400/80 animate-pulse align-middle" />
             </span>
           </div>
         </div>
       </div>
       
-      <div className="bg-zinc-900/60 px-4 py-1.5 border-t border-zinc-800 flex justify-between items-center shrink-0">
-        <span className="text-[9px] text-zinc-600 font-mono tracking-widest uppercase">
+      {/* Bottom Status Bar */}
+      <div className="bg-zinc-900/70 px-4 py-1.5 border-t border-zinc-800/80 flex justify-between items-center shrink-0">
+        <span className="text-[9px] text-zinc-400 font-mono tracking-widest uppercase flex items-center gap-1.5">
+          <span className={cn("w-1.5 h-1.5 rounded-full", displayedLogs.some(l => l.status === 'running') ? "bg-amber-400 animate-ping" : "bg-emerald-400")} />
           {displayedLogs.some(l => l.status === 'running') ? 'status: provisioning' : 'status: idle'}
         </span>
         <div className="flex gap-4">
-          <span className="text-[9px] text-zinc-700 font-mono">UTF-8</span>
-          <span className="text-[9px] text-zinc-700 font-mono">LN {displayedLogs.length}, COL 1</span>
+          <span className="text-[9px] text-zinc-500 font-mono">UTF-8</span>
+          <span className="text-[9px] text-zinc-500 font-mono">LN {displayedLogs.length}, COL 1</span>
         </div>
       </div>
     </div>

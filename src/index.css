@@ -4,48 +4,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 220 25% 97.5%;
+    --foreground: 224 45% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 45% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 224 45% 11%;
+    --primary: 234 85% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 25% 94%;
+    --secondary-foreground: 224 45% 15%;
+    --muted: 220 20% 93%;
+    --muted-foreground: 220 15% 44%;
+    --accent: 234 85% 95%;
+    --accent-foreground: 234 85% 58%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 234 85% 58%;
+    --radius: 0.85rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 228 20% 6.5%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 228 18% 10.5%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 228 18% 11.5%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 234 95% 68%;
+    --primary-foreground: 228 20% 6.5%;
+    --secondary: 228 16% 14%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --muted: 228 16% 13.5%;
+    --muted-foreground: 218 16% 62%;
+    --accent: 228 16% 16%;
+    --accent-foreground: 234 95% 72%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 15% 17%;
+    --input: 228 15% 17%;
+    --ring: 234 95% 68%;
   }
 }
 
@@ -54,13 +54,182 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground antialiased selection:bg-primary/20 selection:text-primary min-h-screen relative overflow-x-hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Antigravity Atmospheric Spatial Canvas */
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(circle at 12% 18%, rgba(99, 102, 241, 0.07) 0%, transparent 45%),
+      radial-gradient(circle at 88% 30%, rgba(168, 85, 247, 0.06) 0%, transparent 45%),
+      radial-gradient(circle at 50% 85%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.16) 0%, transparent 55%),
+      radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 50% 85%, rgba(59, 130, 246, 0.1) 0%, transparent 55%);
+    background-attachment: fixed;
   }
 }
 
+/* Antigravity Design System Utilities */
 @layer utilities {
+  /* Spatial Depth & 3D Helpers */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  /* True Antigravity Glassmorphism with Specular Top Highlight */
+  .glass-header {
+    @apply sticky top-0 z-30 border-b border-white/40 dark:border-white/10 bg-background/70 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.35)];
+  }
+
+  .glass-panel {
+    @apply bg-card/75 dark:bg-card/65 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.7)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.12)];
+  }
+
+  .glass-card {
+    @apply bg-card/80 dark:bg-card/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_16px_40px_-10px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.12)] transition-all duration-300;
+  }
+
+  .glass-card-float {
+    @apply hover:-translate-y-1.5 hover:shadow-[0_25px_50px_-12px_rgba(99,102,241,0.18),inset_0_1px_2px_rgba(255,255,255,0.9)] dark:hover:shadow-[0_25px_50px_-12px_rgba(99,102,241,0.35),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:border-primary/40 transition-all duration-300 ease-out;
+  }
+
+  .glass-pill {
+    @apply bg-background/60 dark:bg-background/40 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.04)];
+  }
+
+  /* Isometric Snapping Utility */
+  .isometric-tilt {
+    transform: perspective(1000px) rotateX(4deg) rotateY(-3deg) rotateZ(1deg);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .isometric-tilt:hover {
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(-4px);
+  }
+
+  /* Numerical and Typography standards */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
   .font-urdu {
     font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', 'Pak Nastaleeq', 'Nafees Web Naskh', system-ui, -apple-system, sans-serif;
   }
+
+  /* Floating Levitation Animations */
+  .animate-float {
+    animation: antigravityFloat 5s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: antigravityFloat 5s ease-in-out 2.5s infinite;
+  }
+  .animate-pulse-slow {
+    animation: antigravityPulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Staggered Drop-In Entrances */
+  .stagger-1 { animation: dominoDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both; }
+  .stagger-2 { animation: dominoDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
+  .stagger-3 { animation: dominoDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.19s both; }
+  .stagger-4 { animation: dominoDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both; }
 }
 
+/* Antigravity Keyframes */
+@keyframes antigravityFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+@keyframes antigravityPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes dominoDrop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes zoomIn97 {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes zoomOut97 {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
+}
+
+/* Radix Dialogs & Popovers */
+[data-state='open'].animate-in {
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1), zoomIn97 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-state='closed'].animate-out {
+  animation: fadeOut 0.12s ease-out, zoomOut97 0.12s ease-out;
+}
+
+/* Accessibility: respect user prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom sleek scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.35);
+}

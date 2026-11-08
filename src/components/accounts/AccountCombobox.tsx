@@ -40,7 +40,6 @@ export default function AccountCombobox({
     [accounts, value]
   )
 
-  // Scope accounts by type if requested
   const baseAccounts = useMemo(() => {
     if (filterType === 'expense') {
       return accounts.filter((a) => {
@@ -53,7 +52,7 @@ export default function AccountCombobox({
           catName.includes('overhead') ||
           code.startsWith('5') ||
           code.startsWith('6') ||
-          code.startsWith('2') // Some Pakistani/UK CoAs use 2xxx for expenses
+          code.startsWith('2')
         )
       })
     }
@@ -67,7 +66,6 @@ export default function AccountCombobox({
     return accounts
   }, [accounts, filterType])
 
-  // Filter accounts based on live user search query
   const filteredAccounts = useMemo(() => {
     if (!search.trim()) return baseAccounts
     const q = search.toLowerCase().trim()
@@ -79,12 +77,10 @@ export default function AccountCombobox({
     })
   }, [baseAccounts, search])
 
-  // Reset keyboard selection index when search query changes
   useEffect(() => {
     setSelectedIndex(0)
   }, [search])
 
-  // Auto-focus input when opened
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50)
@@ -93,7 +89,6 @@ export default function AccountCombobox({
     }
   }, [open])
 
-  // Scroll active item into view
   useEffect(() => {
     if (!listRef.current) return
     const activeEl = listRef.current.children[selectedIndex] as HTMLElement
@@ -126,7 +121,7 @@ export default function AccountCombobox({
         <button
           type="button"
           className={cn(
-            'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-left transition-colors',
+            'flex h-9 w-full items-center justify-between rounded-xl border border-border/80 bg-background/70 backdrop-blur-md px-3 py-1.5 text-xs font-medium ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-left transition-all duration-150 shadow-xs',
             !selectedAccount && 'text-muted-foreground',
             className
           )}
@@ -139,11 +134,11 @@ export default function AccountCombobox({
                 <span className="font-mono font-bold text-primary shrink-0">
                   {selectedAccount.account_code}
                 </span>
-                <span className="truncate text-foreground font-medium">
+                <span className="truncate text-foreground font-semibold">
                   {selectedAccount.account_name}
                 </span>
                 {selectedAccount.account_category && (
-                  <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-muted text-muted-foreground shrink-0">
+                  <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary shrink-0 font-medium">
                     {selectedAccount.account_category.name}
                   </span>
                 )}
@@ -152,18 +147,18 @@ export default function AccountCombobox({
               <span>{placeholder}</span>
             )}
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+          <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0 ml-2" />
         </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="start"
-        className="w-[360px] sm:w-[420px] p-2 bg-popover shadow-xl border rounded-lg z-50"
+        className="w-[360px] sm:w-[420px] p-2 bg-popover/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_15px_40px_-10px_rgba(0,0,0,0.25)] dark:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] z-50"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Search Input Bar (Xero-style) */}
-        <div className="flex items-center border rounded-md px-2.5 py-1.5 bg-background gap-2 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        {/* Search Input Bar */}
+        <div className="flex items-center border border-border/70 rounded-xl px-2.5 py-1.5 bg-background/80 backdrop-blur-md gap-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -175,7 +170,7 @@ export default function AccountCombobox({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
           />
           {search && (
             <button
@@ -185,7 +180,7 @@ export default function AccountCombobox({
                 setSearch('')
                 inputRef.current?.focus()
               }}
-              className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded"
+              className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded-md hover:bg-muted"
             >
               <X className="h-3 w-3" />
             </button>
@@ -193,13 +188,13 @@ export default function AccountCombobox({
         </div>
 
         {/* Count & Info Bar */}
-        <div className="flex items-center justify-between px-2 py-1.5 text-[11px] text-muted-foreground font-medium border-b mb-1">
+        <div className="flex items-center justify-between px-2.5 py-1.5 text-[10px] text-muted-foreground font-semibold border-b border-border/50 uppercase tracking-wider my-1">
           <span>
             {search.trim()
               ? `${filteredAccounts.length} matching ${filteredAccounts.length === 1 ? 'account' : 'accounts'}`
               : `${baseAccounts.length} accounts available`}
           </span>
-          <span className="text-[10px] text-muted-foreground/80">Use ↑↓ keys + Enter</span>
+          <span className="text-[10px] text-muted-foreground/70 normal-case font-normal">Use ↑↓ keys + Enter</span>
         </div>
 
         {/* Scrollable Results List */}
@@ -228,10 +223,10 @@ export default function AccountCombobox({
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={cn(
-                    'flex items-center justify-between px-2.5 py-2 rounded-md text-xs cursor-pointer select-none transition-colors',
-                    isSelected && 'bg-primary/10 text-primary font-medium',
-                    isHighlighted && !isSelected && 'bg-accent text-accent-foreground',
-                    !isHighlighted && !isSelected && 'hover:bg-muted/50'
+                    'flex items-center justify-between px-2.5 py-2 rounded-xl text-xs cursor-pointer select-none transition-all duration-150',
+                    isSelected && 'bg-primary/10 text-primary font-semibold',
+                    isHighlighted && !isSelected && 'bg-accent/80 text-accent-foreground',
+                    !isHighlighted && !isSelected && 'hover:bg-muted/40'
                   )}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -239,10 +234,10 @@ export default function AccountCombobox({
                       {a.account_code}
                     </span>
                     <div className="truncate min-w-0">
-                      <span className="truncate block font-medium">{a.account_name}</span>
+                      <span className="truncate block font-medium text-foreground">{a.account_name}</span>
                       {a.account_category && (
                         <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                          <Tag className="h-2.5 w-2.5 shrink-0" />
+                          <Tag className="h-2.5 w-2.5 shrink-0 opacity-60" />
                           {a.account_category.name}
                         </span>
                       )}

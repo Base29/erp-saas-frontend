@@ -3,17 +3,7 @@ import { Mic, MicOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useGenieStore } from '@/store/genieStore'
-
-// Web Speech API Types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList
-  resultIndex: number
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string
-  message?: string
-}
+import { cn } from '@/lib/utils'
 
 interface GenieVoiceInputProps {
   onTranscript: (text: string, isFinal: boolean) => void
@@ -105,127 +95,93 @@ export const GenieVoiceInput: React.FC<GenieVoiceInputProps> = ({
       return
     }
 
-    if (disabled || isRequestingPermission || activeListeningRef.current) return
+    if (disabled || isRequestingPermission) return
 
-    stopSpeaking() // Cancel any ongoing TTS before speaking
-    setIsRequestingPermission(true)
-
-    // Request microphone permission explicitly to trigger macOS / browser prompt if not already granted
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        // Immediately release microphone tracks so SpeechRecognition has full exclusive access
-        stream.getTracks().forEach((track) => track.stop())
-      }
-    } catch (err: any) {
-      setIsRequestingPermission(false)
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        toast.error('Microphone permission was denied. Please allow microphone access in your browser URL bar.')
-        setIsListening(false)
-        return
-      }
-      console.warn('Microphone permission probe warning:', err)
-    } finally {
-      setIsRequestingPermission(false)
-    }
+    stopSpeaking()
+    accumulatedTranscriptRef.current = ''
+    activeListeningRef.current = true
+    setIsListening(true)
 
     try {
-      // Abort any existing instance
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort()
         } catch {
           // ignore
         }
+        recognitionRef.current = null
       }
 
       const recognition = new SpeechRecognition()
+      recognitionRef.current = recognition
+
       recognition.continuous = true
       recognition.interimResults = true
-      recognition.lang = voiceLanguage
+      recognition.lang = useGenieStore.getState().voiceLanguage || 'en-US'
       recognition.maxAlternatives = 1
 
-      accumulatedTranscriptRef.current = ''
+      const resetSilenceTimer = () => {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+        silenceTimerRef.current = setTimeout(() => {
+          if (activeListeningRef.current) {
+            stopListening(true)
+          }
+        }, 3500)
+      }
 
       recognition.onstart = () => {
-        activeListeningRef.current = true
-        setIsListening(true)
-        if (voiceLanguage === 'ur-PK') {
-          toast.info('🎙️ سن رہا ہوں... اردو میں بولیں')
-        } else {
-          toast.info('🎙️ Listening... Speak your prompt naturally.')
-        }
+        setIsRequestingPermission(false)
+        resetSilenceTimer()
       }
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interim = ''
-        let final = ''
+      recognition.onresult = (event: any) => {
+        resetSilenceTimer()
+        let interimTranscript = ''
+        let finalTranscript = ''
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const item = event.results[i]
-          if (item.isFinal) {
-            final += item[0].transcript
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' '
           } else {
-            interim += item[0].transcript
+            interimTranscript += transcript
           }
         }
 
-        if (final) {
-          accumulatedTranscriptRef.current += (accumulatedTranscriptRef.current ? ' ' : '') + final
-          onTranscriptRef.current(accumulatedTranscriptRef.current, true)
-
-          // Reset silence debounce timer (auto-send 1.6s after finishing speech)
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
-          if (autoSendRef.current) {
-            silenceTimerRef.current = setTimeout(() => {
-              stopListening(true)
-            }, 1600)
-          }
-        } else if (interim) {
-          const liveText = accumulatedTranscriptRef.current
-            ? `${accumulatedTranscriptRef.current} ${interim}`
-            : interim
-          onTranscriptRef.current(liveText, false)
-
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+        if (finalTranscript) {
+          accumulatedTranscriptRef.current += finalTranscript
+          onTranscriptRef.current(accumulatedTranscriptRef.current.trim(), true)
+        } else if (interimTranscript) {
+          const fullDraft = (accumulatedTranscriptRef.current + ' ' + interimTranscript).trim()
+          onTranscriptRef.current(fullDraft, false)
         }
       }
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.warn('SpeechRecognition error:', event.error, event.message)
-        if (event.error === 'not-allowed') {
-          toast.error('Microphone access was blocked. Please enable microphone permissions in your browser.')
-          stopListening(false)
-        } else if (event.error === 'no-speech') {
-          // Keep listening or reset on prolonged silence
-        } else if (event.error === 'network') {
-          toast.error('Speech recognition network error. Please check your internet connection.')
-          stopListening(false)
-        } else if (event.error !== 'aborted') {
-          toast.error(`Voice error: ${event.error}`)
-          stopListening(false)
+      recognition.onerror = (event: any) => {
+        if (event.error === 'no-speech') {
+          return
         }
+        if (event.error === 'not-allowed') {
+          toast.error('Microphone permission was denied. Please allow microphone access in your browser settings.')
+          stopListening(false)
+          return
+        }
+        if (event.error === 'aborted') {
+          return
+        }
+        toast.error(`Voice error: ${event.error || 'Failed to capture audio'}`)
+        stopListening(false)
       }
 
       recognition.onend = () => {
-        // If recognition stopped unexpectedly while we intended to keep listening, auto-restart
         if (activeListeningRef.current) {
-          try {
-            recognition.start()
-          } catch {
-            activeListeningRef.current = false
-            setIsListening(false)
-          }
-        } else {
-          setIsListening(false)
+          stopListening(true)
         }
       }
 
-      recognitionRef.current = recognition
       recognition.start()
-    } catch (err: any) {
-      console.error('Failed to start SpeechRecognition:', err)
-      toast.error('Could not activate microphone. Please try again.')
+    } catch {
+      toast.error('Could not start speech recognition')
       setIsListening(false)
       activeListeningRef.current = false
     }
@@ -244,7 +200,7 @@ export const GenieVoiceInput: React.FC<GenieVoiceInputProps> = ({
     }
   }
 
-  // Handle external trigger (e.g. user clicked mic on floating trigger or header button)
+  // Handle external trigger
   useEffect(() => {
     if (shouldStartListening) {
       setShouldStartListening(false)
@@ -270,18 +226,19 @@ export const GenieVoiceInput: React.FC<GenieVoiceInputProps> = ({
   }, [])
 
   return (
-    <div className="flex items-center gap-1 shrink-0">
+    <div className="flex items-center gap-1.5 shrink-0">
       <Button
         type="button"
         variant="ghost"
         size="icon"
         disabled={disabled || isRequestingPermission}
         onClick={toggleListening}
-        className={`relative h-8 w-8 shrink-0 transition-all ${
+        className={cn(
+          "relative h-8 w-8 shrink-0 rounded-xl transition-all duration-200 active:scale-95",
           isListening
-            ? 'bg-rose-500/15 text-rose-600 hover:bg-rose-500/25 dark:text-rose-400 dark:bg-rose-950/40 ring-2 ring-rose-500/40 animate-pulse'
-            : 'text-purple-600 dark:text-purple-400 hover:bg-purple-100/70 dark:hover:bg-purple-950/40'
-        }`}
+            ? "bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 dark:text-rose-400 dark:bg-rose-950/50 ring-2 ring-rose-500/50 shadow-subtle"
+            : "text-primary hover:bg-primary/10"
+        )}
         title={
           isListening
             ? (voiceLanguage === 'ur-PK' ? 'سننا بند کریں (بھیجنے کے لیے کلک کریں)' : 'Stop listening (Voice active - Click to send)')
@@ -299,11 +256,11 @@ export const GenieVoiceInput: React.FC<GenieVoiceInputProps> = ({
           </span>
         )}
         {isRequestingPermission ? (
-          <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
         ) : isListening ? (
           <MicOff className="h-4 w-4 animate-pulse text-rose-600 dark:text-rose-400" />
         ) : (
-          <Mic className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          <Mic className="h-4 w-4 text-primary" />
         )}
       </Button>
 
@@ -312,11 +269,13 @@ export const GenieVoiceInput: React.FC<GenieVoiceInputProps> = ({
         type="button"
         disabled={isListening}
         onClick={toggleVoiceLanguage}
-        className={`h-7 px-2 rounded-md text-[11px] font-semibold border transition-all flex items-center justify-center select-none ${
+        className={cn(
+          "h-7 px-2.5 rounded-lg text-[11px] font-semibold border transition-all duration-200 flex items-center justify-center select-none active:scale-95",
           voiceLanguage === 'ur-PK'
-            ? 'border-emerald-500/50 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-2xs font-sans'
-            : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
-        } ${isListening ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-400 hover:text-purple-700 dark:hover:text-purple-300'}`}
+            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-2xs font-sans"
+            : "border-border/70 bg-card/60 backdrop-blur-md text-foreground/80 hover:border-primary/50 hover:text-primary",
+          isListening && "opacity-50 cursor-not-allowed"
+        )}
         title={voiceLanguage === 'ur-PK' ? 'اردو منتخب ہے (انگلش میں تبدیل کرنے کے لیے کلک کریں)' : 'English selected (Click to switch to Urdu)'}
       >
         {voiceLanguage === 'ur-PK' ? 'اردو' : 'EN'}
