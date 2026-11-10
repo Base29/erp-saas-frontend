@@ -109,6 +109,11 @@ jobs:
             set -e
             cd ~/genie-cloud
 
+            # Clean up phantom directory if mistakenly created by Docker for docker-entrypoint.sh
+            if [ -d backend/docker-entrypoint.sh ]; then
+              rm -rf backend/docker-entrypoint.sh
+            fi
+
             echo "Logging in to GitHub Container Registry..."
             echo "${{ secrets.CR_PAT || secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
