@@ -128,6 +128,7 @@ const navSections = [
     section: 'settings',
     moduleKey: null,
     items: [
+      { to: '/settings', label: 'Overview', icon: Settings },
       { to: '/settings/companies', label: 'Companies', icon: Building2 },
       { to: '/settings/modules', label: 'Active Modules', icon: Blocks },
       { to: '/settings/fiscal', label: 'Fiscal Periods', icon: Calendar },
@@ -304,6 +305,7 @@ export default function TenantLayout() {
                   <NavLink
                     key={to}
                     to={to}
+                    end={to === '/settings' || to === '/dashboard'}
                     onClick={onNavItemClick}
                     title={collapsed ? label : undefined}
                     className={({ isActive }) =>

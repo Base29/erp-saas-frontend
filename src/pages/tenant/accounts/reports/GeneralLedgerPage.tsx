@@ -13,11 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ReportPagination } from '@/components/ReportPagination'
 import { formatDate } from '@/utils/format'
 
 type GLRow = {
   voucher_number: string
   voucher_date: string
+  account_id?: string
+  account_code?: string
+  account_name?: string
   narration: string | null
   line_narration: string | null
   debit: number
@@ -39,9 +43,8 @@ export default function GeneralLedgerPage() {
     date_from: searchParams.get('date_from') ?? '',
     date_to: searchParams.get('date_to') ?? '',
   })
-  const [submitted, setSubmitted] = useState(
-    !!prefilledAccount && !!searchParams.get('date_from') && !!searchParams.get('date_to')
-  )
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts-all'],
@@ -51,18 +54,20 @@ export default function GeneralLedgerPage() {
   const selectedAccount = accounts.find((a) => a.id === params.account_id)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['report-gl', params],
+    queryKey: ['report-gl', params, page, perPage],
     queryFn: () =>
       fetchGeneralLedger({
-        account_id: params.account_id,
-        date_from: params.date_from,
-        date_to: params.date_to,
-        per_page: 500,
+        account_id: params.account_id || undefined,
+        date_from: params.date_from || undefined,
+        date_to: params.date_to || undefined,
+        page,
+        per_page: perPage,
       }).then((r) => r.data),
-    enabled: submitted && !!params.account_id && !!params.date_from && !!params.date_to,
   })
 
   const rows: GLRow[] = ((data as { data?: GLRow[] })?.data as GLRow[]) ?? []
+  const totalItems: number = (data as { total?: number })?.total ?? rows.length
+  const totalPages: number = (data as { last_page?: number })?.last_page ?? 1
 
   const totalDebit = rows.reduce((s, r) => s + r.debit, 0)
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0)
@@ -71,7 +76,14 @@ export default function GeneralLedgerPage() {
     window.print()
   }
 
-  const canRun = !!params.account_id && !!params.date_from && !!params.date_to
+  const handleFilter = () => {
+    setPage(1)
+  }
+
+  const handleClear = () => {
+    setParams({ account_id: '', date_from: '', date_to: '' })
+    setPage(1)
+  }
 
   return (
     <div className="p-6 space-y-5">
@@ -89,7 +101,9 @@ export default function GeneralLedgerPage() {
         <div>
           <h1 className="text-xl font-semibold">General Ledger</h1>
           <p className="text-sm text-muted-foreground">
-            Posted transactions for a single account within a date range
+            {selectedAccount
+              ? `Posted transactions for ${selectedAccount.account_code} — ${selectedAccount.account_name}`
+              : 'Complete ledger of posted transactions across all accounts'}
           </p>
         </div>
         {rows.length > 0 && (
@@ -101,17 +115,21 @@ export default function GeneralLedgerPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30">
+      <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
         <div className="space-y-1 flex-1 min-w-52">
           <Label>Account</Label>
           <Select
-            value={params.account_id}
-            onValueChange={(v) => { setParams((p) => ({ ...p, account_id: v })); setSubmitted(false) }}
+            value={params.account_id || 'all'}
+            onValueChange={(v) => {
+              setParams((p) => ({ ...p, account_id: v === 'all' ? '' : v }))
+              setPage(1)
+            }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select account…" />
+              <SelectValue placeholder="All Accounts" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
               {accounts.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.account_code} — {a.account_name}
@@ -125,7 +143,10 @@ export default function GeneralLedgerPage() {
           <Input
             type="date"
             value={params.date_from}
-            onChange={(e) => { setParams((p) => ({ ...p, date_from: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => {
+              setParams((p) => ({ ...p, date_from: e.target.value }))
+              setPage(1)
+            }}
             className="w-40"
           />
         </div>
@@ -134,22 +155,22 @@ export default function GeneralLedgerPage() {
           <Input
             type="date"
             value={params.date_to}
-            onChange={(e) => { setParams((p) => ({ ...p, date_to: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => {
+              setParams((p) => ({ ...p, date_to: e.target.value }))
+              setPage(1)
+            }}
             className="w-40"
           />
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setSubmitted(true)} disabled={!canRun}>
-            Run Report
+          <Button onClick={handleFilter}>
+            Filter
           </Button>
           {(params.account_id || params.date_from || params.date_to) && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setParams({ account_id: '', date_from: '', date_to: '' })
-                setSubmitted(false)
-              }}
+              onClick={handleClear}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5 mr-1" />
@@ -159,14 +180,15 @@ export default function GeneralLedgerPage() {
         </div>
       </div>
 
-      {/* Opening balance notice */}
-      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <Info className="h-4 w-4 mt-0.5 shrink-0" />
-        <span>
-          <strong>Running Balance</strong> reflects movement <em>within the selected date range</em> only
-          (starts at 0 from the first transaction). It does not include pre-period opening balances.
-        </span>
-      </div>
+      {/* Opening balance notice when a specific account is filtered */}
+      {selectedAccount && params.date_from && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            <strong>Running Balance</strong> for this account starts from the opening balance prior to {formatDate(params.date_from)}.
+          </span>
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
@@ -175,24 +197,26 @@ export default function GeneralLedgerPage() {
         </div>
       )}
 
-      {submitted && !isLoading && rows.length === 0 && (
+      {!isLoading && rows.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          No posted transactions found for the selected account and date range.
+          No posted transactions found matching the filter criteria.
         </div>
       )}
 
       {/* Report table — also used for printing */}
       {rows.length > 0 && (
-        <div id="gl-print-area">
+        <div id="gl-print-area" className="space-y-3">
           {/* Print header (hidden on screen) */}
           <div className="hidden print:block mb-4">
             <h2 className="text-lg font-bold">General Ledger</h2>
             <p className="text-sm">
-              Account: {selectedAccount?.account_code} — {selectedAccount?.account_name}
+              Account: {selectedAccount ? `${selectedAccount.account_code} — ${selectedAccount.account_name}` : 'All Accounts'}
             </p>
-            <p className="text-sm">
-              Period: {params.date_from} to {params.date_to}
-            </p>
+            {params.date_from && params.date_to && (
+              <p className="text-sm">
+                Period: {params.date_from} to {params.date_to}
+              </p>
+            )}
           </div>
 
           <div className="rounded-lg border overflow-hidden">
@@ -206,6 +230,11 @@ export default function GeneralLedgerPage() {
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Date
                     </th>
+                    {!params.account_id && (
+                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        Account
+                      </th>
+                    )}
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Narration
                     </th>
@@ -216,7 +245,7 @@ export default function GeneralLedgerPage() {
                       Credit
                     </th>
                     <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                      Running Balance
+                      {params.account_id ? 'Running Balance' : 'Net Movement'}
                     </th>
                   </tr>
                 </thead>
@@ -227,15 +256,21 @@ export default function GeneralLedgerPage() {
                         <button
                           className="font-mono text-xs text-primary hover:underline"
                           onClick={() => {
-                            // Find voucher by number isn't straightforward without the id,
-                            // so navigate to vouchers list filtered by number
                             navigate(`/accounts/journal-vouchers?search=${row.voucher_number}`)
                           }}
                         >
                           {row.voucher_number}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5 text-sm">{formatDate(row.voucher_date)}</td>
+                      <td className="px-4 py-2.5 text-sm whitespace-nowrap">{formatDate(row.voucher_date)}</td>
+                      {!params.account_id && (
+                        <td className="px-4 py-2.5 text-sm">
+                          <span className="font-mono text-xs text-muted-foreground mr-1.5">
+                            {row.account_code}
+                          </span>
+                          <span className="font-medium">{row.account_name}</span>
+                        </td>
+                      )}
                       <td className="px-4 py-2.5 text-muted-foreground text-sm max-w-xs">
                         <div>{row.narration ?? '—'}</div>
                         {row.line_narration && row.line_narration !== row.narration && (
@@ -261,8 +296,8 @@ export default function GeneralLedgerPage() {
                 </tbody>
                 <tfoot className="bg-muted/40 border-t-2 font-semibold">
                   <tr>
-                    <td colSpan={3} className="px-4 py-2.5 text-right text-sm">
-                      Totals
+                    <td colSpan={params.account_id ? 3 : 4} className="px-4 py-2.5 text-right text-sm">
+                      Page Totals
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(totalDebit)}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(totalCredit)}</td>
@@ -277,9 +312,19 @@ export default function GeneralLedgerPage() {
               </table>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {rows.length} transaction{rows.length !== 1 ? 's' : ''} · Total rows shown (paginated 10 per page — run with tighter date range to see all)
-          </p>
+
+          {/* Pagination controls */}
+          <ReportPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            perPage={perPage}
+            onPageChange={(p) => setPage(p)}
+            onPerPageChange={(pp) => {
+              setPerPage(pp)
+              setPage(1)
+            }}
+          />
         </div>
       )}
     </div>

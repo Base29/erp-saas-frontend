@@ -19,6 +19,7 @@ import TenantLoginPage from '@/pages/tenant/LoginPage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
 import RecentActivitiesPage from '@/pages/tenant/RecentActivitiesPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
+import SettingsOverviewTab from '@/pages/tenant/settings/SettingsOverviewTab'
 import FiscalPeriodsTab from '@/pages/tenant/settings/FiscalPeriodsTab'
 import TaxSettingsTab from '@/pages/tenant/settings/TaxSettingsTab'
 import SequencesTab from '@/pages/tenant/settings/SequencesTab'
@@ -158,7 +159,7 @@ export const router = createBrowserRouter([
             path: 'settings', 
             element: <SettingsPage />,
             children: [
-              { index: true, element: <Navigate to="companies" replace /> },
+              { index: true, element: <SettingsOverviewTab /> },
               { path: 'companies', element: <CompaniesTab /> },
               { path: 'modules', element: <ActiveModulesTab /> },
               { path: 'fiscal', element: <FiscalPeriodsTab /> },

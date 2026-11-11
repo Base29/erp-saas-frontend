@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ReportPagination } from '@/components/ReportPagination'
 
 type TBRow = {
   account_id: string
@@ -28,7 +29,8 @@ function fmt(n: number) {
 export default function TrialBalancePage() {
   const navigate = useNavigate()
   const [periodId, setPeriodId] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
 
   const { data: periods = [] } = useQuery({
     queryKey: ['fiscal-periods'],
@@ -37,8 +39,7 @@ export default function TrialBalancePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['report-tb', periodId],
-    queryFn: () => fetchTrialBalance({ fiscal_period_id: periodId }).then((r) => r.data),
-    enabled: submitted && !!periodId,
+    queryFn: () => fetchTrialBalance({ fiscal_period_id: periodId || undefined }).then((r) => r.data),
   })
 
   const rows: TBRow[] = (data as { rows?: TBRow[] })?.rows ?? []
@@ -48,11 +49,24 @@ export default function TrialBalancePage() {
 
   const selectedPeriod = periods.find((p) => p.id === periodId)
 
+  // Client-side pagination over accounts
+  const totalItems = rows.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage))
+  const paginatedRows = rows.slice((page - 1) * perPage, page * perPage)
+
   const handleDrillDown = (row: TBRow) => {
-    if (!selectedPeriod) return
-    navigate(
-      `/accounts/reports/general-ledger?account_id=${row.account_id}&date_from=${selectedPeriod.start_date}&date_to=${selectedPeriod.end_date}`
-    )
+    if (selectedPeriod) {
+      navigate(
+        `/accounts/reports/general-ledger?account_id=${row.account_id}&date_from=${selectedPeriod.start_date}&date_to=${selectedPeriod.end_date}`
+      )
+    } else {
+      navigate(`/accounts/reports/general-ledger?account_id=${row.account_id}`)
+    }
+  }
+
+  const handleClear = () => {
+    setPeriodId('')
+    setPage(1)
   }
 
   return (
@@ -70,7 +84,9 @@ export default function TrialBalancePage() {
         <div>
           <h1 className="text-xl font-semibold">Trial Balance</h1>
           <p className="text-sm text-muted-foreground">
-            Debit and credit totals per account for a fiscal period
+            {selectedPeriod
+              ? `Debit and credit totals per account for ${selectedPeriod.name}`
+              : 'Cumulative debit and credit totals per account across all periods'}
           </p>
         </div>
         {rows.length > 0 && (
@@ -82,17 +98,21 @@ export default function TrialBalancePage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30">
+      <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
         <div className="space-y-1 flex-1 min-w-52">
           <Label>Fiscal Period</Label>
           <Select
-            value={periodId}
-            onValueChange={(v) => { setPeriodId(v); setSubmitted(false) }}
+            value={periodId || 'all'}
+            onValueChange={(v) => {
+              setPeriodId(v === 'all' ? '' : v)
+              setPage(1)
+            }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select period…" />
+              <SelectValue placeholder="All Periods" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Periods (Cumulative)</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
@@ -103,17 +123,11 @@ export default function TrialBalancePage() {
           </Select>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setSubmitted(true)} disabled={!periodId}>
-            Run Report
-          </Button>
           {periodId && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setPeriodId('')
-                setSubmitted(false)
-              }}
+              onClick={handleClear}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5 mr-1" />
@@ -130,70 +144,68 @@ export default function TrialBalancePage() {
         </div>
       )}
 
-      {submitted && !isLoading && rows.length === 0 && (
+      {!isLoading && rows.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          No posted transactions found for the selected fiscal period.
+          No posted transactions found for the selected filter.
         </div>
       )}
 
       {rows.length > 0 && (
-        <div id="tb-print-area">
+        <div id="tb-print-area" className="space-y-3">
           {/* Print header */}
           <div className="hidden print:block mb-4">
             <h2 className="text-lg font-bold">Trial Balance</h2>
-            <p className="text-sm">Period: {selectedPeriod?.name}</p>
+            <p className="text-sm">Period: {selectedPeriod ? selectedPeriod.name : 'All Periods (Cumulative)'}</p>
           </div>
 
           {/* Balance indicator */}
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium mb-3 ${balanced ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium ${balanced ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
             <span className="text-base">{balanced ? '✓' : '✗'}</span>
             {balanced
-              ? 'Trial Balance is balanced'
-              : `Not balanced — difference: ${fmt(Math.abs(grandDebit - grandCredit))}`}
+              ? 'Trial Balance is in balance — total debits equal total credits.'
+              : `Trial Balance is OUT OF BALANCE by ${fmt(Math.abs(grandDebit - grandCredit))}.`}
           </div>
 
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
                 <tr>
-                  <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider w-32">
                     Code
                   </th>
                   <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                     Account Name
                   </th>
-                  <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider w-36">
                     Debit
                   </th>
-                  <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider w-36">
                     Credit
                   </th>
-                  <th className="px-4 py-2.5 w-10 print:hidden" />
+                  <th className="px-4 py-2.5 text-center font-medium text-muted-foreground text-xs uppercase tracking-wider w-16 print:hidden">
+                    GL
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.account_id} className="border-t hover:bg-muted/30 transition-colors group">
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                      {row.account_code}
-                    </td>
+                {paginatedRows.map((row) => (
+                  <tr key={row.account_id} className="border-t hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-xs">{row.account_code}</td>
                     <td className="px-4 py-2.5 font-medium">{row.account_name}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-sm">
+                    <td className="px-4 py-2.5 text-right font-mono">
                       {row.total_debit > 0 ? fmt(row.total_debit) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-sm">
+                    <td className="px-4 py-2.5 text-right font-mono">
                       {row.total_credit > 0 ? fmt(row.total_credit) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-4 py-2.5 print:hidden">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="View in General Ledger"
+                    <td className="px-4 py-2.5 text-center print:hidden">
+                      <button
                         onClick={() => handleDrillDown(row)}
+                        className="text-muted-foreground hover:text-primary transition-colors p-1 rounded"
+                        title="View in General Ledger"
                       >
                         <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -201,7 +213,7 @@ export default function TrialBalancePage() {
               <tfoot className="bg-muted/40 border-t-2 font-semibold">
                 <tr>
                   <td colSpan={2} className="px-4 py-2.5 text-right text-sm">
-                    Grand Total
+                    Grand Totals
                   </td>
                   <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(grandDebit)}</td>
                   <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(grandCredit)}</td>
@@ -210,6 +222,19 @@ export default function TrialBalancePage() {
               </tfoot>
             </table>
           </div>
+
+          {/* Pagination controls */}
+          <ReportPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            perPage={perPage}
+            onPageChange={(p) => setPage(p)}
+            onPerPageChange={(pp) => {
+              setPerPage(pp)
+              setPage(1)
+            }}
+          />
 
           <p className="text-xs text-muted-foreground mt-2 print:hidden">
             Tip: Click the <ArrowRight className="inline h-3 w-3" /> icon on any row to drill down into the General Ledger for that account.
