@@ -83,7 +83,7 @@ export default function JournalVoucherDetailPage() {
         }
       `}</style>
 
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="p-6 space-y-6 w-full">
         {/* Header */}
         <div className="flex items-center gap-3 print-hidden">
           <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/journal-vouchers')}>
@@ -172,7 +172,7 @@ export default function JournalVoucherDetailPage() {
           </div>
 
           {/* Info grid */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Fiscal Period</p>
               <p className="font-medium">{jv.fiscal_period?.name ?? '—'}</p>
@@ -181,7 +181,7 @@ export default function JournalVoucherDetailPage() {
               <p className="text-muted-foreground">Reference</p>
               <p className="font-medium">{jv.reference ?? '—'}</p>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-2 md:col-span-4">
               <p className="text-muted-foreground">Narration</p>
               <p className="font-medium">{jv.narration ?? '—'}</p>
             </div>
@@ -196,7 +196,7 @@ export default function JournalVoucherDetailPage() {
           {/* Lines table */}
           <div className="space-y-2 mt-6">
             <h2 className="text-sm font-semibold">Journal Lines</h2>
-            <div className="rounded-md border overflow-hidden">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>

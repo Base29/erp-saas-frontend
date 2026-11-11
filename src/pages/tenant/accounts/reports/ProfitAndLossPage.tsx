@@ -74,7 +74,7 @@ export default function ProfitAndLossPage() {
   const canRun = (!!params.date_from && !!params.date_to) || !!periodId
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 space-y-6">
       <style>{`
         @media print {
           body > * { display: none !important; }

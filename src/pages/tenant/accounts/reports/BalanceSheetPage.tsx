@@ -109,7 +109,7 @@ export default function BalanceSheetPage() {
   const balanced = data?.is_balanced ?? false
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 space-y-6">
       <style>{`
         @media print {
           body > * { display: none !important; }

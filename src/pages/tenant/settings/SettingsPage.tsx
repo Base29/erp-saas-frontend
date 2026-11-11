@@ -101,7 +101,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto bg-background/30 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto p-8">
+        <div className="p-6">
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Outlet />
           </div>

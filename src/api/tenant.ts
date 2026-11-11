@@ -295,6 +295,11 @@ export const deleteAccountType = (id: string) =>
 export const fetchAccountCategories = () =>
   apiClient.get<{ data: AccountCategory[] }>('/v1/accounts/categories')
 
+export const fetchNextCategoryCode = (parentId?: string | null) =>
+  apiClient.get<{ code: string }>('/v1/accounts/categories/next-code', {
+    params: parentId ? { parent_id: parentId } : {},
+  })
+
 export const createAccountCategory = (payload: { name: string; code?: string; parent_id?: string | null }) =>
   apiClient.post<{ data: AccountCategory }>('/v1/accounts/categories', payload)
 
@@ -312,7 +317,10 @@ export const fetchAccounts = (params?: Record<string, string | number | boolean>
   return apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params: queryParams })
 }
 
-export const createAccount = (payload: { account_code: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
+export const fetchNextAccountCode = (categoryId: string) =>
+  apiClient.get<{ code: string }>('/v1/accounts/next-code', { params: { category_id: categoryId } })
+
+export const createAccount = (payload: { account_code?: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
 
 export const updateAccount = (id: string, payload: Partial<Account>) =>

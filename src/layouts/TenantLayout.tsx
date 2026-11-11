@@ -29,6 +29,7 @@ import {
   UserCog,
   UploadCloud,
   Search,
+  FolderGit2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -113,6 +114,15 @@ const navSections = [
     ],
     groupLabel: 'Inventory',
     icon: Package,
+  },
+  {
+    section: 'projects',
+    moduleKey: 'projects',
+    items: [
+      { to: '/projects', label: 'All Projects', icon: FolderGit2 },
+    ],
+    groupLabel: 'Projects',
+    icon: FolderGit2,
   },
   {
     section: 'settings',
