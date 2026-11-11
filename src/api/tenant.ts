@@ -355,12 +355,21 @@ export interface JournalVoucher {
   approval_status: string
   posting_status: string
   is_auto_generated: boolean
+  is_reversed?: boolean
+  reversal_voucher_id?: string
+  reversed_voucher_id?: string
+  reversal_reason?: string
+  reversed_at?: string
+  reversed_by?: string
   created_by: string
   posted_by?: string
   posted_at?: string
   created_at: string
   lines?: JournalVoucherLine[]
   fiscal_period?: { id: string; name: string }
+  reversal_voucher?: JournalVoucher
+  reversed_voucher?: JournalVoucher
+  reversed_by_user?: { id: string; name: string }
 }
 
 export const VOUCHER_TYPE_LABELS: Record<string, string> = {
@@ -414,6 +423,18 @@ export const postJournalVoucher = (id: string) =>
 
 export const unpostJournalVoucher = (id: string) =>
   apiClient.post<{ data: JournalVoucher; message: string }>(`/v1/accounts/journal-vouchers/${id}/unpost`)
+
+export const reverseJournalVoucher = (
+  id: string,
+  payload: { reversal_date: string; fiscal_period_id: string; reason: string }
+) =>
+  apiClient.post<{
+    message: string
+    data: {
+      original_voucher: JournalVoucher
+      reversal_voucher: JournalVoucher
+    }
+  }>(`/v1/accounts/journal-vouchers/${id}/reverse`, payload)
 
 // ── Accounts — Reports ────────────────────────────────────────────────────────
 export const fetchGeneralLedger = (params?: { account_id?: string; date_from?: string; date_to?: string; page?: number; per_page?: number }) =>
