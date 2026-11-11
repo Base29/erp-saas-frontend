@@ -205,8 +205,8 @@ export const router = createBrowserRouter([
               { path: 'budgets', element: <BudgetsPage /> },
               { path: 'budgets/:id/report', element: <BudgetReportPage /> },
 
-              // Bulk Upload / Migration
-              { path: 'data-migration', element: <DataMigrationPage /> },
+              // Bulk Upload / Migration (redirect to Settings -> Bulk Upload & Migration)
+              { path: 'data-migration', element: <Navigate to="/settings/data-migration" replace /> },
 
               // Report sub-routes
               { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },

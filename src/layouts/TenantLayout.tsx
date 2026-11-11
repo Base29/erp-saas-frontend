@@ -79,7 +79,6 @@ const navSections = [
       { to: '/accounts/reports/equity-changes', label: 'Equity Changes', icon: BookOpen },
       { to: '/accounts/reports/customer-statement', label: 'Customer Statement', icon: BookOpen },
       { to: '/accounts/reports/supplier-statement', label: 'Supplier Statement', icon: BookOpen },
-      { to: '/accounts/data-migration', label: 'Bulk Upload Data', icon: UploadCloud },
     ],
     groupLabel: 'Accounts',
     icon: BookOpen,
