@@ -12,20 +12,23 @@ describe('canAccessSection', () => {
   })
 
   it('tenant_admin can access all sections', () => {
-    const sections = ['accounts', 'sales', 'inventory', 'settings']
+    const sections = ['accounts', 'sales', 'inventory', 'reports', 'settings']
     sections.forEach((s) => expect(canAccessSection('tenant_admin', s)).toBe(true))
   })
 
-  it('viewer can access accounts, sales, inventory but not settings', () => {
+  it('viewer can access accounts, sales, inventory, reports but not settings', () => {
     expect(canAccessSection('viewer', 'accounts')).toBe(true)
     expect(canAccessSection('viewer', 'sales')).toBe(true)
     expect(canAccessSection('viewer', 'inventory')).toBe(true)
+    expect(canAccessSection('viewer', 'reports')).toBe(true)
     expect(canAccessSection('viewer', 'settings')).toBe(false)
   })
 
-  it('sales_person can access sales and inventory but not settings', () => {
+  it('sales_person can access sales, inventory, reports but not accounts or settings', () => {
     expect(canAccessSection('sales_person', 'sales')).toBe(true)
     expect(canAccessSection('sales_person', 'inventory')).toBe(true)
+    expect(canAccessSection('sales_person', 'reports')).toBe(true)
+    expect(canAccessSection('sales_person', 'accounts')).toBe(false)
     expect(canAccessSection('sales_person', 'settings')).toBe(false)
   })
 })

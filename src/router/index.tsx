@@ -155,6 +155,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'activities', element: <RecentActivitiesPage /> },
+          { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
           { 
             path: 'settings', 
             element: <SettingsPage />,
