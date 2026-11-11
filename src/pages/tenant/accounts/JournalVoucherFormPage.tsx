@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, ArrowLeft, Search, Check, ChevronDown, X, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Search, Check, ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   fetchJournalVoucher,
@@ -13,10 +13,10 @@ import {
   fetchCostCenters,
   createJournalVoucher,
   updateJournalVoucher,
-  unpostJournalVoucher,
   matchBankStatementLine,
   type Account,
 } from '@/api/tenant'
+import { getProjects, type Project } from '@/api/projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +36,7 @@ import {
 const lineSchema = z.object({
   account_id: z.string().min(1, 'Required'),
   cost_center_id: z.string().optional().nullable(),
+  project_id: z.string().optional().nullable(),
   debit_amount: z.string().default('0'),
   credit_amount: z.string().default('0'),
   line_narration: z.string().optional(),
@@ -240,12 +241,18 @@ export default function JournalVoucherFormPage() {
       }),
   })
 
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects-all-active'],
+    queryFn: () => getProjects({ per_page: 200 }).then((r) => r.data),
+  })
+  const projects: Project[] = projectsData?.data ?? []
+
   const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
     useForm<FormValues>({
       resolver: zodResolver(schema),
       defaultValues: {
         fiscal_period_id: '',
-        lines: [{ account_id: '', cost_center_id: '', debit_amount: '0', credit_amount: '0' }],
+        lines: [{ account_id: '', cost_center_id: '', project_id: '', debit_amount: '0', credit_amount: '0' }],
       },
     })
 
@@ -262,6 +269,7 @@ export default function JournalVoucherFormPage() {
         lines: (jv.lines ?? []).map((l) => ({
           account_id: String(l.account_id),
           cost_center_id: l.cost_center_id ? String(l.cost_center_id) : '',
+          project_id: (l as any).project_id ? String((l as any).project_id) : '',
           debit_amount: String(l.debit_amount),
           credit_amount: String(l.credit_amount),
           line_narration: l.line_narration ?? '',
@@ -324,6 +332,7 @@ export default function JournalVoucherFormPage() {
         lines: v.lines.map((l) => ({
           account_id: l.account_id,
           cost_center_id: l.cost_center_id || undefined,
+          project_id: l.project_id || undefined,
           debit_amount: parseFloat(l.debit_amount) || 0,
           credit_amount: parseFloat(l.credit_amount) || 0,
           line_narration: l.line_narration || undefined,
@@ -373,10 +382,11 @@ export default function JournalVoucherFormPage() {
   )
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01
 
-  const isReadOnly = jv?.posting_status === 'posted' || jv?.is_auto_generated
+  const isApproved = jv?.approval_status === 'approved'
+  const isReadOnly = jv?.posting_status === 'posted' || jv?.is_auto_generated || isApproved
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/journal-vouchers')}>
           <ArrowLeft className="h-4 w-4" />
@@ -389,32 +399,20 @@ export default function JournalVoucherFormPage() {
       {isReadOnly && (
         <div className="rounded-md bg-muted px-4 py-3 text-sm flex items-center justify-between border">
           <span className="text-muted-foreground">
-            This voucher is read-only ({jv?.is_auto_generated ? 'auto-generated from transaction' : 'currently posted'}).
+            This voucher is read-only (
+              {jv?.is_auto_generated
+                ? 'auto-generated from transaction'
+                : jv?.posting_status === 'posted'
+                ? 'posted vouchers cannot be edited and can only be reversed'
+                : 'approved vouchers cannot be edited'}
+            ).
           </span>
-          {!jv?.is_auto_generated && jv?.posting_status === 'posted' && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1.5 text-amber-700 dark:text-amber-300 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-              onClick={() => {
-                if (confirm('Unposting will reverse the general ledger entries for this voucher so you can edit it. Continue?')) {
-                  unpostJournalVoucher(id!).then(() => {
-                    qc.invalidateQueries({ queryKey: ['journal-voucher', id] })
-                    qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
-                  })
-                }
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Unpost to Edit
-            </Button>
-          )}
         </div>
       )}
 
       <form onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-6">
         {/* Header fields */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label>Voucher Type</Label>
             <Controller
@@ -459,7 +457,7 @@ export default function JournalVoucherFormPage() {
             <Label>Reference</Label>
             <Input {...register('reference')} placeholder="Optional reference" disabled={isReadOnly} />
           </div>
-          <div className="col-span-2 space-y-1">
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4 space-y-1">
             <Label>Narration</Label>
             <Input {...register('narration')} placeholder="Description" disabled={isReadOnly} />
           </div>
@@ -481,15 +479,16 @@ export default function JournalVoucherFormPage() {
             )}
           </div>
 
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-64">Account</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-72">Account</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-48">Cost Center</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-48">Project</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Narration</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Debit</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Credit</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-36">Debit</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-36">Credit</th>
                   {!isReadOnly && <th className="px-3 py-2 w-10" />}
                 </tr>
               </thead>
@@ -529,6 +528,31 @@ export default function JournalVoucherFormPage() {
                               {costCenters.map((cc) => (
                                 <SelectItem key={cc.id} value={String(cc.id)}>
                                   {cc.code} — {cc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Controller
+                        control={control}
+                        name={`lines.${i}.project_id`}
+                        render={({ field: f }) => (
+                          <Select 
+                            value={f.value || 'none'} 
+                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)} 
+                            disabled={isReadOnly}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="No project" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-72">
+                              <SelectItem value="none">None</SelectItem>
+                              {projects.map((p) => (
+                                <SelectItem key={p.id} value={String(p.id)}>
+                                  {p.project_code} — {p.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -582,7 +606,7 @@ export default function JournalVoucherFormPage() {
               </tbody>
               <tfoot className="bg-muted/30 border-t">
                 <tr>
-                  <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Totals</td>
+                  <td colSpan={4} className="px-3 py-2 text-sm font-medium text-right">Totals</td>
                   <td className="px-3 py-2 text-right font-mono font-medium">
                     {totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                   </td>

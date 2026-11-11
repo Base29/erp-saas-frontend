@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, TrendingUp, TrendingDown } from 'lucide-react'
+import { Printer, TrendingUp, TrendingDown, X } from 'lucide-react'
 import { fetchProfitAndLoss, fetchFiscalPeriods } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ReportPagination } from '@/components/ReportPagination'
 
 function fmt(n: number) {
   return n.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -29,52 +30,62 @@ function PLDetailRow({ label, amount, isTotal = false, isFinal = false }: { labe
 export default function ProfitAndLossPage() {
   const [periodId, setPeriodId] = useState<string>('')
   const [params, setParams] = useState({
-    date_from: `${new Date().getFullYear()}-01-01`,
-    date_to: new Date().toISOString().slice(0, 10),
+    date_from: '',
+    date_to: '',
   })
-  const [submitted, setSubmitted] = useState(true)
+  const [breakdownPage, setBreakdownPage] = useState(1)
+  const [breakdownPerPage, setBreakdownPerPage] = useState(15)
 
   const { data: periods = [] } = useQuery({
     queryKey: ['fiscal-periods'],
     queryFn: () => fetchFiscalPeriods({ per_page: 100 }).then((r) => r.data.data),
   })
 
-  // Auto-select active fiscal period if none selected
-  useEffect(() => {
-    if (!periodId && periods.length > 0) {
-      const activePeriod = periods.find((p) => p.status === 'open') ?? periods[0]
-      if (activePeriod) {
-        setPeriodId(activePeriod.id)
+  const handlePeriodChange = (selectedId: string) => {
+    if (selectedId === 'all') {
+      setPeriodId('')
+      setParams({ date_from: '', date_to: '' })
+    } else {
+      setPeriodId(selectedId)
+      const selected = periods.find((p) => p.id === selectedId)
+      if (selected) {
         setParams({
-          date_from: activePeriod.start_date,
-          date_to: activePeriod.end_date,
+          date_from: selected.start_date,
+          date_to: selected.end_date,
         })
       }
     }
-  }, [periods, periodId])
-
-  const handlePeriodChange = (selectedId: string) => {
-    setPeriodId(selectedId)
-    const selected = periods.find((p) => p.id === selectedId)
-    if (selected) {
-      setParams({
-        date_from: selected.start_date,
-        date_to: selected.end_date,
-      })
-    }
-    setSubmitted(true)
+    setBreakdownPage(1)
   }
 
   const { data, isLoading } = useQuery({
     queryKey: ['report-pl', params, periodId],
-    queryFn: () => fetchProfitAndLoss({ ...params, fiscal_period_id: periodId || undefined }).then((r) => r.data),
-    enabled: submitted && ((!!params.date_from && !!params.date_to) || !!periodId),
+    queryFn: () =>
+      fetchProfitAndLoss({
+        date_from: params.date_from || undefined,
+        date_to: params.date_to || undefined,
+        fiscal_period_id: periodId || undefined,
+      }).then((r) => r.data),
   })
 
-  const canRun = (!!params.date_from && !!params.date_to) || !!periodId
+  const handleClear = () => {
+    setPeriodId('')
+    setParams({ date_from: '', date_to: '' })
+    setBreakdownPage(1)
+  }
+
+  const details = data?.details ?? []
+  const totalDetails = details.length
+  const totalDetailPages = Math.max(1, Math.ceil(totalDetails / breakdownPerPage))
+  const paginatedDetails = details.slice(
+    (breakdownPage - 1) * breakdownPerPage,
+    breakdownPage * breakdownPerPage
+  )
+
+  const selectedPeriod = periods.find((p) => p.id === periodId)
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 space-y-6">
       <style>{`
         @media print {
           body > * { display: none !important; }
@@ -104,11 +115,12 @@ export default function ProfitAndLossPage() {
         {periods.length > 0 && (
           <div className="space-y-1.5 min-w-56">
             <Label className="text-xs font-bold uppercase text-muted-foreground">Fiscal Period</Label>
-            <Select value={periodId} onValueChange={handlePeriodChange}>
+            <Select value={periodId || 'all'} onValueChange={handlePeriodChange}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select period…" />
+                <SelectValue placeholder="All Periods (All-Time)" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Periods (All-Time)</SelectItem>
                 {periods.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -124,7 +136,10 @@ export default function ProfitAndLossPage() {
           <Input
             type="date"
             value={params.date_from}
-            onChange={(e) => { setParams((p) => ({ ...p, date_from: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => {
+              setParams((p) => ({ ...p, date_from: e.target.value }))
+              setBreakdownPage(1)
+            }}
             className="w-40 h-9"
           />
         </div>
@@ -133,13 +148,24 @@ export default function ProfitAndLossPage() {
           <Input
             type="date"
             value={params.date_to}
-            onChange={(e) => { setParams((p) => ({ ...p, date_to: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => {
+              setParams((p) => ({ ...p, date_to: e.target.value }))
+              setBreakdownPage(1)
+            }}
             className="w-40 h-9"
           />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!canRun} size="sm" className="h-9 px-6">
-          Run Report
-        </Button>
+        {(periodId || params.date_from || params.date_to) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
       </div>
 
       {isLoading && (
@@ -149,17 +175,23 @@ export default function ProfitAndLossPage() {
         </div>
       )}
 
-      {submitted && !isLoading && !data && (
+      {!isLoading && !data && (
         <div className="text-center py-16 rounded-xl border-2 border-dashed">
           <p className="text-sm text-muted-foreground font-medium">No financial activity found for the selected period.</p>
         </div>
       )}
 
-      {submitted && !isLoading && data && (
+      {!isLoading && data && (
         <div id="pl-print-area" className="bg-card p-10 rounded-2xl border shadow-sm print:shadow-none print:border-0 space-y-10">
           <div className="text-center space-y-1 border-b pb-8">
             <h2 className="text-2xl font-bold uppercase tracking-widest">Statement of Profit or Loss</h2>
-            <p className="text-sm text-muted-foreground font-medium">For the period {params.date_from} to {params.date_to}</p>
+            <p className="text-sm text-muted-foreground font-medium">
+              {params.date_from && params.date_to
+                ? `For the period ${params.date_from} to ${params.date_to}`
+                : selectedPeriod
+                ? `Period: ${selectedPeriod.name}`
+                : 'Cumulative All-Time Statement'}
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -198,7 +230,9 @@ export default function ProfitAndLossPage() {
                     <h4 className={`text-xl font-black uppercase tracking-tight ${data.net_profit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
                       {data.net_profit >= 0 ? 'Net Profit' : 'Net Loss'}
                     </h4>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">For the Period</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                      {params.date_from && params.date_to ? 'For the Period' : 'Cumulative'}
+                    </p>
                   </div>
                 </div>
                 <div className={`text-3xl font-black font-mono ${data.net_profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
@@ -208,28 +242,45 @@ export default function ProfitAndLossPage() {
             </div>
           </div>
 
-          <div className="pt-10 space-y-4">
-             <h3 className="text-sm font-bold uppercase text-muted-foreground border-b pb-2">Account Breakdown</h3>
-             <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-muted-foreground uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">Account</th>
-                    <th className="pb-3 font-semibold text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {data.details.map((item: any, i: number) => (
-                    <tr key={i} className="hover:bg-muted/30">
-                      <td className="py-2.5">
-                        <span className="font-mono text-[10px] text-muted-foreground mr-2">{item.account_code}</span>
-                        <span className="font-medium">{item.account_name}</span>
-                      </td>
-                      <td className="py-2.5 text-right font-mono">{fmt(Math.abs(item.balance))}</td>
+          {details.length > 0 && (
+            <div className="pt-10 space-y-4">
+               <div className="flex items-center justify-between border-b pb-2">
+                 <h3 className="text-sm font-bold uppercase text-muted-foreground">Account Breakdown</h3>
+                 <span className="text-xs text-muted-foreground">{totalDetails} account{totalDetails !== 1 ? 's' : ''}</span>
+               </div>
+               <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-muted-foreground uppercase tracking-wider">
+                      <th className="pb-3 font-semibold">Account</th>
+                      <th className="pb-3 font-semibold text-right">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-             </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paginatedDetails.map((item: any, i: number) => (
+                      <tr key={i} className="hover:bg-muted/30">
+                        <td className="py-2.5">
+                          <span className="font-mono text-[10px] text-muted-foreground mr-2">{item.account_code}</span>
+                          <span className="font-medium">{item.account_name}</span>
+                        </td>
+                        <td className="py-2.5 text-right font-mono">{fmt(Math.abs(item.balance))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+               </table>
+
+               <ReportPagination
+                 currentPage={breakdownPage}
+                 totalPages={totalDetailPages}
+                 totalItems={totalDetails}
+                 perPage={breakdownPerPage}
+                 onPageChange={(p) => setBreakdownPage(p)}
+                 onPerPageChange={(pp) => {
+                   setBreakdownPerPage(pp)
+                   setBreakdownPage(1)
+                 }}
+               />
+            </div>
+          )}
         </div>
       )}
     </div>

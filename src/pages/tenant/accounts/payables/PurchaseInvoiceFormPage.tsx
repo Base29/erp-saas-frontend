@@ -15,6 +15,7 @@ import {
   uploadAttachment,
   type Account,
 } from '@/api/tenant'
+import { getProjects, type Project } from '@/api/projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +37,7 @@ const schema = z.object({
   expense_account_id: z.string().min(1, 'Expense account is required'),
   tax_account_id: z.string().optional().nullable(),
   cost_center_id: z.string().optional().nullable(),
+  project_id: z.string().optional().nullable(),
   total_amount: z.string().min(1, 'Amount is required'),
   tax_amount: z.string().default('0'),
 })
@@ -72,6 +74,12 @@ export default function PurchaseInvoiceFormPage() {
     queryKey: ['cost-centers'],
     queryFn: () => fetchCostCenters({ is_active: 1 }).then((r) => r.data.data),
   })
+
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects-all-active'],
+    queryFn: () => getProjects({ per_page: 200 }).then((r) => r.data),
+  })
+  const projects: Project[] = projectsData?.data ?? []
 
   const { data: existingInvoice } = useQuery({
     queryKey: ['purchase-invoice', id],
@@ -110,6 +118,7 @@ export default function PurchaseInvoiceFormPage() {
         expense_account_id: expenseLine ? String(expenseLine.account_id) : '',
         tax_account_id: taxLine ? String(taxLine.account_id) : null,
         cost_center_id: expenseLine?.cost_center_id ?? 'none',
+        project_id: (existingInvoice as any)?.project_id ?? 'none',
         total_amount: String(existingInvoice.total_amount),
         tax_amount: String(existingInvoice.tax_amount || 0),
       })
@@ -124,6 +133,7 @@ export default function PurchaseInvoiceFormPage() {
         tax_amount: parseFloat(v.tax_amount) || 0,
         tax_account_id: v.tax_account_id && v.tax_account_id !== 'default' ? v.tax_account_id : null,
         cost_center_id: v.cost_center_id === 'none' ? null : v.cost_center_id,
+        project_id: v.project_id === 'none' ? null : v.project_id,
       }
 
       const res = isEdit
@@ -151,7 +161,7 @@ export default function PurchaseInvoiceFormPage() {
   })
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/purchase-invoices')}>
           <ArrowLeft className="h-4 w-4" />
@@ -166,7 +176,7 @@ export default function PurchaseInvoiceFormPage() {
           <CardHeader>
             <CardTitle className="text-lg">Invoice Details</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Supplier</Label>
               <Controller
@@ -212,7 +222,7 @@ export default function PurchaseInvoiceFormPage() {
             <CardTitle className="text-lg">Accounting Distribution</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Expense/Asset Account</Label>
                 <Controller
@@ -252,9 +262,30 @@ export default function PurchaseInvoiceFormPage() {
                   )}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Project (Optional)</Label>
+                <Controller
+                  control={control}
+                  name="project_id"
+                  render={({ field }) => (
+                    <Select value={field.value || 'none'} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.project_code} - {p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Total Amount (Inc. Tax)</Label>
                 <Input type="number" step="0.01" min="0" {...register('total_amount')} />

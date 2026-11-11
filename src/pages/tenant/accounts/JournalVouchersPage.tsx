@@ -1,14 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Eye, Search, X, Upload, Pencil, RotateCcw } from 'lucide-react'
+import { Plus, Eye, Search, X, Upload, Pencil, Undo2, Loader2 } from 'lucide-react'
 import BulkImportModal from '@/components/import/BulkImportModal'
-import { fetchJournalVouchers, unpostJournalVoucher, type JournalVoucher, VOUCHER_TYPE_LABELS } from '@/api/tenant'
+import {
+  fetchJournalVouchers,
+  fetchFiscalPeriods,
+  reverseJournalVoucher,
+  type JournalVoucher,
+  VOUCHER_TYPE_LABELS,
+} from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -60,6 +75,53 @@ export default function JournalVouchersPage() {
   const [approvalFilter, setApprovalFilter] = useState('')
   const [postingFilter, setPostingFilter]   = useState('')
 
+  const [reversalJv, setReversalJv] = useState<JournalVoucher | null>(null)
+  const [reversalDate, setReversalDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [reversalPeriodId, setReversalPeriodId] = useState('')
+  const [reversalReason, setReversalReason] = useState('')
+  const [reversalError, setReversalError] = useState<string | null>(null)
+
+  const { data: openPeriods = [] } = useQuery({
+    queryKey: ['fiscal-periods', 'open'],
+    queryFn: () =>
+      fetchFiscalPeriods({ per_page: -1 }).then((r) => {
+        const list = Array.isArray(r.data) ? r.data : (r.data as any)?.data ?? []
+        return list.filter((p: any) => p.status === 'open')
+      }),
+  })
+
+  useEffect(() => {
+    if (openPeriods.length > 0 && !reversalPeriodId) {
+      const today = reversalDate
+      const match = openPeriods.find(
+        (p: any) => p.start_date <= today && p.end_date >= today
+      ) ?? openPeriods[0]
+      if (match) setReversalPeriodId(String(match.id))
+    }
+  }, [openPeriods, reversalDate, reversalPeriodId])
+
+  const reverseMutation = useMutation({
+    mutationFn: (payload: { id: string; reversal_date: string; fiscal_period_id: string; reason: string }) =>
+      reverseJournalVoucher(payload.id, {
+        reversal_date: payload.reversal_date,
+        fiscal_period_id: payload.fiscal_period_id,
+        reason: payload.reason,
+      }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
+      qc.invalidateQueries({ queryKey: ['general-ledger'] })
+      qc.invalidateQueries({ queryKey: ['trial-balance'] })
+      setReversalJv(null)
+      const newId = res.data?.data?.reversal_voucher?.id
+      if (newId) {
+        navigate(`/accounts/journal-vouchers/${newId}`)
+      }
+    },
+    onError: (err: any) => {
+      setReversalError(err?.response?.data?.message ?? 'Failed to reverse voucher')
+    },
+  })
+
   // Build query params
   const queryParams: Record<string, string | number> = { page }
   if (activeTab !== 'all') queryParams.voucher_type = activeTab
@@ -101,17 +163,25 @@ export default function JournalVouchersPage() {
 
   const hasFilters = search || dateFrom || dateTo || approvalFilter || postingFilter
 
-  const unpostMutation = useMutation({
-    mutationFn: (id: string) => unpostJournalVoucher(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['journal-vouchers'] })
-      qc.invalidateQueries({ queryKey: ['general-ledger'] })
-      qc.invalidateQueries({ queryKey: ['trial-balance'] })
-    },
-  })
-
   const columns: ColumnDef<JournalVoucher>[] = [
-    { accessorKey: 'voucher_number', header: 'Voucher #', enableSorting: true },
+    {
+      accessorKey: 'voucher_number',
+      header: 'Voucher #',
+      enableSorting: true,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 font-medium">
+          <span>{row.original.voucher_number}</span>
+          {row.original.is_reversed && (
+            <Badge variant="destructive" className="text-[10px] py-0 px-1 font-normal">Reversed</Badge>
+          )}
+          {row.original.reversed_voucher_id && (
+            <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-950/30">
+              Reversal
+            </Badge>
+          )}
+        </div>
+      ),
+    },
     {
       accessorKey: 'voucher_date',
       header: 'Date',
@@ -160,20 +230,26 @@ export default function JournalVouchersPage() {
       cell: ({ row }) => {
         const jv = row.original
         const isPosted = jv.posting_status === 'posted'
+        const isApproved = jv.approval_status === 'approved'
         const canModify = !jv.is_auto_generated
+
+        // Until the voucher is not Approved, it can be edited. Once approved it cannot be edited.
+        // Once the voucher is posted, it cannot be deleted or edited. It can only be reversed.
+        const canEditVoucher = canEdit && canModify && !isApproved && !isPosted
+        const canReverseVoucher = canEdit && canModify && isPosted && !jv.is_reversed && !jv.reversed_voucher_id
 
         return (
           <div className="flex items-center justify-end gap-1">
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 w-7 p-0"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
               title="View Voucher"
               onClick={() => navigate(`/accounts/journal-vouchers/${jv.id}`)}
             >
               <Eye className="h-3.5 w-3.5" />
             </Button>
-            {canEdit && canModify && !isPosted && (
+            {canEditVoucher && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -184,21 +260,26 @@ export default function JournalVouchersPage() {
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             )}
-            {canEdit && canModify && isPosted && (
+            {canReverseVoucher && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                title="Unpost Voucher"
-                disabled={unpostMutation.isPending}
+                className="h-7 w-7 p-0 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+                title="Reverse Voucher"
                 onClick={() => {
-                  if (confirm('Unposting will reverse the ledger entries for this voucher. Continue?')) {
-                    unpostMutation.mutate(jv.id)
-                  }
+                  setReversalReason('')
+                  setReversalError(null)
+                  setReversalDate(new Date().toISOString().split('T')[0])
+                  setReversalJv(jv)
                 }}
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <Undo2 className="h-3.5 w-3.5" />
               </Button>
+            )}
+            {jv.is_reversed && (
+              <span className="text-[10px] text-muted-foreground italic px-1.5 py-0.5 rounded bg-muted/40 border">
+                Reversed
+              </span>
             )}
           </div>
         )
@@ -356,6 +437,102 @@ export default function JournalVouchersPage() {
         description="Upload CSV containing balanced journal vouchers. Total debits and credits must equal zero."
         onSuccess={() => qc.invalidateQueries({ queryKey: ['journal-vouchers'] })}
       />
+
+      {/* Reversal Confirmation Modal */}
+      <Dialog open={!!reversalJv} onOpenChange={(open) => !open && setReversalJv(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reverse Journal Voucher</DialogTitle>
+            <DialogDescription>
+              This will create a new posted contra journal voucher with inverted debits and credits, neutralizing the financial effect of <strong>{reversalJv?.voucher_number}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="page_reversal_date" className="text-xs font-medium">Reversal Date</Label>
+              <Input
+                id="page_reversal_date"
+                type="date"
+                value={reversalDate}
+                onChange={(e) => setReversalDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="page_fiscal_period" className="text-xs font-medium">Fiscal Period</Label>
+              <Select value={reversalPeriodId} onValueChange={setReversalPeriodId}>
+                <SelectTrigger id="page_fiscal_period">
+                  <SelectValue placeholder="Select open fiscal period…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {openPeriods.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name} ({formatDate(p.start_date)} - {formatDate(p.end_date)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="page_reversal_reason" className="text-xs font-medium">Reason for Reversal *</Label>
+              <Textarea
+                id="page_reversal_reason"
+                rows={3}
+                value={reversalReason}
+                onChange={(e) => setReversalReason(e.target.value)}
+                placeholder="Explain why this journal voucher is being reversed (required for audit trail)…"
+              />
+            </div>
+
+            {reversalError && (
+              <p className="p-2.5 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium">
+                {reversalError}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReversalJv(null)}
+              disabled={reverseMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (!reversalReason.trim()) {
+                  setReversalError('Reversal reason is required.')
+                  return
+                }
+                if (!reversalPeriodId) {
+                  setReversalError('An open fiscal period must be selected.')
+                  return
+                }
+                setReversalError(null)
+                if (reversalJv) {
+                  reverseMutation.mutate({
+                    id: reversalJv.id,
+                    reversal_date: reversalDate,
+                    fiscal_period_id: reversalPeriodId,
+                    reason: reversalReason.trim(),
+                  })
+                }
+              }}
+              disabled={reverseMutation.isPending || !reversalReason.trim()}
+              className="gap-1.5"
+            >
+              {reverseMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+              {reverseMutation.isPending ? 'Reversing…' : 'Confirm Reversal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

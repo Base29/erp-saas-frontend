@@ -19,6 +19,7 @@ import TenantLoginPage from '@/pages/tenant/LoginPage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
 import RecentActivitiesPage from '@/pages/tenant/RecentActivitiesPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
+import SettingsOverviewTab from '@/pages/tenant/settings/SettingsOverviewTab'
 import FiscalPeriodsTab from '@/pages/tenant/settings/FiscalPeriodsTab'
 import TaxSettingsTab from '@/pages/tenant/settings/TaxSettingsTab'
 import SequencesTab from '@/pages/tenant/settings/SequencesTab'
@@ -58,6 +59,10 @@ import BudgetReportPage from '@/pages/tenant/accounts/BudgetReportPage'
 // Inventory pages
 import ItemsPage from '@/pages/tenant/inventory/ItemsPage'
 import WarehousesPage from '@/pages/tenant/inventory/WarehousesPage'
+
+// Projects pages
+import ProjectsListPage from '@/pages/tenant/projects/ProjectsListPage'
+import ProjectDetailPage from '@/pages/tenant/projects/ProjectDetailPage'
 import GoodsReceiptsPage from '@/pages/tenant/inventory/GoodsReceiptsPage'
 import GoodsIssuesPage from '@/pages/tenant/inventory/GoodsIssuesPage'
 import StockTransfersPage from '@/pages/tenant/inventory/StockTransfersPage'
@@ -150,11 +155,12 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'activities', element: <RecentActivitiesPage /> },
+          { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
           { 
             path: 'settings', 
             element: <SettingsPage />,
             children: [
-              { index: true, element: <Navigate to="companies" replace /> },
+              { index: true, element: <SettingsOverviewTab /> },
               { path: 'companies', element: <CompaniesTab /> },
               { path: 'modules', element: <ActiveModulesTab /> },
               { path: 'fiscal', element: <FiscalPeriodsTab /> },
@@ -200,8 +206,8 @@ export const router = createBrowserRouter([
               { path: 'budgets', element: <BudgetsPage /> },
               { path: 'budgets/:id/report', element: <BudgetReportPage /> },
 
-              // Bulk Upload / Migration
-              { path: 'data-migration', element: <DataMigrationPage /> },
+              // Bulk Upload / Migration (redirect to Settings -> Bulk Upload & Migration)
+              { path: 'data-migration', element: <Navigate to="/settings/data-migration" replace /> },
 
               // Report sub-routes
               { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
@@ -242,6 +248,15 @@ export const router = createBrowserRouter([
               { path: 'credit-notes', element: <CreditNotesPage /> },
               { path: 'gate-passes', element: <GatePassesPage /> },
               { path: 'reports', element: <SalesReportsPage /> },
+            ],
+          },
+          // Projects module
+          {
+            path: 'projects',
+            element: <ModuleGuard moduleKey="projects" />,
+            children: [
+              { index: true, element: <ProjectsListPage /> },
+              { path: ':id', element: <ProjectDetailPage /> },
             ],
           },
         ],

@@ -29,6 +29,8 @@ import {
   UserCog,
   UploadCloud,
   Search,
+  FolderGit2,
+  BarChart3,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -51,7 +53,23 @@ import { GenieHeaderButton, GenieFloatingTrigger } from '@/components/genie/Geni
 import { GenieAssistantDrawer } from '@/components/genie/GenieAssistantDrawer'
 import { useGenieStore } from '@/store/genieStore'
 
-const navSections = [
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  section?: string | null
+  moduleKey?: string | null
+}
+
+interface NavSection {
+  section: string | null
+  moduleKey: string | null
+  items: NavItem[]
+  groupLabel?: string
+  icon?: React.ComponentType<{ className?: string }>
+}
+
+const navSections: NavSection[] = [
   {
     section: null, // always visible
     moduleKey: null,
@@ -70,15 +88,6 @@ const navSections = [
       { to: '/accounts/cost-centers', label: 'Cost Centers', icon: Target },
       { to: '/accounts/bank-reconciliation', label: 'Bank Reconciliation', icon: RefreshCcw },
       { to: '/accounts/budgets', label: 'Budgeting', icon: PieChart },
-      { to: '/accounts/reports/general-ledger', label: 'General Ledger', icon: BookOpen },
-      { to: '/accounts/reports/trial-balance', label: 'Trial Balance', icon: BookOpen },
-      { to: '/accounts/reports/profit-and-loss', label: 'Profit & Loss', icon: BookOpen },
-      { to: '/accounts/reports/balance-sheet', label: 'Balance Sheet', icon: BookOpen },
-      { to: '/accounts/reports/cash-flow', label: 'Cash Flow', icon: BookOpen },
-      { to: '/accounts/reports/equity-changes', label: 'Equity Changes', icon: BookOpen },
-      { to: '/accounts/reports/customer-statement', label: 'Customer Statement', icon: BookOpen },
-      { to: '/accounts/reports/supplier-statement', label: 'Supplier Statement', icon: BookOpen },
-      { to: '/accounts/data-migration', label: 'Bulk Upload Data', icon: UploadCloud },
     ],
     groupLabel: 'Accounts',
     icon: BookOpen,
@@ -95,7 +104,6 @@ const navSections = [
       { to: '/sales/receipts', label: 'Receipts', icon: CreditCard },
       { to: '/sales/credit-notes', label: 'Credit Notes', icon: FileText },
       { to: '/sales/gate-passes', label: 'Gate Passes', icon: Package },
-      { to: '/sales/reports', label: 'Reports', icon: BookOpen },
     ],
     groupLabel: 'Sales',
     icon: ShoppingCart,
@@ -109,15 +117,42 @@ const navSections = [
       { to: '/inventory/goods-receipts', label: 'Goods Receipts', icon: Package },
       { to: '/inventory/goods-issues', label: 'Goods Issues', icon: Package },
       { to: '/inventory/transfers', label: 'Stock Transfers', icon: RefreshCcw },
-      { to: '/inventory/reports', label: 'Reports', icon: BookOpen },
     ],
     groupLabel: 'Inventory',
     icon: Package,
   },
   {
+    section: 'projects',
+    moduleKey: 'projects',
+    items: [
+      { to: '/projects', label: 'All Projects', icon: FolderGit2 },
+    ],
+    groupLabel: 'Projects',
+    icon: FolderGit2,
+  },
+  {
+    section: 'reports',
+    moduleKey: null,
+    items: [
+      { to: '/accounts/reports/general-ledger', label: 'General Ledger', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/trial-balance', label: 'Trial Balance', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/profit-and-loss', label: 'Profit & Loss', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/balance-sheet', label: 'Balance Sheet', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/cash-flow', label: 'Cash Flow', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/equity-changes', label: 'Equity Changes', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/customer-statement', label: 'Customer Statement', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/accounts/reports/supplier-statement', label: 'Supplier Statement', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
+      { to: '/sales/reports', label: 'Sales Reports', icon: BookOpen, section: 'sales', moduleKey: 'sales' },
+      { to: '/inventory/reports', label: 'Inventory Reports', icon: BookOpen, section: 'inventory', moduleKey: 'inventory' },
+    ],
+    groupLabel: 'Reports',
+    icon: BarChart3,
+  },
+  {
     section: 'settings',
     moduleKey: null,
     items: [
+      { to: '/settings', label: 'Overview', icon: Settings },
       { to: '/settings/companies', label: 'Companies', icon: Building2 },
       { to: '/settings/modules', label: 'Active Modules', icon: Blocks },
       { to: '/settings/fiscal', label: 'Fiscal Periods', icon: Calendar },
@@ -167,6 +202,18 @@ export default function TenantLayout() {
       [label]: !prev[label],
     }))
   }
+
+  // Auto-expand section containing active item on navigation
+  useEffect(() => {
+    navSections.forEach((section) => {
+      if (section.groupLabel) {
+        const isActive = section.items.some((item) => location.pathname.startsWith(item.to))
+        if (isActive) {
+          setExpandedSections((prev) => (prev[section.groupLabel!] ? prev : { ...prev, [section.groupLabel!]: true }))
+        }
+      }
+    })
+  }, [location.pathname])
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(isCollapsed))
@@ -247,6 +294,14 @@ export default function TenantLayout() {
           if (group.section && !canAccessSection(role, group.section)) return null
           if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
 
+          const visibleItems = group.items.filter((item) => {
+            if (item.section && !canAccessSection(role, item.section)) return false
+            if (item.moduleKey && !isModuleActive(item.moduleKey)) return false
+            return true
+          })
+
+          if (visibleItems.length === 0) return null
+
           const isExpanded = group.groupLabel ? expandedSections[group.groupLabel] : true
 
           return (
@@ -268,12 +323,12 @@ export default function TenantLayout() {
               {collapsed && group.icon && (
                 <div className="flex justify-center py-1">
                   <NavLink
-                    to={group.items[0].to}
-                    title={group.groupLabel || group.items[0].label}
+                    to={visibleItems[0].to}
+                    title={group.groupLabel || visibleItems[0].label}
                     className={({ isActive }) =>
                       cn(
                         'flex items-center justify-center rounded-lg p-2.5 transition-all duration-150',
-                        isActive
+                        isActive || visibleItems.some((item) => location.pathname.startsWith(item.to))
                           ? 'bg-primary text-primary-foreground shadow-subtle'
                           : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
                       )
@@ -290,10 +345,11 @@ export default function TenantLayout() {
                   !isExpanded || collapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[1000px] opacity-100'
                 )}
               >
-                {group.items.map(({ to, label, icon: Icon }) => (
+                {visibleItems.map(({ to, label, icon: Icon }) => (
                   <NavLink
                     key={to}
                     to={to}
+                    end={to === '/settings' || to === '/dashboard'}
                     onClick={onNavItemClick}
                     title={collapsed ? label : undefined}
                     className={({ isActive }) =>

@@ -9,6 +9,8 @@ const sectionRoles: Record<string, UserRole[]> = {
   accounts: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
   sales: ['tenant_admin', 'sales_manager', 'sales_person', 'accountant', 'inventory_manager', 'viewer'],
   inventory: ['tenant_admin', 'inventory_manager', 'sales_manager', 'sales_person', 'accountant', 'viewer'],
+  projects: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
+  reports: ['tenant_admin', 'accountant', 'sales_manager', 'sales_person', 'inventory_manager', 'viewer'],
   settings: ['tenant_admin'],
 }
 
@@ -22,6 +24,7 @@ const writeRoles: Record<string, UserRole[]> = {
   accounts: ['tenant_admin', 'accountant'],
   sales: ['tenant_admin', 'sales_manager', 'sales_person'],
   inventory: ['tenant_admin', 'inventory_manager'],
+  projects: ['tenant_admin', 'accountant', 'sales_manager'],
   settings: ['tenant_admin'],
 }
 

@@ -295,6 +295,11 @@ export const deleteAccountType = (id: string) =>
 export const fetchAccountCategories = () =>
   apiClient.get<{ data: AccountCategory[] }>('/v1/accounts/categories')
 
+export const fetchNextCategoryCode = (parentId?: string | null) =>
+  apiClient.get<{ code: string }>('/v1/accounts/categories/next-code', {
+    params: parentId ? { parent_id: parentId } : {},
+  })
+
 export const createAccountCategory = (payload: { name: string; code?: string; parent_id?: string | null }) =>
   apiClient.post<{ data: AccountCategory }>('/v1/accounts/categories', payload)
 
@@ -312,7 +317,10 @@ export const fetchAccounts = (params?: Record<string, string | number | boolean>
   return apiClient.get<PaginatedResponse<Account>>('/v1/accounts', { params: queryParams })
 }
 
-export const createAccount = (payload: { account_code: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
+export const fetchNextAccountCode = (categoryId: string) =>
+  apiClient.get<{ code: string }>('/v1/accounts/next-code', { params: { category_id: categoryId } })
+
+export const createAccount = (payload: { account_code?: string; account_name: string; account_category_id: string; is_active?: boolean }) =>
   apiClient.post<Account>('/v1/accounts', payload)
 
 export const updateAccount = (id: string, payload: Partial<Account>) =>
@@ -347,12 +355,21 @@ export interface JournalVoucher {
   approval_status: string
   posting_status: string
   is_auto_generated: boolean
+  is_reversed?: boolean
+  reversal_voucher_id?: string
+  reversed_voucher_id?: string
+  reversal_reason?: string
+  reversed_at?: string
+  reversed_by?: string
   created_by: string
   posted_by?: string
   posted_at?: string
   created_at: string
   lines?: JournalVoucherLine[]
   fiscal_period?: { id: string; name: string }
+  reversal_voucher?: JournalVoucher
+  reversed_voucher?: JournalVoucher
+  reversed_by_user?: { id: string; name: string }
 }
 
 export const VOUCHER_TYPE_LABELS: Record<string, string> = {
@@ -407,14 +424,26 @@ export const postJournalVoucher = (id: string) =>
 export const unpostJournalVoucher = (id: string) =>
   apiClient.post<{ data: JournalVoucher; message: string }>(`/v1/accounts/journal-vouchers/${id}/unpost`)
 
+export const reverseJournalVoucher = (
+  id: string,
+  payload: { reversal_date: string; fiscal_period_id: string; reason: string }
+) =>
+  apiClient.post<{
+    message: string
+    data: {
+      original_voucher: JournalVoucher
+      reversal_voucher: JournalVoucher
+    }
+  }>(`/v1/accounts/journal-vouchers/${id}/reverse`, payload)
+
 // ── Accounts — Reports ────────────────────────────────────────────────────────
-export const fetchGeneralLedger = (params: { account_id: string; date_from: string; date_to: string; page?: number; per_page?: number }) =>
+export const fetchGeneralLedger = (params?: { account_id?: string; date_from?: string; date_to?: string; page?: number; per_page?: number }) =>
   apiClient.get('/v1/accounts/reports/general-ledger', { params })
 
-export const fetchTrialBalance = (params: { fiscal_period_id: string }) =>
+export const fetchTrialBalance = (params?: { fiscal_period_id?: string; date_from?: string; date_to?: string }) =>
   apiClient.get('/v1/accounts/reports/trial-balance', { params })
 
-export const fetchProfitAndLoss = (params: { date_from?: string; date_to?: string; fiscal_period_id?: string }) =>
+export const fetchProfitAndLoss = (params?: { date_from?: string; date_to?: string; fiscal_period_id?: string }) =>
   apiClient.get<{
     revenue: { sales: number; other: number; total: number }
     cogs: number
@@ -426,7 +455,7 @@ export const fetchProfitAndLoss = (params: { date_from?: string; date_to?: strin
     details: any[]
   }>('/v1/accounts/reports/profit-and-loss', { params })
 
-export const fetchBalanceSheet = (params: { as_of_date?: string; fiscal_period_id?: string }) =>
+export const fetchBalanceSheet = (params?: { as_of_date?: string; fiscal_period_id?: string }) =>
   apiClient.get<{
     assets: { current: any[]; non_current: any[]; total: number }
     liabilities: { current: any[]; non_current: any[]; total: number }
@@ -434,7 +463,7 @@ export const fetchBalanceSheet = (params: { as_of_date?: string; fiscal_period_i
     is_balanced: boolean
   }>('/v1/accounts/reports/balance-sheet', { params })
 
-export const fetchCashFlow = (params: { date_from: string; date_to: string }) =>
+export const fetchCashFlow = (params?: { date_from?: string; date_to?: string }) =>
   apiClient.get<{
     operating_activities: {
       net_profit: number
@@ -455,7 +484,7 @@ export const fetchCashFlow = (params: { date_from: string; date_to: string }) =>
     net_cash_increase: number
   }>('/v1/accounts/reports/cash-flow', { params })
 
-export const fetchEquityChanges = (params: { date_from: string; date_to: string }) =>
+export const fetchEquityChanges = (params?: { date_from?: string; date_to?: string }) =>
   apiClient.get<{
     opening_balance: number
     share_capital_issued: number
@@ -464,7 +493,7 @@ export const fetchEquityChanges = (params: { date_from: string; date_to: string 
     closing_balance: number
   }>('/v1/accounts/reports/equity-changes', { params })
 
-export const fetchCustomerStatement = (params: { customer_id: string; date_from: string; date_to: string }) =>
+export const fetchCustomerStatement = (params?: { customer_id?: string; date_from?: string; date_to?: string }) =>
   apiClient.get('/v1/accounts/reports/customer-statement', { params })
 
 // ── Sales — Customers (for customer statement selector) ───────────────────────
@@ -1251,6 +1280,9 @@ export interface SupplierStatementRow {
   debit: number
   credit: number
   balance: number
+  supplier_id?: string
+  supplier_name?: string
+  supplier_code?: string
 }
 
 export interface SupplierStatementResponse {
@@ -1260,7 +1292,7 @@ export interface SupplierStatementResponse {
     supplier_code: string
     email?: string
     phone?: string
-  }
+  } | null
   opening_balance: number
   total_debit: number
   total_credit: number
@@ -1268,7 +1300,7 @@ export interface SupplierStatementResponse {
   rows: SupplierStatementRow[]
 }
 
-export const fetchSupplierStatement = (params: { supplier_id: string; date_from: string; date_to: string }) =>
+export const fetchSupplierStatement = (params?: { supplier_id?: string; date_from?: string; date_to?: string }) =>
   apiClient.get<SupplierStatementResponse>('/v1/accounts/reports/supplier-statement', { params })
 
 // ── Accounts — Cost Centers ───────────────────────────────────────────────────

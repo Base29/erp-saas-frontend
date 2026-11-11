@@ -7,11 +7,13 @@ import { z } from 'zod'
 import { Plus, Pencil, ChevronRight, ChevronDown, Folder, FileText, Trash2 } from 'lucide-react'
 import {
   fetchAccountCategories,
+  fetchNextCategoryCode,
   createAccountCategory,
   updateAccountCategory,
   deleteAccountCategory,
   type AccountCategory,
 } from '@/api/tenant'
+import CategoryCombobox from '@/components/accounts/CategoryCombobox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,13 +25,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { toast } from 'sonner'
 
 const categorySchema = z.object({
@@ -84,6 +79,11 @@ export default function AccountCategoriesTab() {
     setEditing(null)
     reset({ name: '', code: '', parent_id: parentId })
     setOpen(true)
+    fetchNextCategoryCode(parentId).then((r) => {
+      if (r.data?.code) {
+        setValue('code', r.data.code, { shouldValidate: true })
+      }
+    }).catch(() => {})
   }
 
   const openEdit = (cat: AccountCategory) => {
@@ -97,17 +97,21 @@ export default function AccountCategoriesTab() {
   }
 
   const flatCategories = useMemo(() => {
-    const flattened: Array<{ id: string; label: string; depth: number }> = []
+    const flattened: Array<{ id: string; label: string; depth: number; name?: string | null; code?: string | null }> = []
     const walk = (cats: AccountCategory[], prefix = '') => {
       cats.forEach((c) => {
-        const label = prefix ? `${prefix} > ${c.name}` : c.name
-        flattened.push({ id: c.id, label, depth: c.depth })
+        const label = prefix ? `${prefix} > ${c.name} [${c.code}]` : `${c.name} [${c.code}]`
+        flattened.push({ id: c.id, label, depth: c.depth, name: c.name, code: c.code })
         if (c.children) walk(c.children, label)
       })
     }
     walk(categories)
     return flattened
   }, [categories])
+
+  const parentOptions = useMemo(() => {
+    return flatCategories.filter(c => c.depth < 5 && (!editing || c.id !== editing.id))
+  }, [flatCategories, editing])
 
   if (isLoading) return <div className="p-4">Loading hierarchy...</div>
 
@@ -143,27 +147,32 @@ export default function AccountCategoriesTab() {
           <form onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>Parent Category</Label>
-              <Select
-                value={watch('parent_id') || 'root'}
-                onValueChange={(v) => setValue('parent_id', v === 'root' ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Root" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="root">None (Root Level)</SelectItem>
-                  {flatCategories
-                    .filter(c => c.depth < 5 && (!editing || c.id !== editing.id))
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <span className="text-xs">{c.label}</span>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <CategoryCombobox
+                value={watch('parent_id')}
+                onChange={(v) => {
+                  setValue('parent_id', v, { shouldValidate: true })
+                  if (!editing) {
+                    fetchNextCategoryCode(v).then((r) => {
+                      if (r.data?.code) {
+                        setValue('code', r.data.code, { shouldValidate: true })
+                      }
+                    }).catch(() => {})
+                  }
+                }}
+                categories={parentOptions}
+                includeAllOption={true}
+                allOptionLabel="None (Root Level)"
+                placeholder="None (Root Level)"
+                className="w-full"
+              />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="cat-code">Category Code</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="cat-code">Category Code</Label>
+                {!editing && (
+                  <span className="text-[10px] text-muted-foreground">Auto-sequenced</span>
+                )}
+              </div>
               <Input id="cat-code" {...register('code')} placeholder="e.g. 1000" />
               {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
             </div>

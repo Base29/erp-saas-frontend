@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import TenantDashboardPage from './DashboardPage'
 import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -150,5 +150,83 @@ describe('TenantDashboardPage', () => {
     expect(screen.getByText('Main Co')).toBeInTheDocument()
     expect(screen.getByText('Sub Co')).toBeInTheDocument()
     expect(screen.getByText(/REG123/)).toBeInTheDocument()
+  })
+
+  it('renders quick access launchpad with categorized tiles and allows search', async () => {
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(mockSummary as any)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantDashboardPage />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(await screen.findByText('Quick Access Launchpad')).toBeInTheDocument()
+    expect(screen.getByText('Chart of Accounts')).toBeInTheDocument()
+    expect(screen.getByText('Items & Products')).toBeInTheDocument()
+    expect(screen.getByText('Customers Directory')).toBeInTheDocument()
+
+    // Test search filter on tiles
+    const searchInput = screen.getByPlaceholderText('Search access tiles...')
+    fireEvent.change(searchInput, { target: { value: 'Chart' } })
+
+    expect(screen.getByText('Chart of Accounts')).toBeInTheDocument()
+    expect(screen.queryByText('Items & Products')).not.toBeInTheDocument()
+  })
+
+  it('filters quick access tiles by category tab', async () => {
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(mockSummary as any)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantDashboardPage />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(await screen.findByText('Quick Access Launchpad')).toBeInTheDocument()
+
+    // Click on "Inventory & Stock"
+    const inventoryTab = screen.getByRole('button', { name: 'Inventory & Stock' })
+    fireEvent.click(inventoryTab)
+
+    expect(screen.getByText('Items & Products')).toBeInTheDocument()
+    expect(screen.getByText('Warehouses')).toBeInTheDocument()
+    expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument()
+  })
+
+  it('renders and filters latest happenings feed', async () => {
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(mockSummary as any)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantDashboardPage />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(await screen.findByText('Latest Happenings')).toBeInTheDocument()
+    expect(screen.getByText('Live Stream')).toBeInTheDocument()
+
+    // Both activities should initially be visible
+    expect(screen.getByText('SO-1001')).toBeInTheDocument()
+    expect(screen.getByText('RCP-2002')).toBeInTheDocument()
+
+    // Filter by "Orders & Sales"
+    const salesFilter = screen.getByRole('button', { name: 'Orders & Sales' })
+    fireEvent.click(salesFilter)
+
+    expect(screen.getByText('SO-1001')).toBeInTheDocument()
+    expect(screen.queryByText('RCP-2002')).not.toBeInTheDocument()
+
+    // Search inside happenings
+    const happeningsSearch = screen.getByPlaceholderText('Filter events...')
+    fireEvent.change(happeningsSearch, { target: { value: 'Nonexistent' } })
+
+    expect(screen.getByText('No recent happenings match your criteria.')).toBeInTheDocument()
   })
 })

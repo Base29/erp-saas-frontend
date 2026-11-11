@@ -89,7 +89,7 @@ export default function BankStatementFormPage() {
   })
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/bank-reconciliation')}>
           <ArrowLeft className="h-4 w-4" />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, Scale } from 'lucide-react'
+import { Printer, Scale, X } from 'lucide-react'
 import { fetchEquityChanges } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,18 +21,22 @@ function EquityRow({ label, amount, isTotal = false }: { label: string, amount: 
 
 export default function EquityChangesPage() {
   const [params, setParams] = useState({ date_from: '', date_to: '' })
-  const [submitted, setSubmitted] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['report-equity', params],
-    queryFn: () => fetchEquityChanges(params).then((r) => r.data),
-    enabled: submitted && !!params.date_from && !!params.date_to,
+    queryFn: () =>
+      fetchEquityChanges({
+        date_from: params.date_from || undefined,
+        date_to: params.date_to || undefined,
+      }).then((r) => r.data),
   })
 
-  const canRun = !!params.date_from && !!params.date_to
+  const handleClear = () => {
+    setParams({ date_from: '', date_to: '' })
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto">
+    <div className="p-6 space-y-6">
       <style>{`
         @media print {
           body > * { display: none !important; }
@@ -64,7 +68,7 @@ export default function EquityChangesPage() {
           <Input
             type="date"
             value={params.date_from}
-            onChange={(e) => { setParams((p) => ({ ...p, date_from: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => setParams((p) => ({ ...p, date_from: e.target.value }))}
             className="w-40 h-9"
           />
         </div>
@@ -73,13 +77,21 @@ export default function EquityChangesPage() {
           <Input
             type="date"
             value={params.date_to}
-            onChange={(e) => { setParams((p) => ({ ...p, date_to: e.target.value })); setSubmitted(false) }}
+            onChange={(e) => setParams((p) => ({ ...p, date_to: e.target.value }))}
             className="w-40 h-9"
           />
         </div>
-        <Button onClick={() => setSubmitted(true)} disabled={!canRun} size="sm" className="h-9 px-6">
-          Run Report
-        </Button>
+        {(params.date_from || params.date_to) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
       </div>
 
       {isLoading && (
@@ -89,25 +101,36 @@ export default function EquityChangesPage() {
         </div>
       )}
 
-      {submitted && !isLoading && !data && (
+      {!isLoading && !data && (
         <div className="text-center py-16 rounded-xl border-2 border-dashed">
           <p className="text-sm text-muted-foreground font-medium">No equity changes found for the selected period.</p>
         </div>
       )}
 
-      {submitted && !isLoading && data && (
+      {!isLoading && data && (
         <div id="equity-print-area" className="bg-card p-12 rounded-2xl border shadow-sm print:shadow-none print:border-0 space-y-10">
           <div className="text-center space-y-1 border-b pb-8">
             <h2 className="text-xl font-bold uppercase tracking-widest">Statement of Changes in Equity</h2>
-            <p className="text-sm text-muted-foreground font-medium">For the period {params.date_from} to {params.date_to}</p>
+            <p className="text-sm text-muted-foreground font-medium">
+              {params.date_from && params.date_to
+                ? `For the period ${params.date_from} to ${params.date_to}`
+                : 'Cumulative All-Time Statement'}
+            </p>
           </div>
 
           <div className="space-y-1">
-             <EquityRow label={`Balance as at ${params.date_from}`} amount={data.opening_balance} />
+             <EquityRow
+               label={params.date_from ? `Balance as at ${params.date_from}` : 'Opening Balance'}
+               amount={data.opening_balance}
+             />
              <EquityRow label="Issue of Share Capital" amount={data.share_capital_issued} />
              <EquityRow label="Total Comprehensive Income (Net Profit)" amount={data.net_profit_for_period} />
              <EquityRow label="Dividends / Drawings" amount={-data.dividends_drawings} />
-             <EquityRow label={`Balance as at ${params.date_to}`} amount={data.closing_balance} isTotal />
+             <EquityRow
+               label={params.date_to ? `Balance as at ${params.date_to}` : 'Closing Balance'}
+               amount={data.closing_balance}
+               isTotal
+             />
           </div>
 
           <div className="mt-12 p-6 bg-muted/20 rounded-2xl border flex items-start gap-4">
