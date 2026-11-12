@@ -95,7 +95,7 @@ export default function RequisitionDetailPage() {
                     : 'bg-muted text-muted-foreground'
                 }
               >
-                {req.approval_status.replace('_', ' ')}
+                {(req.approval_status || 'draft').replace('_', ' ')}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -198,7 +198,7 @@ export default function RequisitionDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Fulfillment:</span>
-              <span className="font-medium capitalize text-foreground">{req.status.replace('_', ' ')}</span>
+              <span className="font-medium capitalize text-foreground">{(req.status || 'draft').replace('_', ' ')}</span>
             </div>
           </CardContent>
         </Card>

@@ -117,7 +117,7 @@ export default function PurchaseOrderDetailPage() {
                     : 'bg-muted text-muted-foreground'
                 }
               >
-                {po.status.replace('_', ' ')}
+                {(po.status || 'draft').replace('_', ' ')}
               </Badge>
               <Badge
                 variant="outline"
@@ -129,7 +129,7 @@ export default function PurchaseOrderDetailPage() {
                     : 'text-muted-foreground'
                 }
               >
-                {po.approval_status.replace('_', ' ')}
+                {(po.approval_status || 'draft').replace('_', ' ')}
               </Badge>
               <Badge
                 variant="secondary"

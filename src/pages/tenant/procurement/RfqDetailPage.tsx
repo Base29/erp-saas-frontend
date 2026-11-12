@@ -121,7 +121,7 @@ export default function RfqDetailPage() {
                     : 'bg-muted text-muted-foreground'
                 }
               >
-                {rfq.status.toUpperCase()}
+                {(rfq.status || 'draft').toUpperCase()}
               </Badge>
             </div>
             <p className="text-sm font-medium text-foreground mt-0.5">{rfq.title}</p>

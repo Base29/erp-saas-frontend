@@ -61,7 +61,7 @@ export default function PurchaseOrdersPage() {
     [data]
   )
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'issued':
         return <Badge className="bg-blue-500/15 text-blue-600 border-blue-500/30">Issued</Badge>
@@ -74,7 +74,7 @@ export default function PurchaseOrdersPage() {
       case 'cancelled':
         return <Badge className="bg-rose-500/15 text-rose-600 border-rose-500/30">Cancelled</Badge>
       default:
-        return <Badge variant="outline">Draft</Badge>
+        return <Badge variant="outline">{status ? status.replace('_', ' ') : 'Draft'}</Badge>
     }
   }
 
@@ -149,7 +149,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'approval_status',
         header: 'Approval',
         cell: ({ row }) => {
-          const status = row.original.approval_status
+          const status = row.original.approval_status || 'draft'
           return (
             <Badge
               variant="outline"
