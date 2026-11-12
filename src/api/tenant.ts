@@ -584,6 +584,9 @@ export const deleteItemCategory = (id: string) =>
 export const fetchItems = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Item>>('/v1/inventory/items', { params })
 
+export const fetchNextItemCode = (itemType: string = 'stock') =>
+  apiClient.get<{ code: string }>('/v1/inventory/items/next-code', { params: { item_type: itemType } })
+
 export const fetchItem = (id: string) =>
   apiClient.get<{ data: Item }>(`/v1/inventory/items/${id}`)
 

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import {
-  fetchItems, fetchItemCategories, fetchUoms, createItem, updateItem,
+  fetchItems, fetchNextItemCode, fetchItemCategories, fetchUoms, createItem, updateItem,
   type Item, type ItemCategory, type UnitOfMeasure,
 } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
@@ -31,7 +31,7 @@ const bundleSchema = z.object({
 })
 
 const schema = z.object({
-  item_code: z.string().min(1, 'Required'),
+  item_code: z.string().max(50, 'Max 50 characters').optional().default(''),
   item_name: z.string().min(1, 'Required'),
   item_type: z.enum(['stock', 'service', 'bundle']),
   category_id: z.string().nullable().default(null),
@@ -121,6 +121,13 @@ export default function ItemsPage() {
     setEditing(null)
     reset({ item_code: '', item_name: '', item_type: 'stock', category_id: null, base_unit_of_measure_id: '', reorder_level: 0, is_batch_tracked: false, is_serial_tracked: false, is_expiry_tracked: false, is_active: true, variants: [], bundle_components: [] })
     setOpen(true)
+    fetchNextItemCode('stock')
+      .then((r) => {
+        if (r.data?.code) {
+          setValue('item_code', r.data.code, { shouldValidate: true })
+        }
+      })
+      .catch(() => {})
   }
 
   const openEdit = (item: Item) => {
@@ -260,8 +267,21 @@ export default function ItemsPage() {
             {/* Basic fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>Item Code</Label>
-                <Input {...register('item_code')} placeholder="e.g. ITM-001" />
+                <div className="flex items-center justify-between">
+                  <Label>Item Code</Label>
+                  {!editing && <span className="text-[10px] text-muted-foreground">Auto-sequenced</span>}
+                </div>
+                <Input
+                  {...register('item_code')}
+                  disabled={Boolean(editing)}
+                  placeholder={editing ? 'Item code' : 'Auto-generated (e.g. ITM-00001)'}
+                  className={editing ? 'bg-muted cursor-not-allowed' : ''}
+                />
+                {!editing ? (
+                  <p className="text-[11px] text-muted-foreground">Leave blank to auto-generate sequence.</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Item code cannot be changed once created.</p>
+                )}
                 {errors.item_code && <p className="text-xs text-destructive">{errors.item_code.message}</p>}
               </div>
               <div className="space-y-1">
@@ -274,7 +294,23 @@ export default function ItemsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Type</Label>
-                <Select value={watch('item_type')} onValueChange={(v) => setValue('item_type', v as 'stock' | 'service' | 'bundle', { shouldValidate: true })}>
+                <Select
+                  value={watch('item_type')}
+                  disabled={Boolean(editing)}
+                  onValueChange={(v) => {
+                    const newType = v as 'stock' | 'service' | 'bundle'
+                    setValue('item_type', newType, { shouldValidate: true })
+                    if (!editing) {
+                      fetchNextItemCode(newType)
+                        .then((r) => {
+                          if (r.data?.code) {
+                            setValue('item_code', r.data.code, { shouldValidate: true })
+                          }
+                        })
+                        .catch(() => {})
+                    }
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="stock">Stock</SelectItem>
