@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   fetchTenantModules,
   fetchModuleHistory,
@@ -18,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ChevronLeft, Clock } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 function HistoryTimeline({ tenantId, moduleKey }: { tenantId: string; moduleKey: string }) {
   const { data, isLoading } = useQuery({
@@ -58,12 +60,24 @@ export default function TenantModulesPage() {
 
   const activate = useMutation({
     mutationFn: (moduleKey: string) => activateTenantModule(tenantId!, moduleKey),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] })
+      toast.success('Module activated successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to activate module')
+    },
   })
 
   const deactivate = useMutation({
     mutationFn: (moduleKey: string) => deactivateTenantModule(tenantId!, moduleKey),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] })
+      toast.success('Module deactivated successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to deactivate module')
+    },
   })
 
   const handleToggle = (mod: TenantModule) => {
@@ -77,57 +91,74 @@ export default function TenantModulesPage() {
   const isPending = activate.isPending || deactivate.isPending
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          to={`/platform/tenants/${tenantId}`}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
+    <div className="p-8 w-full space-y-6">
+      <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-foreground" asChild>
+        <Link to={`/platform/tenants/${tenantId}`}>
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Back to Tenant
         </Link>
-        <h1 className="text-xl font-semibold">Module Management</h1>
+      </Button>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Module Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Enable or disable modules and feature packages for this tenant</p>
+        </div>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading modules…</p>}
 
       {modules && (
-        <div className="rounded-md border divide-y">
+        <div className="rounded-2xl border border-border/70 overflow-hidden bg-card/85 backdrop-blur-xl shadow-elevated divide-y divide-border/60">
           {modules.map((mod) => (
-            <div key={mod.module_key} className="flex items-center justify-between px-4 py-3 gap-4">
+            <div
+              key={mod.module_key}
+              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:px-6 sm:py-4 gap-4 hover:bg-muted/30 transition-colors"
+            >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{mod.display_name}</span>
-                  <span className="text-xs text-muted-foreground">v{mod.version}</span>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="font-semibold text-sm text-foreground">{mod.display_name}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">
+                    v{mod.version}
+                  </span>
+                  {mod.is_active ? (
+                    <Badge variant="success">Active</Badge>
+                  ) : (
+                    <Badge variant="secondary">Inactive</Badge>
+                  )}
                   {mod.is_core && (
-                    <Badge variant="secondary" className="text-xs">Core</Badge>
+                    <Badge variant="outline" className="border-primary/40 text-primary">Core</Badge>
                   )}
                   {!mod.is_available && (
-                    <Badge variant="outline" className="text-xs text-destructive border-destructive">
+                    <Badge variant="outline" className="text-destructive border-destructive">
                       Unavailable
                     </Badge>
                   )}
                 </div>
                 {mod.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{mod.description}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">{mod.description}</p>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-8 px-3 text-xs"
                   onClick={() => setHistoryModule(mod)}
                 >
-                  <Clock className="h-3.5 w-3.5 mr-1" />
+                  <Clock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                   History
                 </Button>
                 <Button
                   size="sm"
-                  variant={mod.is_active ? 'destructive' : 'default'}
+                  variant={mod.is_active ? 'outline' : 'default'}
                   disabled={!mod.is_available || isPending}
                   onClick={() => handleToggle(mod)}
-                  className="h-7 px-3 text-xs"
+                  className={cn(
+                    'h-8 px-3 text-xs font-medium',
+                    mod.is_active && 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
+                  )}
                 >
                   {mod.is_active ? 'Deactivate' : 'Activate'}
                 </Button>

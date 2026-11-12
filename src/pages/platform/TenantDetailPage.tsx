@@ -1,7 +1,20 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Loader2, Puzzle } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Loader2,
+  Puzzle,
+  Ban,
+  Activity,
+  CreditCard,
+  Globe,
+  Database,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import {
   fetchTenant,
   fetchProvisioningLogs,
@@ -12,6 +25,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+function statusVariant(status: string) {
+  switch (status) {
+    case 'active': return 'success'
+    case 'suspended': return 'warning'
+    case 'provisioning_failed': return 'destructive'
+    default: return 'secondary'
+  }
+}
 
 function stepIcon(status: ProvisioningLog['status']) {
   switch (status) {
@@ -70,43 +92,47 @@ export default function TenantDetailPage() {
 
   const suspendMutation = useMutation({
     mutationFn: () => suspendTenant(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform', 'tenants', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants', id] })
+      toast.success('Tenant suspended successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to suspend tenant')
+    },
   })
 
   const reactivateMutation = useMutation({
     mutationFn: () => reactivateTenant(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform', 'tenants', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants', id] })
+      toast.success('Tenant reactivated successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to reactivate tenant')
+    },
   })
 
   if (tenantLoading) return <div className="p-8 text-muted-foreground">Loading…</div>
   if (!tenant) return <div className="p-8 text-muted-foreground">Tenant not found</div>
 
   return (
-    <div className="p-8 max-w-3xl">
-      <Button variant="ghost" size="sm" className="mb-6 -ml-2" onClick={() => navigate('/platform/tenants')}>
+    <div className="p-8 w-full space-y-6">
+      <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-foreground" onClick={() => navigate('/platform/tenants')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Tenants
       </Button>
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{tenant.name}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{tenant.subdomain}</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
+            <Badge variant={statusVariant(tenant.status)}>
+              {tenant.status}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-sm font-mono mt-1">{tenant.subdomain}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge
-            variant={
-              tenant.status === 'active'
-                ? 'success'
-                : tenant.status === 'suspended'
-                ? 'warning'
-                : tenant.status === 'provisioning_failed'
-                ? 'destructive'
-                : 'secondary'
-            }
-          >
-            {tenant.status}
-          </Badge>
           {tenant.status === 'active' && (
             <Button
               variant="outline"
@@ -114,6 +140,7 @@ export default function TenantDetailPage() {
               onClick={() => suspendMutation.mutate()}
               disabled={suspendMutation.isPending}
             >
+              <Ban className="h-4 w-4 mr-2 text-amber-600" />
               Suspend
             </Button>
           )}
@@ -123,6 +150,7 @@ export default function TenantDetailPage() {
               onClick={() => reactivateMutation.mutate()}
               disabled={reactivateMutation.isPending}
             >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
               Reactivate
             </Button>
           )}
@@ -135,27 +163,62 @@ export default function TenantDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Plan</p>
-            <p className="font-medium">{tenant.plan_name ?? '—'}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Status</p>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
+              {tenant.status === 'pending' && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Database</p>
-            <p className="font-medium font-mono text-sm">{tenant.db_name}</p>
+
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Plan</p>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-base mt-1.5">{tenant.plan_name ?? '—'}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Subdomain</p>
+              <Globe className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="font-semibold font-mono text-sm mt-1.5 text-foreground">{tenant.subdomain}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Database</p>
+              <Database className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="font-semibold font-mono text-sm mt-1.5 truncate text-foreground" title={tenant.db_name}>
+              {tenant.db_name}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Provisioning Log Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Provisioning Log</CardTitle>
+      <Card className="w-full bg-card/85 backdrop-blur-xl border-border/70 shadow-elevated">
+        <CardHeader className="pb-3 border-b border-border/40">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            Provisioning Log
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {logsLoading ? (
             <p className="text-muted-foreground text-sm">Loading…</p>
           ) : logs?.length === 0 ? (
