@@ -63,6 +63,16 @@ import WarehousesPage from '@/pages/tenant/inventory/WarehousesPage'
 // Projects pages
 import ProjectsListPage from '@/pages/tenant/projects/ProjectsListPage'
 import ProjectDetailPage from '@/pages/tenant/projects/ProjectDetailPage'
+
+// Procurement pages
+import RequisitionsPage from '@/pages/tenant/procurement/RequisitionsPage'
+import RequisitionDetailPage from '@/pages/tenant/procurement/RequisitionDetailPage'
+import PurchaseOrdersPage from '@/pages/tenant/procurement/PurchaseOrdersPage'
+import PurchaseOrderFormPage from '@/pages/tenant/procurement/PurchaseOrderFormPage'
+import PurchaseOrderDetailPage from '@/pages/tenant/procurement/PurchaseOrderDetailPage'
+import RfqsPage from '@/pages/tenant/procurement/RfqsPage'
+import RfqDetailPage from '@/pages/tenant/procurement/RfqDetailPage'
+
 import GoodsReceiptsPage from '@/pages/tenant/inventory/GoodsReceiptsPage'
 import GoodsIssuesPage from '@/pages/tenant/inventory/GoodsIssuesPage'
 import StockTransfersPage from '@/pages/tenant/inventory/StockTransfersPage'
@@ -257,6 +267,22 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <ProjectsListPage /> },
               { path: ':id', element: <ProjectDetailPage /> },
+            ],
+          },
+          // Procurement module
+          {
+            path: 'procurement',
+            element: <ModuleGuard moduleKey="procurement" />,
+            children: [
+              { index: true, element: <Navigate to="/procurement/orders" replace /> },
+              { path: 'requisitions', element: <RequisitionsPage /> },
+              { path: 'requisitions/:id', element: <RequisitionDetailPage /> },
+              { path: 'rfqs', element: <RfqsPage /> },
+              { path: 'rfqs/:id', element: <RfqDetailPage /> },
+              { path: 'orders', element: <PurchaseOrdersPage /> },
+              { path: 'orders/new', element: <PurchaseOrderFormPage /> },
+              { path: 'orders/:id', element: <PurchaseOrderDetailPage /> },
+              { path: 'orders/:id/edit', element: <PurchaseOrderFormPage /> },
             ],
           },
         ],
