@@ -31,6 +31,9 @@ import {
   Search,
   FolderGit2,
   BarChart3,
+  ShoppingBag,
+  ClipboardList,
+  Layers,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -129,6 +132,17 @@ const navSections: NavSection[] = [
     ],
     groupLabel: 'Projects',
     icon: FolderGit2,
+  },
+  {
+    section: 'procurement',
+    moduleKey: 'procurement',
+    items: [
+      { to: '/procurement/requisitions', label: 'Requisitions', icon: ClipboardList },
+      { to: '/procurement/rfqs', label: 'Sourcing & RFQs', icon: Layers },
+      { to: '/procurement/orders', label: 'Purchase Orders', icon: ShoppingBag },
+    ],
+    groupLabel: 'Procurement',
+    icon: ShoppingBag,
   },
   {
     section: 'reports',

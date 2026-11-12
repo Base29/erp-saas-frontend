@@ -605,16 +605,23 @@ export const updateWarehouse = (id: string, payload: Partial<Omit<Warehouse, 'id
 // ── Inventory — Stock Transactions ───────────────────────────────────────────
 export interface GoodsReceiptLine {
   id?: string
+  purchase_order_line_id?: string | null
   item_id: string
   quantity: number
+  accepted_quantity?: number | null
+  rejected_quantity?: number | null
+  qc_status?: string | null
+  qc_notes?: string | null
   unit_cost: number
   batch_id?: string | null
+  serial_number_id?: string | null
   item?: Item
 }
 
 export interface GoodsReceipt {
   id: string
   grn_number: string
+  purchase_order_id?: string | null
   warehouse_id: string
   receipt_date: string
   reference: string | null
@@ -623,6 +630,7 @@ export interface GoodsReceipt {
   created_by: string
   created_at: string
   warehouse?: Warehouse
+  purchase_order?: { id: string; po_number: string } | null
   lines?: GoodsReceiptLine[]
 }
 
@@ -680,7 +688,7 @@ export const fetchGoodsReceipts = (params?: Record<string, string | number | boo
 export const fetchGoodsReceipt = (id: string) =>
   apiClient.get<{ data: GoodsReceipt }>(`/v1/inventory/goods-receipts/${id}`)
 
-export const createGoodsReceipt = (payload: { warehouse_id: string; receipt_date: string; reference?: string; lines: GoodsReceiptLine[] }) =>
+export const createGoodsReceipt = (payload: { warehouse_id: string; receipt_date: string; reference?: string; purchase_order_id?: string | null; lines: GoodsReceiptLine[] }) =>
   apiClient.post<{ data: GoodsReceipt }>('/v1/inventory/goods-receipts', payload)
 
 export const submitGoodsReceiptForApproval = (id: string, comments?: string) =>
