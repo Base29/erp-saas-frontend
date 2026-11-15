@@ -34,6 +34,10 @@ import {
   ShoppingBag,
   ClipboardList,
   Layers,
+  Wrench,
+  AlertTriangle,
+  AlertOctagon,
+  Megaphone,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout } from '@/api/tenant'
@@ -232,6 +236,43 @@ export default function TenantLayout() {
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(isCollapsed))
   }, [isCollapsed])
+
+  const [globalNotice, setGlobalNotice] = useState<{
+    id?: string
+    title: string
+    message: string
+    level: 'maintenance' | 'warning' | 'critical' | 'info'
+    starts_at?: string
+    ends_at?: string
+    dismissible?: boolean
+    is_active?: boolean
+  } | null>(null)
+  const [noticeDismissed, setNoticeDismissed] = useState(false)
+
+  // Poll active global system notices (e.g. Scheduled System Maintenance)
+  useEffect(() => {
+    const fetchGlobalNotice = async () => {
+      try {
+        const res = await apiClient.get('/v1/system/global-notice')
+        const notice = res.data?.notice
+        if (notice && notice.is_active) {
+          const key = `dismissed_notice_${notice.id || notice.title}`
+          if (!sessionStorage.getItem(key)) {
+            setGlobalNotice(notice)
+            setNoticeDismissed(false)
+          }
+        } else {
+          setGlobalNotice(null)
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+
+    fetchGlobalNotice()
+    const interval = setInterval(fetchGlobalNotice, 45000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Re-fetch active modules on mount
   useEffect(() => {
@@ -568,6 +609,89 @@ export default function TenantLayout() {
             </div>
           </div>
         </header>
+
+        {/* Global System Notice Banner (e.g. Scheduled System Maintenance) */}
+        {globalNotice && !noticeDismissed && (
+          <div
+            role="alert"
+            className={cn(
+              'px-4 py-2.5 text-xs flex items-center justify-between border-b shadow-sm relative z-30 transition-all shrink-0 animate-fade-in',
+              globalNotice.level === 'critical'
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 dark:text-rose-200'
+                : globalNotice.level === 'warning'
+                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300 dark:text-amber-200'
+                : globalNotice.level === 'maintenance'
+                ? 'bg-gradient-to-r from-amber-600/20 via-orange-600/20 to-amber-700/20 border-amber-500/40 text-amber-200 dark:text-amber-100'
+                : 'bg-blue-500/15 border-blue-500/30 text-blue-300 dark:text-blue-200'
+            )}
+          >
+            <div className="flex items-center gap-3 overflow-hidden min-w-0">
+              <div
+                className={cn(
+                  'h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border shadow-xs',
+                  globalNotice.level === 'critical'
+                    ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                    : globalNotice.level === 'warning' || globalNotice.level === 'maintenance'
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                    : 'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                )}
+              >
+                {globalNotice.level === 'maintenance' ? (
+                  <Wrench className="h-3.5 w-3.5 animate-pulse" />
+                ) : globalNotice.level === 'critical' ? (
+                  <AlertOctagon className="h-3.5 w-3.5" />
+                ) : globalNotice.level === 'warning' ? (
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                ) : (
+                  <Megaphone className="h-3.5 w-3.5" />
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 overflow-hidden">
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase inline-block shrink-0',
+                    globalNotice.level === 'critical'
+                      ? 'bg-rose-500/30 text-rose-200 border border-rose-500/40'
+                      : globalNotice.level === 'maintenance'
+                      ? 'bg-amber-500/30 text-amber-200 border border-amber-500/40'
+                      : globalNotice.level === 'warning'
+                      ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-500/40'
+                      : 'bg-blue-500/30 text-blue-200 border border-blue-500/40'
+                  )}
+                >
+                  {globalNotice.level === 'maintenance'
+                    ? 'Scheduled Maintenance'
+                    : globalNotice.level.toUpperCase()}
+                </span>
+                <strong className="font-semibold text-foreground/95 shrink-0">
+                  {globalNotice.title}
+                </strong>
+                <span className="text-muted-foreground hidden md:inline shrink-0">•</span>
+                <span className="text-foreground/80 truncate font-normal">
+                  {globalNotice.message}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              {globalNotice.dismissible !== false && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem(`dismissed_notice_${globalNotice.id || globalNotice.title}`, 'true')
+                    setNoticeDismissed(true)
+                  }}
+                  className="p-1 rounded-md text-foreground/60 hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  title="Dismiss notification"
+                  aria-label="Dismiss notice"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Page content with smooth animated transition */}
         <main key={location.pathname} className="flex-1 overflow-auto bg-muted/20 animate-fade-in">

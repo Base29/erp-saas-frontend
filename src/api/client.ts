@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { getSubdomain } from '@/utils/subdomain'
 
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 })
@@ -11,7 +12,7 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  const subdomain = import.meta.env.VITE_TENANT_SUBDOMAIN
+  const subdomain = import.meta.env.VITE_TENANT_SUBDOMAIN || getSubdomain()
   if (subdomain) {
     config.headers['X-Tenant-Subdomain'] = subdomain
   }

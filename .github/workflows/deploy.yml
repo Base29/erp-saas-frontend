@@ -1,8 +1,9 @@
-name: Frontend CI/CD
+name: Frontend CI & Packaging
 
 on:
   push:
     branches: [ "develop", "main" ]
+    tags: [ "v*.*.*" ]
   pull_request:
     branches: [ "develop", "main" ]
 
@@ -29,7 +30,7 @@ jobs:
       - name: Build check
         run: npm run build
 
-  build-and-push:
+  package-and-publish:
     needs: test
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -61,7 +62,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=sha
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
@@ -74,71 +77,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy-develop:
-    needs: build-and-push
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-    steps:
-      - name: Install cloudflared
-        run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-
-      - name: Deploy to Server via Cloudflare Tunnel
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          
-          # Construct the Proxy-Command
-          PROXY_CMD="cloudflared access ssh --hostname ${{ secrets.SSH_HOST }}"
-          
-          # Add service token if available
-          if [ -n "${{ secrets.CF_ACCESS_CLIENT_ID }}" ]; then
-            PROXY_CMD="$PROXY_CMD --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}"
-          fi
-
-          # Ensure target directory exists on server
-          ssh -o StrictHostKeyChecking=no -o "ProxyCommand=$PROXY_CMD" -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/genie-cloud"
-
-          ssh -o StrictHostKeyChecking=no -o "ProxyCommand=$PROXY_CMD" -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            set -e
-            cd ~/genie-cloud
-
-            # Clean up phantom directory if mistakenly created by Docker for docker-entrypoint.sh
-            if [ -d backend/docker-entrypoint.sh ]; then
-              rm -rf backend/docker-entrypoint.sh
-            fi
-
-            echo "Logging in to GitHub Container Registry..."
-            echo "${{ secrets.CR_PAT || secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            echo "Pulling latest frontend image from GHCR..."
-            if ! docker compose pull frontend; then
-              echo "::error::DEPLOYMENT FAILED: Could not pull frontend image from GHCR."
-              exit 1
-            fi
-
-            echo "Starting frontend container..."
-            docker compose up -d --force-recreate frontend
-
-            echo "Deployment complete. Checking logs..."
-            sleep 5
-            docker compose logs --tail=20 frontend
-
-            docker system prune -f
-          EOF
-
-  deploy-main:
-    needs: build-and-push
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Placeholder for Production Deployment
-        run: |
-          echo "Production server is not setup yet."
-          echo "Image has been built and pushed to: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"

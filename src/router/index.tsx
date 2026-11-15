@@ -1,11 +1,13 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { isModuleActive } from '@/utils/permissions'
+import { getSubdomain } from '@/utils/subdomain'
 import { useEffect, useState } from 'react'
 
 // Layouts
 import PlatformLayout from '@/layouts/PlatformLayout'
 import TenantLayout from '@/layouts/TenantLayout'
+import TenantResolutionGuard from '@/components/tenant/TenantResolutionGuard'
 
 // Platform pages
 import PlatformLoginPage from '@/pages/platform/LoginPage'
@@ -127,6 +129,11 @@ function ModuleGuard({ moduleKey }: { moduleKey: string }) {
   return <Outlet />
 }
 
+function FallbackRedirect() {
+  const subdomain = getSubdomain()
+  return <Navigate to={subdomain ? '/login' : '/platform/login'} replace />
+}
+
 export const router = createBrowserRouter([
   // Platform routes
   {
@@ -150,20 +157,23 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Tenant routes
+  // Tenant routes wrapped with TenantResolutionGuard
   {
-    path: '/login',
-    element: <TenantLoginPage />,
-  },
-  {
-    path: '/',
-    element: <TenantProtectedRoute />,
+    element: <TenantResolutionGuard />,
     children: [
       {
-        element: <TenantLayout />,
+        path: '/login',
+        element: <TenantLoginPage />,
+      },
+      {
+        path: '/',
+        element: <TenantProtectedRoute />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: 'dashboard', element: <TenantDashboardPage /> },
+          {
+            element: <TenantLayout />,
+            children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: 'dashboard', element: <TenantDashboardPage /> },
           { path: 'activities', element: <RecentActivitiesPage /> },
           { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
           { 
@@ -289,7 +299,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  ],
+},
 
   // Fallback
-  { path: '*', element: <Navigate to="/platform/login" replace /> },
+  { path: '*', element: <FallbackRedirect /> },
 ])

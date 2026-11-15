@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -21,6 +21,8 @@ type FormValues = z.infer<typeof schema>
 
 export default function TenantLoginPage() {
   const navigate = useNavigate()
+  const outletCtx = useOutletContext<{ tenantInfo?: { name?: string; subdomain?: string } } | null>()
+  const tenantName = outletCtx?.tenantInfo?.name
   const { login, token, isPlatform } = useAuthStore()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -74,9 +76,11 @@ export default function TenantLoginPage() {
         {/* Weightless Glass Login Card */}
         <Card className="rounded-2xl border border-white/60 dark:border-white/10 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-[0_25px_60px_-12px_rgba(99,102,241,0.2),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)]">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-lg font-semibold tracking-tight">Sign in</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              {tenantName ? `Sign in to ${tenantName}` : 'Sign in'}
+            </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
-              Enter your credentials to access your workspace
+              {tenantName ? `Access your workspace on Genie Cloud` : 'Enter your credentials to access your workspace'}
             </CardDescription>
           </CardHeader>
           <CardContent>
