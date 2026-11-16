@@ -27,10 +27,17 @@ apiClient.interceptors.request.use(async (config) => {
   return config
 })
 
-// Redirect to login on 401
+// Redirect to login on 401 & handle stale company context on 403
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // If request failed because of an invalid or stale company header, reset active company ID
+    if (error.response?.status === 403 && error.response?.data?.message?.toLowerCase().includes('company')) {
+      import('@/store/authStore').then(({ useAuthStore }) => {
+        useAuthStore.getState().setActiveCompanyId(null)
+      })
+    }
+
     const url = error.config?.url || ''
     if (url.includes('/auth/') || url.includes('/v1/settings/')) {
       return Promise.reject(error)
@@ -51,11 +58,24 @@ apiClient.interceptors.response.use(
   }
 )
 
-// In-memory token storage (avoids XSS via localStorage)
+// In-memory token storage with localStorage rehydration fallback
 let _token: string | null = null
 
 export function getToken(): string | null {
-  return _token
+  if (_token) return _token
+  try {
+    const raw = localStorage.getItem('auth-storage')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed?.state?.token) {
+        _token = parsed.state.token
+        return _token
+      }
+    }
+  } catch {
+    // non-fatal
+  }
+  return null
 }
 
 export function setToken(token: string | null): void {

@@ -287,7 +287,8 @@ export default function TenantLayout() {
       .then((res) => {
         const list = res.data.data ?? []
         setCompanies(list)
-        if (!activeCompanyId && list.length > 0) {
+        const isValid = list.some((c) => c.id === activeCompanyId)
+        if ((!activeCompanyId || !isValid) && list.length > 0) {
           setActiveCompanyId(list[0].id)
         }
       })

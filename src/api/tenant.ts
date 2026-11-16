@@ -3,7 +3,7 @@ import type { AuthUser } from '@/store/authStore'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const tenantLogin = (email: string, password: string) =>
-  apiClient.post<{ token: string; user: AuthUser }>('/v1/auth/login', { email, password })
+  apiClient.post<{ token: string; user: AuthUser; active_modules?: string[]; company_id?: string | null }>('/v1/auth/login', { email, password })
 
 
 

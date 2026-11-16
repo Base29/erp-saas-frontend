@@ -42,7 +42,13 @@ export default function TenantLoginPage() {
     setServerError(null)
     try {
       const res = await tenantLogin(values.email, values.password)
-      await login(res.data.token, res.data.user, false)
+      await login(
+        res.data.token,
+        res.data.user,
+        false,
+        res.data.active_modules,
+        res.data.company_id
+      )
       navigate('/dashboard')
     } catch (err: unknown) {
       const msg =
