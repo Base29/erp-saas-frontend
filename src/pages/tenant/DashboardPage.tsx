@@ -40,7 +40,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Link } from 'react-router-dom'
-import { ROLE_LABELS, canAccessSection, canWrite, hasPermission } from '@/utils/permissions'
+import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive } from '@/utils/permissions'
 import type { UserRole } from '@/store/authStore'
 
 type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
@@ -53,6 +53,7 @@ interface QuickAccessTile {
   actionLabel?: string
   actionTo?: string
   requiredPermission?: string
+  moduleKey?: string
   category: 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
   icon: React.ComponentType<{ className?: string }>
   colorScheme: {
@@ -64,6 +65,10 @@ interface QuickAccessTile {
 }
 
 function isTileAccessible(tile: QuickAccessTile, role: UserRole | null): boolean {
+  const module = tile.moduleKey ?? (tile.category !== 'settings' ? tile.category : undefined)
+  if (module && !isModuleActive(module)) {
+    return false
+  }
   if (!canAccessSection(role, tile.category)) {
     return false
   }
@@ -404,7 +409,7 @@ const QUICK_ACCESS_TILES: QuickAccessTile[] = [
 ]
 
 export default function TenantDashboardPage() {
-  const { user, role } = useAuthStore()
+  const { user, role, activeModules } = useAuthStore()
 
   const [tileCategory, setTileCategory] = useState<TileCategory>('all')
   const [tileSearch, setTileSearch] = useState('')
@@ -415,26 +420,32 @@ export default function TenantDashboardPage() {
     queryKey: ['dashboard-summary'],
     queryFn: async () => {
       const response = await fetchDashboardSummary()
+      if (Array.isArray((response.data as any)?.active_modules)) {
+        useAuthStore.getState().setActiveModules((response.data as any).active_modules)
+      }
       return response.data
     },
   })
 
-  // Available category pills based on RBAC
+  // Available category pills based on RBAC and active tenant modules
   const availableCategories = useMemo(() => {
-    const list: { id: TileCategory; label: string; section?: string }[] = [
+    const list: { id: TileCategory; label: string; section?: string; moduleKey?: string }[] = [
       { id: 'all', label: 'All Modules' },
-      { id: 'accounts', label: 'Finance & Accounts', section: 'accounts' },
-      { id: 'sales', label: 'Sales & Orders', section: 'sales' },
-      { id: 'inventory', label: 'Inventory & Stock', section: 'inventory' },
-      { id: 'projects', label: 'Projects', section: 'projects' },
+      { id: 'accounts', label: 'Finance & Accounts', section: 'accounts', moduleKey: 'accounts' },
+      { id: 'sales', label: 'Sales & Orders', section: 'sales', moduleKey: 'sales' },
+      { id: 'inventory', label: 'Inventory & Stock', section: 'inventory', moduleKey: 'inventory' },
+      { id: 'projects', label: 'Projects', section: 'projects', moduleKey: 'projects' },
       { id: 'settings', label: 'Settings & Admin', section: 'settings' },
     ]
-    return list.filter((cat) => !cat.section || canAccessSection(role, cat.section))
-  }, [role])
+    return list.filter((cat) => {
+      if (cat.moduleKey && !isModuleActive(cat.moduleKey)) return false
+      return !cat.section || canAccessSection(role, cat.section)
+    })
+  }, [role, activeModules])
 
   const activeTileCategory = availableCategories.some((c) => c.id === tileCategory) ? tileCategory : 'all'
 
-  // Filter Quick Access Tiles based on Category, Permission and Search
+  // Filter Quick Access Tiles based on Category, Permission, Module Active and Search
   const filteredTiles = useMemo(() => {
     return QUICK_ACCESS_TILES.filter((tile) => {
       if (!isTileAccessible(tile, role)) {
@@ -449,26 +460,26 @@ export default function TenantDashboardPage() {
         (tile.actionLabel && tile.actionLabel.toLowerCase().includes(query))
       return matchesCategory && matchesSearch
     })
-  }, [activeTileCategory, tileSearch, role])
+  }, [activeTileCategory, tileSearch, role, activeModules])
 
-  // Available tabs for Latest Happenings
+  // Available tabs for Latest Happenings based on active modules and RBAC
   const availableHappeningsTabs = useMemo(() => {
     const tabs: { id: 'all' | 'sales' | 'finance' | 'inventory'; label: string }[] = [{ id: 'all', label: 'All Happenings' }]
-    if (canAccessSection(role, 'sales')) {
+    if (isModuleActive('sales') && canAccessSection(role, 'sales')) {
       tabs.push({ id: 'sales', label: 'Orders & Sales' })
     }
-    if (canAccessSection(role, 'accounts')) {
+    if (isModuleActive('accounts') && canAccessSection(role, 'accounts')) {
       tabs.push({ id: 'finance', label: 'Finance & Vouchers' })
     }
-    if (canAccessSection(role, 'inventory')) {
+    if (isModuleActive('inventory') && canAccessSection(role, 'inventory')) {
       tabs.push({ id: 'inventory', label: 'Inventory & Items' })
     }
     return tabs
-  }, [role])
+  }, [role, activeModules])
 
   const activeHappeningsFilter = availableHappeningsTabs.some((t) => t.id === happeningsFilter) ? happeningsFilter : 'all'
 
-  // Filter Latest Happenings based on Tab & Search
+  // Filter Latest Happenings based on Tab & Search & Module Active & RBAC
   const recentActivities: Activity[] = summary?.recent_activities || []
   const filteredHappenings = useMemo(() => {
     return recentActivities.filter((act) => {
@@ -476,6 +487,11 @@ export default function TenantDashboardPage() {
       const isSalesEvent = lowerType.includes('sale') || lowerType.includes('order') || lowerType.includes('quotation') || lowerType.includes('customer')
       const isFinanceEvent = lowerType.includes('receipt') || lowerType.includes('voucher') || lowerType.includes('invoice') || lowerType.includes('payment') || lowerType.includes('account')
       const isInventoryEvent = lowerType.includes('item') || lowerType.includes('stock') || lowerType.includes('receipt') || lowerType.includes('transfer') || lowerType.includes('warehouse')
+
+      // If module is not active for this tenant, hide that event completely
+      if (isSalesEvent && !isModuleActive('sales')) return false
+      if (isFinanceEvent && !isModuleActive('accounts')) return false
+      if (isInventoryEvent && !isModuleActive('inventory')) return false
 
       // If user lacks permission for the module, hide that event unless user has audit.read or tenant_admin
       if (!hasPermission('audit.read') && role !== 'tenant_admin') {
@@ -503,7 +519,7 @@ export default function TenantDashboardPage() {
 
       return matchesType && matchesSearch
     })
-  }, [recentActivities, activeHappeningsFilter, happeningsSearch, role])
+  }, [recentActivities, activeHappeningsFilter, happeningsSearch, role, activeModules])
 
   if (isLoading) {
     return (
@@ -531,19 +547,19 @@ export default function TenantDashboardPage() {
   const expensesVal = Number(financials?.expenses || 0)
   const profitMarginPercent = revenueVal > 0 ? Math.round(((revenueVal - expensesVal) / revenueVal) * 100) : 0
 
-  const canCreateVoucher = canWrite(role, 'accounts') && (hasPermission('accounts.jv.create') || hasPermission('accounts.write') || role === 'tenant_admin')
-  const canCreateSaleOrder = canWrite(role, 'sales') && (hasPermission('orders.write') || hasPermission('sales.write') || role === 'tenant_admin')
-  const canCreateItem = canWrite(role, 'inventory') && (hasPermission('inventory.items.manage') || hasPermission('inventory.write') || role === 'tenant_admin')
-  const canCreateCustomer = canWrite(role, 'sales') && (hasPermission('sales.customers.manage') || hasPermission('sales.write') || role === 'tenant_admin')
+  const canCreateVoucher = isModuleActive('accounts') && canWrite(role, 'accounts') && (hasPermission('accounts.jv.create') || hasPermission('accounts.write') || role === 'tenant_admin')
+  const canCreateSaleOrder = isModuleActive('sales') && canWrite(role, 'sales') && (hasPermission('orders.write') || hasPermission('sales.write') || role === 'tenant_admin')
+  const canCreateItem = isModuleActive('inventory') && canWrite(role, 'inventory') && (hasPermission('inventory.items.manage') || hasPermission('inventory.write') || role === 'tenant_admin')
+  const canCreateCustomer = isModuleActive('sales') && canWrite(role, 'sales') && (hasPermission('sales.customers.manage') || hasPermission('sales.write') || role === 'tenant_admin')
   const hasAnyQuickAction = canCreateVoucher || canCreateSaleOrder || canCreateItem || canCreateCustomer
 
-  const showRevenueCard = canAccessSection(role, 'accounts') && !!financials
-  const showProfitCard = canAccessSection(role, 'accounts') && !!financials
-  const showSalesCard = canAccessSection(role, 'sales') && !!sales
-  const showInventoryCard = canAccessSection(role, 'inventory') && !!inventory
+  const showRevenueCard = isModuleActive('accounts') && canAccessSection(role, 'accounts') && !!financials
+  const showProfitCard = isModuleActive('accounts') && canAccessSection(role, 'accounts') && !!financials
+  const showSalesCard = isModuleActive('sales') && canAccessSection(role, 'sales') && !!sales
+  const showInventoryCard = isModuleActive('inventory') && canAccessSection(role, 'inventory') && !!inventory
   const showAnyKpi = showRevenueCard || showProfitCard || showSalesCard || showInventoryCard
 
-  const showFinancialSummary = canAccessSection(role, 'accounts') && !!financials
+  const showFinancialSummary = isModuleActive('accounts') && canAccessSection(role, 'accounts') && !!financials
   const showCompaniesWidget = canAccessSection(role, 'settings') || role === 'tenant_admin'
   const hasRightSidebar = showFinancialSummary || showCompaniesWidget
 

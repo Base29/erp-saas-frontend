@@ -59,6 +59,7 @@ const mockSummary = {
         status: 'posted',
       },
     ],
+    active_modules: ['accounts', 'sales', 'inventory', 'projects'],
   }
 }
 
@@ -72,6 +73,7 @@ describe('TenantDashboardPage', () => {
       user: { id: 1, name: 'Admin', email: 'admin@test.com', role: 'tenant_admin' },
       role: 'tenant_admin',
       permissions: ['*'],
+      activeModules: ['accounts', 'sales', 'inventory', 'projects'],
       token: 'fake-token'
     })
   })
@@ -238,6 +240,7 @@ describe('TenantDashboardPage', () => {
       user: { id: 2, name: 'Restricted User', email: 'user@test.com', role: 'viewer' },
       role: 'viewer',
       permissions: ['sales.read', 'inventory.read'],
+      activeModules: ['accounts', 'sales', 'inventory', 'projects'],
       token: 'fake-token',
     })
 
@@ -323,5 +326,104 @@ describe('TenantDashboardPage', () => {
     // Finance activity should be filtered out from live stream
     expect(screen.getByText('SO-1001')).toBeInTheDocument()
     expect(screen.queryByText('RCP-2002')).not.toBeInTheDocument()
+  })
+
+  it('hides module widgets when a module is not active for the tenant even if user is admin', async () => {
+    // Admin user with full permissions '*' but only 'sales' is active for this tenant
+    useAuthStore.setState({
+      user: { id: 1, name: 'Admin', email: 'admin@test.com', role: 'tenant_admin' },
+      role: 'tenant_admin',
+      permissions: ['*'],
+      activeModules: ['sales'], // accounts & inventory are inactive
+      token: 'fake-token',
+    })
+
+    const summaryData = {
+      data: {
+        financials: null,
+        sales: {
+          total_orders: 12,
+          pending_quotations: 4,
+        },
+        inventory: null,
+        companies: [
+          { id: '1', name: 'Main Co', email: 'main@example.com', registration_number: 'REG123' },
+        ],
+        recent_activities: [
+          {
+            id: '1',
+            type: 'Sale Order',
+            reference: 'SO-1001',
+            description: 'Order for Acme Corp',
+            amount: 1500,
+            date: '2026-04-27',
+            status: 'created',
+          },
+          {
+            id: '2',
+            type: 'Journal Voucher',
+            reference: 'JV-2002',
+            description: 'Depreciation entry',
+            amount: 500,
+            date: '2026-04-26',
+            status: 'posted',
+          },
+        ],
+        active_modules: ['sales'],
+      },
+    }
+
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(summaryData as any)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantDashboardPage />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(await screen.findByText(/Welcome back, Admin/)).toBeInTheDocument()
+
+    // Accounts & Inventory KPI cards should NOT be visible
+    expect(screen.queryByText('Monthly Revenue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Monthly Profit')).not.toBeInTheDocument()
+    expect(screen.queryByText('Low Stock Items')).not.toBeInTheDocument()
+    expect(screen.queryByText('Financial Summary')).not.toBeInTheDocument()
+
+    // Sales KPI card SHOULD be visible
+    expect(screen.getByText('Sales Orders')).toBeInTheDocument()
+
+    // Quick Actions: Only sales actions (New Sale Order, New Customer) visible; Accounts (New Voucher) and Inventory (Add Item) hidden
+    expect(screen.queryByText('New Voucher')).not.toBeInTheDocument()
+    expect(screen.queryByText('Add Item')).not.toBeInTheDocument()
+    expect(screen.getByText('New Sale Order')).toBeInTheDocument()
+    expect(screen.getByText('New Customer')).toBeInTheDocument()
+
+    // Launchpad Tiles: Accounts and Inventory tiles hidden; Sales tiles visible
+    expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Journal Vouchers')).not.toBeInTheDocument()
+    expect(screen.queryByText('Items & Products')).not.toBeInTheDocument()
+    expect(screen.queryByText('Warehouses')).not.toBeInTheDocument()
+    expect(screen.getByText('Sale Orders')).toBeInTheDocument()
+    expect(screen.getByText('Customers Directory')).toBeInTheDocument()
+
+    // Category pills: Inactive module tabs hidden; active module tab visible
+    expect(screen.queryByRole('button', { name: 'Finance & Accounts' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Inventory & Stock' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sales & Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings & Admin' })).toBeInTheDocument()
+
+    // Happenings tabs: Inactive module tabs hidden
+    expect(screen.queryByRole('button', { name: 'Finance & Vouchers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Inventory & Items' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Orders & Sales' })).toBeInTheDocument()
+
+    // Inactive module events hidden from live stream
+    expect(screen.getByText('SO-1001')).toBeInTheDocument()
+    expect(screen.queryByText('JV-2002')).not.toBeInTheDocument()
+
+    // Companies widget still visible (settings)
+    expect(screen.getByText('Your Companies')).toBeInTheDocument()
   })
 })
