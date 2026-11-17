@@ -13,22 +13,25 @@ export type UserRole =
   | 'viewer'
 
 export interface AuthUser {
-  id: number
+  id: number | string
   name: string
   email: string
   role?: UserRole
+  permissions?: string[]
 }
 
 interface AuthState {
   token: string | null
   user: AuthUser | null
   role: UserRole | null
+  permissions: string[]
   isPlatform: boolean
   activeModules: string[]
   activeCompanyId: string | null
   login: (token: string, user: AuthUser, isPlatform?: boolean, initialModules?: string[], initialCompanyId?: string | null) => Promise<void>
   logout: () => void
   setUser: (user: AuthUser) => void
+  setPermissions: (permissions: string[]) => void
   setActiveModules: (modules: string[]) => void
   setActiveCompanyId: (id: string | null) => void
 }
@@ -39,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       role: null,
+      permissions: [],
       isPlatform: false,
       activeModules: [],
       activeCompanyId: null,
@@ -50,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
           token,
           user,
           role: user.role ?? null,
+          permissions: user.permissions ?? [],
           isPlatform,
           activeModules: modules,
           activeCompanyId: initialCompanyId ?? null,
@@ -68,11 +73,15 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         setToken(null)
-        set({ token: null, user: null, role: null, isPlatform: false, activeModules: [], activeCompanyId: null })
+        set({ token: null, user: null, role: null, permissions: [], isPlatform: false, activeModules: [], activeCompanyId: null })
       },
 
       setUser: (user) => {
-        set({ user, role: user.role ?? null })
+        set({ user, role: user.role ?? null, permissions: user.permissions ?? [] })
+      },
+
+      setPermissions: (permissions) => {
+        set({ permissions })
       },
 
       setActiveModules: (modules) => {

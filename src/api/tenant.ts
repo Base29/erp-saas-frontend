@@ -1427,3 +1427,107 @@ export const updateBudget = (id: string, payload: { amount: number }) =>
 
 export const deleteBudget = (id: string) =>
   apiClient.delete(`/v1/accounts/budgets/${id}`)
+
+// ── RBAC & Permissions ──────────────────────────────────────────────────────
+export interface TenantPermission {
+  id: string
+  name: string
+  display_name: string
+  module: string
+  group: string
+  action: string
+  source: string
+  description?: string | null
+  depends_on?: string[] | null
+  is_system: boolean
+}
+
+export interface TenantRole {
+  id: string
+  name: string
+  display_name: string
+  description?: string | null
+  is_system: boolean
+  users_count?: number
+  permissions_count?: number
+  permissions?: TenantPermission[]
+  users?: TenantUser[]
+}
+
+export interface UserRoleAssignment {
+  id: string
+  user_id: string
+  role_id: string
+  company_id?: string | null
+  role?: TenantRole
+  company?: { id: string; name: string }
+}
+
+export interface UserPermissionOverride {
+  id: string
+  user_id: string
+  permission_id: string
+  type: 'grant' | 'deny'
+  company_id?: string | null
+  permission?: TenantPermission
+  company?: { id: string; name: string }
+}
+
+export interface UserEffectivePermissionsResponse {
+  user: TenantUser
+  company_id: string | null
+  is_admin: boolean
+  roles: UserRoleAssignment[]
+  permissions: string[]
+  overrides: UserPermissionOverride[]
+}
+
+export const fetchRoles = (params?: Record<string, string | number | boolean>) =>
+  apiClient.get<{ data: TenantRole[] }>('/v1/settings/roles', { params })
+
+export const createRole = (payload: { name: string; display_name: string; description?: string; permissions?: string[] }) =>
+  apiClient.post<{ data: TenantRole; message: string }>('/v1/settings/roles', payload)
+
+export const updateRole = (id: string, payload: { name?: string; display_name?: string; description?: string; permissions?: string[] }) =>
+  apiClient.patch<{ data: TenantRole; message: string }>(`/v1/settings/roles/${id}`, payload)
+
+export const cloneRole = (id: string, payload: { name: string; display_name: string; description?: string }) =>
+  apiClient.post<{ data: TenantRole; message: string }>(`/v1/settings/roles/${id}/clone`, payload)
+
+export const deleteRole = (id: string) =>
+  apiClient.delete(`/v1/settings/roles/${id}`)
+
+export const fetchPermissions = (params?: Record<string, string | number | boolean>) =>
+  apiClient.get<{ data: TenantPermission[]; grouped: Record<string, TenantPermission[]> }>('/v1/settings/permissions', { params })
+
+export const initializePermissions = () =>
+  apiClient.post<{ message: string; permissions: TenantPermission[]; roles: TenantRole[] }>('/v1/settings/permissions/initialize')
+
+export const createCustomPermission = (payload: {
+  name: string
+  display_name: string
+  module: string
+  group: string
+  action: string
+  description?: string
+  depends_on?: string[]
+}) =>
+  apiClient.post<{ data: TenantPermission; message: string }>('/v1/settings/permissions', payload)
+
+export const deleteCustomPermission = (id: string) =>
+  apiClient.delete(`/v1/settings/permissions/${id}`)
+
+export const fetchUserEffectivePermissions = (userId: string, companyId?: string | null) =>
+  apiClient.get<{ data: UserEffectivePermissionsResponse }>(`/v1/settings/users/${userId}/permissions`, {
+    params: companyId ? { company_id: companyId } : undefined,
+  })
+
+export const saveUserOverride = (userId: string, payload: { permission_id: string; type: 'grant' | 'deny'; company_id?: string | null }) =>
+  apiClient.post<{ data: UserPermissionOverride; message: string }>(`/v1/settings/users/${userId}/permissions/override`, payload)
+
+export const deleteUserOverride = (userId: string, overrideId: string) =>
+  apiClient.delete(`/v1/settings/users/${userId}/permissions/override/${overrideId}`)
+
+export const assignUserRoles = (userId: string, roles: Array<{ role_id: string; company_id?: string | null }>) =>
+  apiClient.post<{ data: UserRoleAssignment[]; message: string }>(`/v1/settings/users/${userId}/roles`, { roles })
+

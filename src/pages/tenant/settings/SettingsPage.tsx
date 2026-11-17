@@ -10,6 +10,7 @@ import {
   Package, 
   Users, 
   UserCog,
+  ShieldCheck,
   Settings2,
   UploadCloud,
   ChevronLeft,
@@ -58,7 +59,8 @@ export const SETTINGS_CATEGORIES: readonly Category[] = [
   {
     title: 'Administration',
     tabs: [
-      { id: 'users', label: 'Users', icon: UserCog, description: 'User roles and permissions' },
+      { id: 'users', label: 'Users', icon: UserCog, description: 'User accounts and access' },
+      { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, description: 'Define custom roles, permission matrix, and overrides' },
     ]
   }
 ]

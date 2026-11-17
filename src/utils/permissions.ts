@@ -17,6 +17,14 @@ const sectionRoles: Record<string, UserRole[]> = {
 
 export function canAccessSection(role: UserRole | null, section: string): boolean {
   if (!role) return false
+  if (!sectionRoles[section]) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  const permissions = useAuthStore.getState().permissions
+  if (permissions.length > 0) {
+    if (permissions.includes('*') || permissions.includes(`${section}.read`) || permissions.includes(`${section}.*`)) {
+      return true
+    }
+  }
   return sectionRoles[section]?.includes(role) ?? false
 }
 
@@ -32,7 +40,27 @@ const writeRoles: Record<string, UserRole[]> = {
 
 export function canWrite(role: UserRole | null, section: string): boolean {
   if (!role) return false
+  if (!writeRoles[section]) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  const permissions = useAuthStore.getState().permissions
+  if (permissions.length > 0) {
+    if (permissions.includes('*') || permissions.includes(`${section}.write`) || permissions.includes(`${section}.*`)) {
+      return true
+    }
+  }
   return writeRoles[section]?.includes(role) ?? false
+}
+
+export function hasPermission(permission: string): boolean {
+  const { role, permissions } = useAuthStore.getState()
+  if (!role) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  if (permissions.includes('*') || permissions.includes(permission)) return true
+  if (permission.includes('.')) {
+    const [mod] = permission.split('.')
+    if (permissions.includes(`${mod}.*`)) return true
+  }
+  return false
 }
 
 // Approval actions

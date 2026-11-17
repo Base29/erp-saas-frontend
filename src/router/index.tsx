@@ -26,6 +26,7 @@ import FiscalPeriodsTab from '@/pages/tenant/settings/FiscalPeriodsTab'
 import TaxSettingsTab from '@/pages/tenant/settings/TaxSettingsTab'
 import SequencesTab from '@/pages/tenant/settings/SequencesTab'
 import UsersTab from '@/pages/tenant/settings/UsersTab'
+import RolesTab from '@/pages/tenant/settings/RolesTab'
 import ActiveModulesTab from '@/pages/tenant/settings/ActiveModulesTab'
 import ProductCategoriesTab from '@/pages/tenant/settings/ProductCategoriesTab'
 import CustomerCategoriesTab from '@/pages/tenant/settings/CustomerCategoriesTab'
@@ -190,6 +191,7 @@ export const router = createBrowserRouter([
               { path: 'categories', element: <ProductCategoriesTab /> },
               { path: 'customer-categories', element: <CustomerCategoriesTab /> },
               { path: 'users', element: <UsersTab /> },
+              { path: 'roles', element: <RolesTab /> },
               { path: 'data-migration', element: <DataMigrationPage /> },
             ]
           },

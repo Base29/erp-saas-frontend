@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, ShieldCheck } from 'lucide-react'
 import SettingsHeaderActions from './SettingsHeaderActions'
+import UserPermissionsModal from './UserPermissionsModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -51,6 +52,7 @@ export default function UsersTab() {
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<TenantUser | null>(null)
+  const [permUser, setPermUser] = useState<TenantUser | null>(null)
   const [roleValue, setRoleValue] = useState<string>('')
   const [editRoleValue, setEditRoleValue] = useState<string>('')
   const [page, setPage] = useState(1)
@@ -124,6 +126,15 @@ export default function UsersTab() {
       header: '',
       cell: ({ row }) => (
         <div className="flex gap-1 justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 text-xs"
+            onClick={() => setPermUser(row.original)}
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            Permissions
+          </Button>
           <Button size="sm" variant="outline" onClick={() => openEdit(row.original)}>Edit</Button>
           {row.original.is_active && (
             <Button
@@ -285,6 +296,12 @@ export default function UsersTab() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <UserPermissionsModal
+        open={Boolean(permUser)}
+        onOpenChange={(open) => !open && setPermUser(null)}
+        user={permUser}
+      />
     </div>
   )
 }
