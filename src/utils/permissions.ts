@@ -13,18 +13,43 @@ const sectionRoles: Record<string, UserRole[]> = {
   procurement: ['tenant_admin', 'accountant', 'inventory_manager', 'sales_manager', 'viewer'],
   reports: ['tenant_admin', 'accountant', 'sales_manager', 'sales_person', 'inventory_manager', 'viewer'],
   settings: ['tenant_admin'],
+  genie: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
 }
 
 export function canAccessSection(role: UserRole | null, section: string): boolean {
   if (!role) return false
   if (!sectionRoles[section]) return false
   if (role === 'tenant_admin' || role === 'super_admin') return true
-  const permissions = useAuthStore.getState().permissions
-  if (permissions.length > 0) {
-    if (permissions.includes('*') || permissions.includes(`${section}.read`) || permissions.includes(`${section}.*`)) {
+
+  const { user, permissions } = useAuthStore.getState()
+
+  // When a user is authenticated, dynamic RBAC permissions take precedence
+  if (user) {
+    if (permissions.includes('*') || permissions.includes(`${section}.*`)) {
       return true
     }
+
+    // Reports section is accessible if user has access to any reporting domain
+    if (section === 'reports') {
+      return (
+        permissions.some(
+          (p) =>
+            p.startsWith('accounts.') ||
+            p.startsWith('sales.') ||
+            p.startsWith('inventory.') ||
+            p.startsWith('reports.') ||
+            p.startsWith('audit.')
+        )
+      )
+    }
+
+    // Check if user has ANY permission for this section (e.g. 'accounts.read', 'accounts.coa.view', etc.)
+    return permissions.some(
+      (p) => p === section || p === `${section}.read` || p.startsWith(`${section}.`)
+    )
   }
+
+  // Fallback for unauthenticated contexts or unit tests without an active user session
   return sectionRoles[section]?.includes(role) ?? false
 }
 
@@ -36,18 +61,31 @@ const writeRoles: Record<string, UserRole[]> = {
   projects: ['tenant_admin', 'accountant', 'sales_manager'],
   procurement: ['tenant_admin', 'accountant', 'inventory_manager'],
   settings: ['tenant_admin'],
+  genie: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager'],
 }
 
 export function canWrite(role: UserRole | null, section: string): boolean {
   if (!role) return false
   if (!writeRoles[section]) return false
   if (role === 'tenant_admin' || role === 'super_admin') return true
-  const permissions = useAuthStore.getState().permissions
-  if (permissions.length > 0) {
-    if (permissions.includes('*') || permissions.includes(`${section}.write`) || permissions.includes(`${section}.*`)) {
+
+  const { user, permissions } = useAuthStore.getState()
+
+  if (user) {
+    if (permissions.includes('*') || permissions.includes(`${section}.*`) || permissions.includes(`${section}.write`)) {
       return true
     }
+    return permissions.some(
+      (p) =>
+        p.startsWith(`${section}.`) &&
+        (p.endsWith('.write') ||
+          p.endsWith('.create') ||
+          p.endsWith('.edit') ||
+          p.endsWith('.manage') ||
+          p.endsWith('.post'))
+    )
   }
+
   return writeRoles[section]?.includes(role) ?? false
 }
 

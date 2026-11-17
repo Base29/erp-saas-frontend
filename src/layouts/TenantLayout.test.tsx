@@ -41,6 +41,8 @@ describe('TenantLayout', () => {
     expect(screen.getAllByText('Accounts').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Reports').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Admin User').length).toBeGreaterThan(0)
+    expect(screen.getByText('Bulk Upload')).toBeInTheDocument()
+    expect(screen.getByText('Genie AI')).toBeInTheDocument()
   })
 
   it('renders all report links under Reports menu head', () => {
@@ -62,5 +64,27 @@ describe('TenantLayout', () => {
     expect(screen.getAllByText('Supplier Statement').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Sales Reports').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Inventory Reports').length).toBeGreaterThan(0)
+  })
+
+  it('hides Bulk Upload and Genie AI in header when permissions are revoked', () => {
+    useAuthStore.setState({
+      user: { id: 2, name: 'Viewer User', email: 'viewer@test.com' },
+      role: 'viewer',
+      token: 'fake-token',
+      activeModules: ['accounts', 'sales', 'inventory'],
+      permissions: ['sales.read'], // No settings, no genie
+    })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantLayout />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(screen.queryByText('Bulk Upload')).not.toBeInTheDocument()
+    expect(screen.queryByText('Genie AI')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ask Genie AI or Search...')).not.toBeInTheDocument()
   })
 })

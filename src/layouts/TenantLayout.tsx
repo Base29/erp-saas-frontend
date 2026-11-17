@@ -41,8 +41,8 @@ import {
   Megaphone,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { tenantLogout } from '@/api/tenant'
-import { canAccessSection, isModuleActive, ROLE_LABELS } from '@/utils/permissions'
+import { tenantLogout, tenantMe } from '@/api/tenant'
+import { canAccessSection, isModuleActive, ROLE_LABELS, hasPermission } from '@/utils/permissions'
 import { Button } from '@/components/ui/button'
 import NotificationBell from '@/components/NotificationBell'
 import { useQueryClient } from '@tanstack/react-query'
@@ -276,9 +276,18 @@ export default function TenantLayout() {
     return () => clearInterval(interval)
   }, [])
 
-  // Re-fetch active modules on mount
+  // Re-fetch active modules and user profile/permissions on mount
   useEffect(() => {
     if (!token) return
+
+    tenantMe()
+      .then((res) => {
+        const u = res.data?.user || res.data?.data
+        if (u) {
+          useAuthStore.getState().setUser(u)
+        }
+      })
+      .catch(() => {})
 
     apiClient
       .get<{ data: string[] }>('/v1/settings/active-modules')
@@ -303,8 +312,13 @@ export default function TenantLayout() {
     }
   }, [activeCompanyId, queryClient])
 
+  const canAccessGenie = canAccessSection(role, 'genie') || hasPermission('genie.read')
+  const canAccessSettings = canAccessSection(role, 'settings') || hasPermission('settings.read')
+
   // Keyboard shortcut for Cmd+K / Ctrl+K to toggle Genie Assistant
   useEffect(() => {
+    if (!canAccessGenie) return
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
@@ -313,7 +327,7 @@ export default function TenantLayout() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleOpen])
+  }, [toggleOpen, canAccessGenie])
 
   const activeCompany = companies.find((c) => c.id === activeCompanyId)
 
@@ -566,31 +580,35 @@ export default function TenantLayout() {
             </DropdownMenu>
 
             {/* Quick Search trigger button */}
-            <button
-              type="button"
-              onClick={toggleOpen}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/70 bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-xs transition-colors"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span>Ask Genie AI or Search...</span>
-              <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-1 rounded bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground border border-border/60">
-                ⌘K
-              </kbd>
-            </button>
+            {canAccessGenie && (
+              <button
+                type="button"
+                onClick={toggleOpen}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/70 bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-xs transition-colors"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span>Ask Genie AI or Search...</span>
+                <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-1 rounded bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground border border-border/60">
+                  ⌘K
+                </kbd>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-8 hidden sm:inline-flex border-border/70 hover:bg-accent text-foreground/80 hover:text-foreground"
-              onClick={() => navigate('/data-migration')}
-            >
-              <UploadCloud className="h-3.5 w-3.5 text-primary" />
-              <span>Bulk Upload</span>
-            </Button>
+            {canAccessSettings && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 hidden sm:inline-flex border-border/70 hover:bg-accent text-foreground/80 hover:text-foreground"
+                onClick={() => navigate('/settings/data-migration')}
+              >
+                <UploadCloud className="h-3.5 w-3.5 text-primary" />
+                <span>Bulk Upload</span>
+              </Button>
+            )}
 
-            <GenieHeaderButton />
+            {canAccessGenie && <GenieHeaderButton />}
             <ThemeToggle />
             <NotificationBell />
 
@@ -703,8 +721,12 @@ export default function TenantLayout() {
       </div>
 
       {/* Genie AI Assistant Floating Trigger & Drawer */}
-      <GenieFloatingTrigger />
-      <GenieAssistantDrawer />
+      {canAccessGenie && (
+        <>
+          <GenieFloatingTrigger />
+          <GenieAssistantDrawer />
+        </>
+      )}
     </div>
   )
 }

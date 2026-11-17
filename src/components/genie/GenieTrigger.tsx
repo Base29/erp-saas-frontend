@@ -2,9 +2,17 @@ import React, { useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useGenieStore } from '@/store/genieStore'
+import { useAuthStore } from '@/store/authStore'
+import { canAccessSection, hasPermission } from '@/utils/permissions'
 
 export const GenieHeaderButton: React.FC = () => {
   const { toggleOpen, isOpen } = useGenieStore()
+  const { role } = useAuthStore()
+  const canAccessGenie = canAccessSection(role, 'genie') || hasPermission('genie.read')
+
+  if (!canAccessGenie) {
+    return null
+  }
 
   return (
     <Button
@@ -31,8 +39,12 @@ export const GenieHeaderButton: React.FC = () => {
 
 export const GenieFloatingTrigger: React.FC = () => {
   const { toggleOpen, isOpen, loadStatus } = useGenieStore()
+  const { role } = useAuthStore()
+  const canAccessGenie = canAccessSection(role, 'genie') || hasPermission('genie.read')
 
   useEffect(() => {
+    if (!canAccessGenie) return
+
     loadStatus()
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,9 +56,9 @@ export const GenieFloatingTrigger: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleOpen, loadStatus])
+  }, [toggleOpen, loadStatus, canAccessGenie])
 
-  if (isOpen) return null
+  if (!canAccessGenie || isOpen) return null
 
   return (
     <div className="fixed bottom-6 right-6 z-40">

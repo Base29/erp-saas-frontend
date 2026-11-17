@@ -9,7 +9,7 @@ export const tenantLogin = (email: string, password: string) =>
 
 export const tenantLogout = () => apiClient.post('/v1/auth/logout')
 
-export const tenantMe = () => apiClient.get<{ data: AuthUser }>('/v1/auth/me')
+export const tenantMe = () => apiClient.get<{ data?: AuthUser; user?: AuthUser }>('/v1/auth/me')
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export interface DashboardSummary {
@@ -140,7 +140,7 @@ export interface TenantUser {
 export const fetchUsers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<TenantUser>>('/v1/settings/users', { params })
 
-export const createUser = (payload: { name: string; email: string; password: string; role: string }) =>
+export const createUser = (payload: { name: string; email: string; password: string; role: string; company_id?: string | null }) =>
   apiClient.post<{ data: TenantUser }>('/v1/settings/users', payload)
 
 export const updateUser = (id: string, payload: Partial<TenantUser>) =>
@@ -1530,4 +1530,50 @@ export const deleteUserOverride = (userId: string, overrideId: string) =>
 
 export const assignUserRoles = (userId: string, roles: Array<{ role_id: string; company_id?: string | null }>) =>
   apiClient.post<{ data: UserRoleAssignment[]; message: string }>(`/v1/settings/users/${userId}/roles`, { roles })
+
+// ── User Invitations & Password Reset ────────────────────────────────────────
+export interface UserInvitation {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  company_id: string | null
+  token: string
+  invited_by: string | null
+  expires_at: string
+  accepted_at: string | null
+  invite_url?: string
+  is_valid?: boolean
+  inviter?: { id: string; name: string; email: string }
+  company?: { id: string; name: string }
+}
+
+export const fetchInvitations = (params?: Record<string, string | number | boolean>) =>
+  apiClient.get<PaginatedResponse<UserInvitation>>('/v1/settings/invitations', { params })
+
+export const createInvitation = (payload: { email: string; name?: string; role: string; company_id?: string | null }) =>
+  apiClient.post<{ data: UserInvitation; invite_url: string; message: string }>('/v1/settings/invitations', payload)
+
+export const resendInvitation = (id: string) =>
+  apiClient.post<{ data: UserInvitation; invite_url: string; message: string }>(`/v1/settings/invitations/${id}/resend`)
+
+export const deleteInvitation = (id: string) =>
+  apiClient.delete(`/v1/settings/invitations/${id}`)
+
+export const resetUserPassword = (userId: string, password: string) =>
+  apiClient.post<{ message: string }>(`/v1/settings/users/${userId}/reset-password`, { password })
+
+export const fetchPublicInvitation = (token: string) =>
+  apiClient.get<{ data: { email: string; name: string | null; role: string; company?: { id: string; name: string }; expires_at: string } }>(
+    `/v1/auth/invitations/${token}`
+  )
+
+export const acceptPublicInvitation = (
+  token: string,
+  payload: { name: string; password: string; password_confirmation: string }
+) =>
+  apiClient.post<{ token: string; user: TenantUser; message: string }>(
+    `/v1/auth/invitations/${token}/accept`,
+    payload
+  )
 

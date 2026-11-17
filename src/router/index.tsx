@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { isModuleActive } from '@/utils/permissions'
+import { isModuleActive, canAccessSection } from '@/utils/permissions'
 import { getSubdomain } from '@/utils/subdomain'
 import { useEffect, useState } from 'react'
 
@@ -18,6 +18,7 @@ import TenantModulesPage from '@/pages/platform/TenantModulesPage'
 
 // Tenant pages
 import TenantLoginPage from '@/pages/tenant/LoginPage'
+import AcceptInvitePage from '@/pages/tenant/AcceptInvitePage'
 import TenantDashboardPage from '@/pages/tenant/DashboardPage'
 import RecentActivitiesPage from '@/pages/tenant/RecentActivitiesPage'
 import SettingsPage from '@/pages/tenant/settings/SettingsPage'
@@ -124,9 +125,14 @@ function TenantProtectedRoute() {
   return <Outlet />
 }
 
-// Guard that redirects to ModuleNotActivePage if the module is inactive
-function ModuleGuard({ moduleKey }: { moduleKey: string }) {
-  if (!isModuleActive(moduleKey)) return <ModuleNotActivePage />
+// Guard that redirects to ModuleNotActivePage if the module is inactive, or to /dashboard if permission is denied
+function ModuleGuard({ moduleKey, section }: { moduleKey?: string; section?: string }) {
+  const role = useAuthStore((s) => s.role)
+  if (moduleKey && !isModuleActive(moduleKey)) return <ModuleNotActivePage />
+  const targetSection = section || moduleKey
+  if (targetSection && !canAccessSection(role, targetSection)) {
+    return <Navigate to="/dashboard" replace />
+  }
   return <Outlet />
 }
 
@@ -167,6 +173,10 @@ export const router = createBrowserRouter([
         element: <TenantLoginPage />,
       },
       {
+        path: '/accept-invite',
+        element: <AcceptInvitePage />,
+      },
+      {
         path: '/',
         element: <TenantProtectedRoute />,
         children: [
@@ -179,24 +189,34 @@ export const router = createBrowserRouter([
           { path: 'reports', element: <Navigate to="/accounts/reports/general-ledger" replace /> },
           { 
             path: 'settings', 
-            element: <SettingsPage />,
+            element: <ModuleGuard section="settings" />,
             children: [
-              { index: true, element: <SettingsOverviewTab /> },
-              { path: 'companies', element: <CompaniesTab /> },
-              { path: 'modules', element: <ActiveModulesTab /> },
-              { path: 'fiscal', element: <FiscalPeriodsTab /> },
-              { path: 'tax', element: <TaxSettingsTab /> },
-              { path: 'account-categories', element: <AccountCategoriesTab /> },
-              { path: 'sequences', element: <SequencesTab /> },
-              { path: 'categories', element: <ProductCategoriesTab /> },
-              { path: 'customer-categories', element: <CustomerCategoriesTab /> },
-              { path: 'users', element: <UsersTab /> },
-              { path: 'roles', element: <RolesTab /> },
-              { path: 'data-migration', element: <DataMigrationPage /> },
-            ]
+              {
+                element: <SettingsPage />,
+                children: [
+                  { index: true, element: <SettingsOverviewTab /> },
+                  { path: 'companies', element: <CompaniesTab /> },
+                  { path: 'modules', element: <ActiveModulesTab /> },
+                  { path: 'fiscal', element: <FiscalPeriodsTab /> },
+                  { path: 'tax', element: <TaxSettingsTab /> },
+                  { path: 'account-categories', element: <AccountCategoriesTab /> },
+                  { path: 'sequences', element: <SequencesTab /> },
+                  { path: 'categories', element: <ProductCategoriesTab /> },
+                  { path: 'customer-categories', element: <CustomerCategoriesTab /> },
+                  { path: 'users', element: <UsersTab /> },
+                  { path: 'roles', element: <RolesTab /> },
+                  { path: 'data-migration', element: <DataMigrationPage /> },
+                ],
+              },
+            ],
           },
-          { path: 'settings/data-migration', element: <DataMigrationPage /> },
-          { path: 'data-migration', element: <DataMigrationPage /> },
+          {
+            path: 'data-migration',
+            element: <ModuleGuard section="settings" />,
+            children: [
+              { index: true, element: <Navigate to="/settings/data-migration" replace /> },
+            ],
+          },
           // Accounts module
           {
             path: 'accounts',

@@ -69,7 +69,9 @@ describe('TenantDashboardPage', () => {
     vi.clearAllMocks()
     queryClient = createTestQueryClient()
     useAuthStore.setState({ 
-      user: { id: 1, name: 'Admin', email: 'admin@test.com' },
+      user: { id: 1, name: 'Admin', email: 'admin@test.com', role: 'tenant_admin' },
+      role: 'tenant_admin',
+      permissions: ['*'],
       token: 'fake-token'
     })
   })
@@ -228,5 +230,98 @@ describe('TenantDashboardPage', () => {
     fireEvent.change(happeningsSearch, { target: { value: 'Nonexistent' } })
 
     expect(screen.getByText('No recent happenings match your criteria.')).toBeInTheDocument()
+  })
+
+  it('hides module widgets when user lacks permission for that module', async () => {
+    // User with only sales and inventory access (accounts revoked)
+    useAuthStore.setState({
+      user: { id: 2, name: 'Restricted User', email: 'user@test.com', role: 'viewer' },
+      role: 'viewer',
+      permissions: ['sales.read', 'inventory.read'],
+      token: 'fake-token',
+    })
+
+    const summaryWithoutAccounts = {
+      data: {
+        financials: null, // Backend omits financials
+        sales: {
+          total_orders: 8,
+          pending_quotations: 2,
+        },
+        inventory: {
+          total_items: 50,
+          low_stock_items: 2,
+        },
+        companies: [],
+        recent_activities: [
+          {
+            id: '1',
+            type: 'Sale Order',
+            reference: 'SO-1001',
+            description: 'Order for Acme Corp',
+            amount: 1500,
+            date: '2026-04-27',
+            status: 'created',
+          },
+          {
+            id: '2',
+            type: 'Receipt',
+            reference: 'RCP-2002',
+            description: 'Payment from Globex',
+            amount: 2500,
+            date: '2026-04-26',
+            status: 'posted',
+          },
+        ],
+      },
+    }
+
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(summaryWithoutAccounts as any)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TenantDashboardPage />
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+
+    expect(await screen.findByText(/Welcome back, Restricted User/)).toBeInTheDocument()
+
+    // Financial KPI cards and summary should be completely hidden
+    expect(screen.queryByText('Monthly Revenue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Monthly Profit')).not.toBeInTheDocument()
+    expect(screen.queryByText('Financial Summary')).not.toBeInTheDocument()
+
+    // Sales and Inventory KPI cards should be visible
+    expect(screen.getByText('Sales Orders')).toBeInTheDocument()
+    expect(screen.getByText('Low Stock Items')).toBeInTheDocument()
+
+    // Quick Actions: Viewer without write permissions should not see write action buttons
+    expect(screen.queryByText('New Voucher')).not.toBeInTheDocument()
+    expect(screen.queryByText('New Sale Order')).not.toBeInTheDocument()
+    expect(screen.queryByText('Add Item')).not.toBeInTheDocument()
+
+    // Accounts quick access tiles should be hidden
+    expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Journal Vouchers')).not.toBeInTheDocument()
+
+    // Sales & inventory quick access tiles should still be visible
+    expect(screen.getByText('Sale Orders')).toBeInTheDocument()
+    expect(screen.getByText('Items & Products')).toBeInTheDocument()
+
+    // Category pills: "Finance & Accounts" and "Settings & Admin" should be hidden
+    expect(screen.queryByRole('button', { name: 'Finance & Accounts' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Settings & Admin' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sales & Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Inventory & Stock' })).toBeInTheDocument()
+
+    // Finance tab in happenings should be hidden
+    expect(screen.queryByRole('button', { name: 'Finance & Vouchers' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Orders & Sales' })).toBeInTheDocument()
+
+    // Finance activity should be filtered out from live stream
+    expect(screen.getByText('SO-1001')).toBeInTheDocument()
+    expect(screen.queryByText('RCP-2002')).not.toBeInTheDocument()
   })
 })

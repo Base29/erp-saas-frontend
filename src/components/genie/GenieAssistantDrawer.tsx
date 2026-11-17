@@ -36,8 +36,13 @@ import { GenieThinkingAccordion } from './GenieThinkingAccordion'
 import { GenieMarkdown, isUrduOrArabic } from './GenieMarkdown'
 import { GenieReasoningState } from './GenieReasoningState'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
+import { canAccessSection, hasPermission } from '@/utils/permissions'
 
 export const GenieAssistantDrawer: React.FC = () => {
+  const { role } = useAuthStore()
+  const canAccessGenie = canAccessSection(role, 'genie') || hasPermission('genie.read')
+
   const {
     isOpen,
     setIsOpen,
@@ -122,7 +127,7 @@ export const GenieAssistantDrawer: React.FC = () => {
     }
   }
 
-  if (!isOpen) return null
+  if (!canAccessGenie || !isOpen) return null
 
   return (
     <>

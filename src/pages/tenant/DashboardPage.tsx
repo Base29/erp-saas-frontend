@@ -40,7 +40,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Link } from 'react-router-dom'
-import { ROLE_LABELS } from '@/utils/permissions'
+import { ROLE_LABELS, canAccessSection, canWrite, hasPermission } from '@/utils/permissions'
+import type { UserRole } from '@/store/authStore'
 
 type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
 
@@ -51,6 +52,7 @@ interface QuickAccessTile {
   to: string
   actionLabel?: string
   actionTo?: string
+  requiredPermission?: string
   category: 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
   icon: React.ComponentType<{ className?: string }>
   colorScheme: {
@@ -59,6 +61,16 @@ interface QuickAccessTile {
     borderHover: string
     glow: string
   }
+}
+
+function isTileAccessible(tile: QuickAccessTile, role: UserRole | null): boolean {
+  if (!canAccessSection(role, tile.category)) {
+    return false
+  }
+  if (tile.requiredPermission) {
+    return hasPermission(tile.requiredPermission) || hasPermission(`${tile.category}.read`) || hasPermission(`${tile.category}.write`)
+  }
+  return true
 }
 
 const QUICK_ACCESS_TILES: QuickAccessTile[] = [
@@ -407,10 +419,28 @@ export default function TenantDashboardPage() {
     },
   })
 
-  // Filter Quick Access Tiles based on Category and Search
+  // Available category pills based on RBAC
+  const availableCategories = useMemo(() => {
+    const list: { id: TileCategory; label: string; section?: string }[] = [
+      { id: 'all', label: 'All Modules' },
+      { id: 'accounts', label: 'Finance & Accounts', section: 'accounts' },
+      { id: 'sales', label: 'Sales & Orders', section: 'sales' },
+      { id: 'inventory', label: 'Inventory & Stock', section: 'inventory' },
+      { id: 'projects', label: 'Projects', section: 'projects' },
+      { id: 'settings', label: 'Settings & Admin', section: 'settings' },
+    ]
+    return list.filter((cat) => !cat.section || canAccessSection(role, cat.section))
+  }, [role])
+
+  const activeTileCategory = availableCategories.some((c) => c.id === tileCategory) ? tileCategory : 'all'
+
+  // Filter Quick Access Tiles based on Category, Permission and Search
   const filteredTiles = useMemo(() => {
     return QUICK_ACCESS_TILES.filter((tile) => {
-      const matchesCategory = tileCategory === 'all' || tile.category === tileCategory
+      if (!isTileAccessible(tile, role)) {
+        return false
+      }
+      const matchesCategory = activeTileCategory === 'all' || tile.category === activeTileCategory
       const query = tileSearch.toLowerCase().trim()
       const matchesSearch =
         !query ||
@@ -419,20 +449,48 @@ export default function TenantDashboardPage() {
         (tile.actionLabel && tile.actionLabel.toLowerCase().includes(query))
       return matchesCategory && matchesSearch
     })
-  }, [tileCategory, tileSearch])
+  }, [activeTileCategory, tileSearch, role])
+
+  // Available tabs for Latest Happenings
+  const availableHappeningsTabs = useMemo(() => {
+    const tabs: { id: 'all' | 'sales' | 'finance' | 'inventory'; label: string }[] = [{ id: 'all', label: 'All Happenings' }]
+    if (canAccessSection(role, 'sales')) {
+      tabs.push({ id: 'sales', label: 'Orders & Sales' })
+    }
+    if (canAccessSection(role, 'accounts')) {
+      tabs.push({ id: 'finance', label: 'Finance & Vouchers' })
+    }
+    if (canAccessSection(role, 'inventory')) {
+      tabs.push({ id: 'inventory', label: 'Inventory & Items' })
+    }
+    return tabs
+  }, [role])
+
+  const activeHappeningsFilter = availableHappeningsTabs.some((t) => t.id === happeningsFilter) ? happeningsFilter : 'all'
 
   // Filter Latest Happenings based on Tab & Search
   const recentActivities: Activity[] = summary?.recent_activities || []
   const filteredHappenings = useMemo(() => {
     return recentActivities.filter((act) => {
-      let matchesType = true
       const lowerType = act.type.toLowerCase()
-      if (happeningsFilter === 'sales') {
-        matchesType = lowerType.includes('sale') || lowerType.includes('order') || lowerType.includes('quotation') || lowerType.includes('customer')
-      } else if (happeningsFilter === 'finance') {
-        matchesType = lowerType.includes('receipt') || lowerType.includes('voucher') || lowerType.includes('invoice') || lowerType.includes('payment') || lowerType.includes('account')
-      } else if (happeningsFilter === 'inventory') {
-        matchesType = lowerType.includes('item') || lowerType.includes('stock') || lowerType.includes('receipt') || lowerType.includes('transfer') || lowerType.includes('warehouse')
+      const isSalesEvent = lowerType.includes('sale') || lowerType.includes('order') || lowerType.includes('quotation') || lowerType.includes('customer')
+      const isFinanceEvent = lowerType.includes('receipt') || lowerType.includes('voucher') || lowerType.includes('invoice') || lowerType.includes('payment') || lowerType.includes('account')
+      const isInventoryEvent = lowerType.includes('item') || lowerType.includes('stock') || lowerType.includes('receipt') || lowerType.includes('transfer') || lowerType.includes('warehouse')
+
+      // If user lacks permission for the module, hide that event unless user has audit.read or tenant_admin
+      if (!hasPermission('audit.read') && role !== 'tenant_admin') {
+        if (isFinanceEvent && !canAccessSection(role, 'accounts')) return false
+        if (isSalesEvent && !canAccessSection(role, 'sales')) return false
+        if (isInventoryEvent && !canAccessSection(role, 'inventory')) return false
+      }
+
+      let matchesType = true
+      if (activeHappeningsFilter === 'sales') {
+        matchesType = isSalesEvent
+      } else if (activeHappeningsFilter === 'finance') {
+        matchesType = isFinanceEvent
+      } else if (activeHappeningsFilter === 'inventory') {
+        matchesType = isInventoryEvent
       }
 
       const query = happeningsSearch.toLowerCase().trim()
@@ -445,7 +503,7 @@ export default function TenantDashboardPage() {
 
       return matchesType && matchesSearch
     })
-  }, [recentActivities, happeningsFilter, happeningsSearch])
+  }, [recentActivities, activeHappeningsFilter, happeningsSearch, role])
 
   if (isLoading) {
     return (
@@ -472,6 +530,22 @@ export default function TenantDashboardPage() {
   const revenueVal = Number(financials?.revenue || 0)
   const expensesVal = Number(financials?.expenses || 0)
   const profitMarginPercent = revenueVal > 0 ? Math.round(((revenueVal - expensesVal) / revenueVal) * 100) : 0
+
+  const canCreateVoucher = canWrite(role, 'accounts') && (hasPermission('accounts.jv.create') || hasPermission('accounts.write') || role === 'tenant_admin')
+  const canCreateSaleOrder = canWrite(role, 'sales') && (hasPermission('orders.write') || hasPermission('sales.write') || role === 'tenant_admin')
+  const canCreateItem = canWrite(role, 'inventory') && (hasPermission('inventory.items.manage') || hasPermission('inventory.write') || role === 'tenant_admin')
+  const canCreateCustomer = canWrite(role, 'sales') && (hasPermission('sales.customers.manage') || hasPermission('sales.write') || role === 'tenant_admin')
+  const hasAnyQuickAction = canCreateVoucher || canCreateSaleOrder || canCreateItem || canCreateCustomer
+
+  const showRevenueCard = canAccessSection(role, 'accounts') && !!financials
+  const showProfitCard = canAccessSection(role, 'accounts') && !!financials
+  const showSalesCard = canAccessSection(role, 'sales') && !!sales
+  const showInventoryCard = canAccessSection(role, 'inventory') && !!inventory
+  const showAnyKpi = showRevenueCard || showProfitCard || showSalesCard || showInventoryCard
+
+  const showFinancialSummary = canAccessSection(role, 'accounts') && !!financials
+  const showCompaniesWidget = canAccessSection(role, 'settings') || role === 'tenant_admin'
+  const hasRightSidebar = showFinancialSummary || showCompaniesWidget
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
@@ -511,208 +585,230 @@ export default function TenantDashboardPage() {
             <RefreshCw className={`h-3.5 w-3.5 text-muted-foreground ${isFetching ? 'animate-spin text-primary' : ''}`} />
             <span>Refresh</span>
           </Button>
-          <Link to="/settings/data-migration">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 border-border/70 hover:bg-accent text-xs font-medium h-9"
-            >
-              <UploadCloud className="h-4 w-4 text-primary" />
-              <span>Bulk Upload Data</span>
-            </Button>
-          </Link>
+          {canAccessSection(role, 'settings') && (
+            <Link to="/settings/data-migration">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-border/70 hover:bg-accent text-xs font-medium h-9"
+              >
+                <UploadCloud className="h-4 w-4 text-primary" />
+                <span>Bulk Upload Data</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* ── KPI Overview Cards (Antigravity Floating Stat Tiles) ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Monthly Revenue */}
-        <Link to="/accounts/reports/profit-and-loss" className="block group stagger-1">
-          <Card className="hover:border-emerald-500/50 hover:shadow-[0_20px_45px_-10px_rgba(16,185,129,0.2)] transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Monthly Revenue
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500/20 shadow-xs transition-all duration-300">
-                <TrendingUp className="h-4 w-4" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-                {formatCurrency(financials?.revenue)}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Total revenue this month
-                </span>
-                <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+      {showAnyKpi && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Monthly Revenue */}
+          {showRevenueCard && (
+            <Link to="/accounts/reports/profit-and-loss" className="block group stagger-1">
+              <Card className="hover:border-emerald-500/50 hover:shadow-[0_20px_45px_-10px_rgba(16,185,129,0.2)] transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Monthly Revenue
+                  </CardTitle>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500/20 shadow-xs transition-all duration-300">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
+                    {formatCurrency(financials?.revenue)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Total revenue this month
+                    </span>
+                    <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
-        {/* Monthly Profit */}
-        <Link to="/accounts/reports/profit-and-loss" className="block group stagger-2">
-          <Card className="hover:border-blue-500/50 hover:shadow-[0_20px_45px_-10px_rgba(59,130,246,0.2)] transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Monthly Profit
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 group-hover:bg-blue-500/20 shadow-xs transition-all duration-300">
-                <DollarSign className="h-4 w-4" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-                {formatCurrency(financials?.net_profit)}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Net profit after expenses
-                </span>
-                <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+          {/* Monthly Profit */}
+          {showProfitCard && (
+            <Link to="/accounts/reports/profit-and-loss" className="block group stagger-2">
+              <Card className="hover:border-blue-500/50 hover:shadow-[0_20px_45px_-10px_rgba(59,130,246,0.2)] transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Monthly Profit
+                  </CardTitle>
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 group-hover:bg-blue-500/20 shadow-xs transition-all duration-300">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
+                    {formatCurrency(financials?.net_profit)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Net profit after expenses
+                    </span>
+                    <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
-        {/* Sales Orders */}
-        <Link to="/sales/orders" className="block group stagger-3">
-          <Card className="hover:border-amber-500/50 hover:shadow-[0_20px_45px_-10px_rgba(245,158,11,0.2)] transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Sales Orders
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 group-hover:bg-amber-500/20 shadow-xs transition-all duration-300">
-                <ShoppingCart className="h-4 w-4" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-                {sales?.total_orders ?? 0}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> New orders this month
-                </span>
-                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                  {sales?.pending_quotations ? `${sales.pending_quotations} quotes pending` : 'Active'}
-                </span>
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+          {/* Sales Orders */}
+          {showSalesCard && (
+            <Link to="/sales/orders" className="block group stagger-3">
+              <Card className="hover:border-amber-500/50 hover:shadow-[0_20px_45px_-10px_rgba(245,158,11,0.2)] transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Sales Orders
+                  </CardTitle>
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 group-hover:bg-amber-500/20 shadow-xs transition-all duration-300">
+                    <ShoppingCart className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
+                    {sales?.total_orders ?? 0}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> New orders this month
+                    </span>
+                    <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      {sales?.pending_quotations ? `${sales.pending_quotations} quotes pending` : 'Active'}
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
-        {/* Low Stock Items */}
-        <Link to="/inventory/reports" className="block group stagger-4">
-          <Card className="hover:border-rose-500/50 hover:shadow-[0_20px_45px_-10px_rgba(244,63,94,0.2)] transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Low Stock Items
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:scale-110 group-hover:bg-rose-500/20 shadow-xs transition-all duration-300">
-                <AlertCircle className="h-4 w-4" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-                {inventory?.low_stock_items ?? 0}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500" /> Items below reorder level
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {inventory?.total_items ? `of ${inventory.total_items} items` : ''}
-                </span>
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+          {/* Low Stock Items */}
+          {showInventoryCard && (
+            <Link to="/inventory/reports" className="block group stagger-4">
+              <Card className="hover:border-rose-500/50 hover:shadow-[0_20px_45px_-10px_rgba(244,63,94,0.2)] transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Low Stock Items
+                  </CardTitle>
+                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:scale-110 group-hover:bg-rose-500/20 shadow-xs transition-all duration-300">
+                    <AlertCircle className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
+                    {inventory?.low_stock_items ?? 0}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500" /> Items below reorder level
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {inventory?.total_items ? `of ${inventory.total_items} items` : ''}
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* ── High-Speed Quick Actions Row ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-primary/10 text-primary">
-              <Plus className="h-4 w-4" />
+      {hasAnyQuickAction && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded-md bg-primary/10 text-primary">
+                <Plus className="h-4 w-4" />
+              </div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Quick Actions
+              </h2>
             </div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Quick Actions
-            </h2>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Direct creation shortcuts
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground hidden sm:inline">
-            Direct creation shortcuts
-          </span>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {canCreateVoucher && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
+                asChild
+              >
+                <Link to="/accounts/journal-vouchers/new">
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-xs sm:text-sm text-foreground">New Voucher</div>
+                    <div className="text-[11px] text-muted-foreground">Create a journal entry</div>
+                  </div>
+                </Link>
+              </Button>
+            )}
+
+            {canCreateSaleOrder && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
+                asChild
+              >
+                <Link to="/sales/orders/new">
+                  <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <ShoppingCart className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-xs sm:text-sm text-foreground">New Sale Order</div>
+                    <div className="text-[11px] text-muted-foreground">Process a customer order</div>
+                  </div>
+                </Link>
+              </Button>
+            )}
+
+            {canCreateItem && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
+                asChild
+              >
+                <Link to="/inventory/items/new">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-xs sm:text-sm text-foreground">Add Item</div>
+                    <div className="text-[11px] text-muted-foreground">Register new product</div>
+                  </div>
+                </Link>
+              </Button>
+            )}
+
+            {canCreateCustomer && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
+                asChild
+              >
+                <Link to="/sales/customers/new">
+                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-xs sm:text-sm text-foreground">New Customer</div>
+                    <div className="text-[11px] text-muted-foreground">Grow your client base</div>
+                  </div>
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Button
-            variant="outline"
-            className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
-            asChild
-          >
-            <Link to="/accounts/journal-vouchers/new">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                <FileText className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="font-semibold text-xs sm:text-sm text-foreground">New Voucher</div>
-                <div className="text-[11px] text-muted-foreground">Create a journal entry</div>
-              </div>
-            </Link>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
-            asChild
-          >
-            <Link to="/sales/orders/new">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                <ShoppingCart className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="font-semibold text-xs sm:text-sm text-foreground">New Sale Order</div>
-                <div className="text-[11px] text-muted-foreground">Process a customer order</div>
-              </div>
-            </Link>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
-            asChild
-          >
-            <Link to="/inventory/items/new">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                <Package className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="font-semibold text-xs sm:text-sm text-foreground">Add Item</div>
-                <div className="text-[11px] text-muted-foreground">Register new product</div>
-              </div>
-            </Link>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto p-4 flex-col gap-2 items-start rounded-xl border-border/70 hover:border-primary/40 hover:bg-accent/50 text-left transition-all duration-150 group"
-            asChild
-          >
-            <Link to="/sales/customers/new">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                <TrendingUp className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="font-semibold text-xs sm:text-sm text-foreground">New Customer</div>
-                <div className="text-[11px] text-muted-foreground">Grow your client base</div>
-              </div>
-            </Link>
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* ── Tenant Quick Access Tiles (Comprehensive Domain Launchpad) ── */}
       <div className="space-y-4">
@@ -745,20 +841,13 @@ export default function TenantDashboardPage() {
 
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: 'all', label: 'All Modules' },
-            { id: 'accounts', label: 'Finance & Accounts' },
-            { id: 'sales', label: 'Sales & Orders' },
-            { id: 'inventory', label: 'Inventory & Stock' },
-            { id: 'projects', label: 'Projects' },
-            { id: 'settings', label: 'Settings & Admin' },
-          ].map((cat) => (
+          {availableCategories.map((cat) => (
             <button
               key={cat.id}
               type="button"
               onClick={() => setTileCategory(cat.id as TileCategory)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
-                tileCategory === cat.id
+                activeTileCategory === cat.id
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
@@ -782,7 +871,7 @@ export default function TenantDashboardPage() {
                     <div className={`p-2.5 rounded-xl ${tile.colorScheme.bg} ${tile.colorScheme.text} group-hover:scale-105 transition-transform`}>
                       <IconComponent className="h-5 w-5" />
                     </div>
-                    {tile.actionTo && (
+                    {tile.actionTo && canWrite(role, tile.category) && (
                       <Link
                         to={tile.actionTo}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-muted/80 hover:bg-primary hover:text-primary-foreground text-muted-foreground transition-colors shrink-0"
@@ -846,7 +935,7 @@ export default function TenantDashboardPage() {
       {/* ── Main Dual Section: Latest Happenings & Tenant Overview ── */}
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         {/* Latest Happenings on Tenant (Main Stream) */}
-        <Card className="lg:col-span-8 flex flex-col">
+        <Card className={`${hasRightSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex flex-col`}>
           <CardHeader className="pb-3 border-b border-border/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -864,28 +953,25 @@ export default function TenantDashboardPage() {
                 </CardDescription>
               </div>
 
-              <Button variant="ghost" size="sm" className="h-8 text-xs text-primary hover:text-primary font-medium" asChild>
-                <Link to="/activities" className="flex items-center gap-1.5">
-                  View Full Audit Trail <ArrowRight className="h-3 w-3" />
-                </Link>
-              </Button>
+              {(hasPermission('audit.read') || role === 'tenant_admin') && (
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-primary hover:text-primary font-medium" asChild>
+                  <Link to="/activities" className="flex items-center gap-1.5">
+                    View Full Audit Trail <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
             </div>
 
             {/* Filter and Search within Happenings */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3">
               <div className="flex items-center gap-1 flex-wrap">
-                {[
-                  { id: 'all', label: 'All Happenings' },
-                  { id: 'sales', label: 'Orders & Sales' },
-                  { id: 'finance', label: 'Finance & Vouchers' },
-                  { id: 'inventory', label: 'Inventory & Items' },
-                ].map((tab) => (
+                {availableHappeningsTabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setHappeningsFilter(tab.id as any)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      happeningsFilter === tab.id
+                      activeHappeningsFilter === tab.id
                         ? 'bg-primary/10 text-primary font-semibold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
@@ -1009,125 +1095,135 @@ export default function TenantDashboardPage() {
         </Card>
 
         {/* Right Side: Financial Performance & Multi-Company Directory */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Financial Summary Widget */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Financial Summary</CardTitle>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-                  {profitMarginPercent}% Margin
-                </span>
-              </div>
-              <CardDescription>Revenue vs. operating costs this month.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="font-medium text-foreground">Revenue</span>
-                    <span className="font-semibold text-foreground tabular-nums">
-                      {formatCurrency(financials?.revenue)}
-                    </span>
-                  </div>
-                  <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                      style={{ width: financials?.revenue ? '100%' : '0%' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="font-medium text-foreground">Expenses</span>
-                    <span className="font-semibold text-foreground tabular-nums">
-                      {formatCurrency(financials?.expenses)}
-                    </span>
-                  </div>
-                  <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-rose-500 rounded-full transition-all duration-700"
-                      style={{
-                        width: financials?.revenue
-                          ? `${Math.min((financials.expenses / financials.revenue) * 100, 100)}%`
-                          : '0%',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-border/70">
+        {hasRightSidebar && (
+          <div className="lg:col-span-4 space-y-6">
+            {/* Financial Summary Widget */}
+            {showFinancialSummary && (
+              <Card>
+                <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-semibold text-foreground">Net Profit</span>
-                    <span
-                      className={`text-base sm:text-lg font-bold tabular-nums ${
-                        financials?.net_profit && financials.net_profit >= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-rose-600 dark:text-rose-400'
-                      }`}
-                    >
-                      {formatCurrency(financials?.net_profit)}
+                    <CardTitle className="text-base">Financial Summary</CardTitle>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
+                      {profitMarginPercent}% Margin
                     </span>
                   </div>
-                </div>
-
-                <Button variant="outline" size="sm" className="w-full text-xs font-medium" asChild>
-                  <Link to="/accounts/reports/profit-and-loss" className="flex items-center justify-center gap-1.5">
-                    View Complete P&L Statement <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Companies Widget */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <div>
-                <CardTitle className="text-base">Your Companies</CardTitle>
-                <CardDescription>Multi-entity structure under this tenant.</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-                <Link to="/settings/companies">Manage All</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2.5">
-                {companies.length > 0 ? (
-                  companies.map((company) => (
-                    <div
-                      key={company.id}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border/70 bg-card/60 hover:bg-accent/40 transition-all duration-150 group"
-                    >
-                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                        <Building2 className="h-4 w-4" />
+                  <CardDescription>Revenue vs. operating costs this month.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="font-medium text-foreground">Revenue</span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatCurrency(financials?.revenue)}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-xs truncate text-foreground">{company.name}</h4>
-                        <p className="text-[11px] text-muted-foreground truncate">{company.email || 'No email set'}</p>
-                        {company.registration_number && (
-                          <p className="text-[10px] mt-0.5 text-muted-foreground/80 font-mono">
-                            REG: {company.registration_number}
-                          </p>
-                        )}
+                      <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                          style={{ width: financials?.revenue ? '100%' : '0%' }}
+                        />
                       </div>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
-                  ))
-                ) : (
-                  <div className="py-6 text-center border-2 border-dashed border-border/60 rounded-xl">
-                    <Building2 className="h-6 w-6 text-muted-foreground mx-auto mb-2 opacity-50" />
-                    <p className="text-xs text-muted-foreground">No companies found.</p>
-                    <Button variant="link" size="sm" className="text-xs mt-1" asChild>
-                      <Link to="/settings/companies">Create your first company</Link>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="font-medium text-foreground">Expenses</span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatCurrency(financials?.expenses)}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                          style={{
+                            width: financials?.revenue
+                              ? `${Math.min((financials.expenses / financials.revenue) * 100, 100)}%`
+                              : '0%',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-border/70">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs sm:text-sm font-semibold text-foreground">Net Profit</span>
+                        <span
+                          className={`text-base sm:text-lg font-bold tabular-nums ${
+                            financials?.net_profit && financials.net_profit >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          {formatCurrency(financials?.net_profit)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button variant="outline" size="sm" className="w-full text-xs font-medium" asChild>
+                      <Link to="/accounts/reports/profit-and-loss" className="flex items-center justify-center gap-1.5">
+                        View Complete P&L Statement <ChevronRight className="h-3 w-3" />
+                      </Link>
                     </Button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Companies Widget */}
+            {showCompaniesWidget && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <div>
+                    <CardTitle className="text-base">Your Companies</CardTitle>
+                    <CardDescription>Multi-entity structure under this tenant.</CardDescription>
+                  </div>
+                  {canAccessSection(role, 'settings') && (
+                    <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+                      <Link to="/settings/companies">Manage All</Link>
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2.5">
+                    {companies.length > 0 ? (
+                      companies.map((company) => (
+                        <div
+                          key={company.id}
+                          className="flex items-center gap-3 p-3 rounded-xl border border-border/70 bg-card/60 hover:bg-accent/40 transition-all duration-150 group"
+                        >
+                          <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                            <Building2 className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-xs truncate text-foreground">{company.name}</h4>
+                            <p className="text-[11px] text-muted-foreground truncate">{company.email || 'No email set'}</p>
+                            {company.registration_number && (
+                              <p className="text-[10px] mt-0.5 text-muted-foreground/80 font-mono">
+                                REG: {company.registration_number}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-6 text-center border-2 border-dashed border-border/60 rounded-xl">
+                        <Building2 className="h-6 w-6 text-muted-foreground mx-auto mb-2 opacity-50" />
+                        <p className="text-xs text-muted-foreground">No companies found.</p>
+                        {canAccessSection(role, 'settings') && (
+                          <Button variant="link" size="sm" className="text-xs mt-1" asChild>
+                            <Link to="/settings/companies">Create your first company</Link>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
