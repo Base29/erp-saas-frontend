@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Eye, Puzzle, MoreHorizontal, Ban, CheckCircle2, Loader2 } from 'lucide-react'
+import { Plus, Eye, Puzzle, MoreHorizontal, Ban, CheckCircle2, Loader2, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { fetchTenants, suspendTenant, reactivateTenant, type Tenant } from '@/api/platform'
 import { Button } from '@/components/ui/button'
@@ -145,6 +145,10 @@ export default function TenantsPage() {
                 <DropdownMenuItem onClick={() => navigate(`/platform/tenants/${tenant.id}`)}>
                   <Eye className="mr-2 h-4 w-4 text-muted-foreground" />
                   View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/platform/tenants/${tenant.id}?tab=subscription`)}>
+                  <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Subscription
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(`/platform/tenants/${tenant.id}/modules`)}>
                   <Puzzle className="mr-2 h-4 w-4 text-muted-foreground" />

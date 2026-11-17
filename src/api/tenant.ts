@@ -1577,3 +1577,48 @@ export const acceptPublicInvitation = (
     payload
   )
 
+// ── Subscription ─────────────────────────────────────────────────────────────
+export interface TenantSubscriptionInfo {
+  subscription: {
+    status: string
+    tenure: string
+    activated_at: string | null
+    current_period_starts_at: string | null
+    current_period_ends_at: string | null
+    days_remaining: number
+    is_active: boolean
+    is_expired: boolean
+    is_expiring_soon: boolean
+    plan: {
+      code: string
+      name: string
+      description: string | null
+      max_users: number
+      features: string[]
+    }
+  }
+  quota: {
+    active_users: number
+    max_users: number
+    available: number
+    percentage: number
+  }
+  history: Array<{
+    id: string
+    action: string
+    tenure: string
+    period_start: string | null
+    period_end: string | null
+    amount_paid: number
+    currency: string
+    payment_method: string
+    payment_reference: string | null
+    notes: string | null
+    created_at: string
+  }>
+}
+
+export const fetchSubscription = () =>
+  apiClient.get<{ data: TenantSubscriptionInfo }>('/v1/settings/subscription')
+
+

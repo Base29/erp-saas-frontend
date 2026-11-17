@@ -1,12 +1,19 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { createTenant } from '@/api/platform'
+import { createTenant, fetchSubscriptionPlans } from '@/api/platform'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Building2, Shield, User, Globe, Loader2 } from 'lucide-react'
+import { Building2, Shield, User, Globe, Loader2, Sparkles, Calendar } from 'lucide-react'
 
 const schema = z.object({
   name: z.string().min(1, 'Company Name is required'),
@@ -22,7 +29,8 @@ const schema = z.object({
     .string()
     .min(1, 'Subdomain is required')
     .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens'),
-  plan_name: z.string().optional(),
+  plan_code: z.string().default('standard'),
+  tenure: z.enum(['monthly', 'annually']).default('monthly'),
   admin_name: z.string().min(1, 'Admin Name is required'),
   admin_email: z.string().email('Invalid email address'),
   admin_password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -39,6 +47,12 @@ interface CreateTenantDialogProps {
 export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTenantDialogProps) {
   const queryClient = useQueryClient()
   const [serverError, setServerError] = useState<string | null>(null)
+
+  const { data: plansData } = useQuery({
+    queryKey: ['platform', 'subscription-plans'],
+    queryFn: () => fetchSubscriptionPlans().then((res) => res.data.data),
+    staleTime: 60000,
+  })
 
   const mutation = useMutation({
     mutationFn: createTenant,
@@ -60,14 +74,34 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      plan_code: 'standard',
+      tenure: 'monthly',
+    },
+  })
 
   const onSubmit = (values: FormValues) => {
     setServerError(null)
-    mutation.mutate(values)
+    mutation.mutate({
+      ...values,
+      plan_name: values.plan_code,
+    })
   }
+
+  const plans = plansData && plansData.length > 0 ? plansData : [
+    {
+      code: 'standard',
+      name: 'Standard Plan',
+      max_users: 5,
+      price_monthly: 49,
+      price_annually: 490,
+    },
+  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,9 +137,55 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="plan_name" className="text-xs font-semibold">Subscription Plan (optional)</Label>
-              <Input id="plan_name" {...register('plan_name')} placeholder="standard" className="rounded-xl h-9.5 text-xs bg-background/50 border-border/70" />
+            <div className="grid grid-cols-2 gap-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="plan_code" className="text-xs font-semibold flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-primary" /> Subscription Tier
+                </Label>
+                <Controller
+                  name="plan_code"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="plan_code" className="rounded-xl h-9.5 text-xs bg-background/50 border-border/70">
+                        <SelectValue placeholder="Select Plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((p) => (
+                          <SelectItem key={p.code} value={p.code} className="text-xs">
+                            {p.name} ({p.max_users} users)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tenure" className="text-xs font-semibold flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-primary" /> Tenure / Duration
+                </Label>
+                <Controller
+                  name="tenure"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="tenure" className="rounded-xl h-9.5 text-xs bg-background/50 border-border/70">
+                        <SelectValue placeholder="Select Tenure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly" className="text-xs">
+                          Monthly (1 Month)
+                        </SelectItem>
+                        <SelectItem value="annually" className="text-xs">
+                          Annually (1 Year)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
             </div>
           </div>
 

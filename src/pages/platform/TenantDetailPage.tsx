@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TenantSubscriptionTab } from '@/components/platform/TenantSubscriptionTab'
 
 function statusVariant(status: string) {
   switch (status) {
@@ -47,7 +48,11 @@ function stepIcon(status: ProvisioningLog['status']) {
 export default function TenantDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscription'>(() => 
+    searchParams.get('tab') === 'subscription' ? 'subscription' : 'overview'
+  )
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['platform', 'tenants', id],
@@ -163,88 +168,119 @@ export default function TenantDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Status</p>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
-              {tenant.status === 'pending' && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Plan</p>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-semibold text-base mt-1.5">{tenant.plan_name ?? '—'}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Subdomain</p>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-semibold font-mono text-sm mt-1.5 text-foreground">{tenant.subdomain}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Database</p>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-semibold font-mono text-sm mt-1.5 truncate text-foreground" title={tenant.db_name}>
-              {tenant.db_name}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center gap-2 border-b border-border/60 pb-2">
+        <Button
+          variant={activeTab === 'overview' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('overview')}
+          className="rounded-xl text-xs h-8.5"
+        >
+          <Activity className="h-3.5 w-3.5 mr-1.5" />
+          Overview & Logs
+        </Button>
+        <Button
+          variant={activeTab === 'subscription' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('subscription')}
+          className="rounded-xl text-xs h-8.5"
+        >
+          <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+          Subscription Management
+        </Button>
       </div>
 
-      {/* Provisioning Log Timeline */}
-      <Card className="w-full bg-card/85 backdrop-blur-xl border-border/70 shadow-elevated">
-        <CardHeader className="pb-3 border-b border-border/40">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
-            Provisioning Log
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {logsLoading ? (
-            <p className="text-muted-foreground text-sm">Loading…</p>
-          ) : logs?.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No provisioning events</p>
-          ) : (
-            <ol className="relative border-l border-border ml-2 space-y-4">
-              {refinedLogs.map((log) => (
-                <li key={log.id} className="ml-6">
-                  <span className="absolute -left-[11px] flex items-center justify-center w-5 h-5 bg-background rounded-full ring-2 ring-border">
-                    {stepIcon(log.status)}
-                  </span>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{log.step}</p>
-                    <time className="text-xs text-muted-foreground">
-                      {new Date(log.created_at).toLocaleString()}
-                    </time>
-                  </div>
-                  {log.message && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{log.message}</p>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </CardContent>
-      </Card>
+      {activeTab === 'subscription' ? (
+        <TenantSubscriptionTab
+          tenantId={id!}
+          tenantName={tenant.name}
+          tenantStatus={tenant.status}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Status</p>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
+                  {tenant.status === 'pending' && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Plan</p>
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="font-semibold text-base mt-1.5">{tenant.plan_name ?? '—'}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Subdomain</p>
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="font-semibold font-mono text-sm mt-1.5 text-foreground">{tenant.subdomain}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Database</p>
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="font-semibold font-mono text-sm mt-1.5 truncate text-foreground" title={tenant.db_name}>
+                  {tenant.db_name}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Provisioning Log Timeline */}
+          <Card className="w-full bg-card/85 backdrop-blur-xl border-border/70 shadow-elevated">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Provisioning Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {logsLoading ? (
+                <p className="text-muted-foreground text-sm">Loading…</p>
+              ) : logs?.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No provisioning events</p>
+              ) : (
+                <ol className="relative border-l border-border ml-2 space-y-4">
+                  {refinedLogs.map((log) => (
+                    <li key={log.id} className="ml-6">
+                      <span className="absolute -left-[11px] flex items-center justify-center w-5 h-5 bg-background rounded-full ring-2 ring-border">
+                        {stepIcon(log.status)}
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{log.step}</p>
+                        <time className="text-xs text-muted-foreground">
+                          {new Date(log.created_at).toLocaleString()}
+                        </time>
+                      </div>
+                      {log.message && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{log.message}</p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

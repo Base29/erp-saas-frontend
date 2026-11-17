@@ -43,6 +43,8 @@ export interface CreateTenantPayload {
   name: string
   subdomain: string
   plan_name?: string
+  plan_code?: string
+  tenure?: 'monthly' | 'annually'
   admin_name: string
   admin_email: string
   admin_password: string
@@ -133,3 +135,84 @@ export const fetchModuleHistory = (tenantId: string, moduleKey: string) =>
   apiClient.get<{ data: ModuleActivationHistory[] }>(
     `/platform/v1/tenants/${tenantId}/modules/${moduleKey}/history`
   )
+
+// ── Subscriptions ────────────────────────────────────────────────────────────
+export interface SubscriptionPlan {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  price_monthly: number
+  price_annually: number
+  currency: string
+  max_users: number
+  features: string[]
+  limits?: Record<string, any>
+  is_active: boolean
+}
+
+export interface SubscriptionHistoryItem {
+  id: string
+  action: string
+  tenure: string
+  period_start: string | null
+  period_end: string | null
+  amount_paid: number
+  currency: string
+  payment_method: string
+  payment_reference: string | null
+  performed_by_type: string
+  performed_by_id: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface TenantSubscriptionDetails {
+  tenant_id: string
+  tenant_name: string
+  tenant_status: string
+  subscription: {
+    id: string
+    status: 'pending' | 'active' | 'suspended' | 'grace_period' | 'expired' | 'cancelled'
+    tenure: 'monthly' | 'annually'
+    starts_at: string | null
+    activated_at: string | null
+    current_period_starts_at: string | null
+    current_period_ends_at: string | null
+    days_remaining: number
+    is_active: boolean
+    is_expired: boolean
+    is_suspended: boolean
+    plan: SubscriptionPlan
+    notes: string | null
+  } | null
+  usage: {
+    active_users: number
+    max_users: number
+    available: number
+  }
+  history: SubscriptionHistoryItem[]
+}
+
+export const fetchSubscriptionPlans = () =>
+  apiClient.get<{ data: SubscriptionPlan[] }>('/platform/v1/subscription-plans')
+
+export const fetchTenantSubscription = (tenantId: string) =>
+  apiClient.get<{ data: TenantSubscriptionDetails }>(`/platform/v1/tenants/${tenantId}/subscription`)
+
+export interface RenewSubscriptionPayload {
+  tenure: 'monthly' | 'annually' | 'custom'
+  custom_ends_at?: string
+  amount_paid?: number
+  payment_reference?: string
+  notes?: string
+}
+
+export const renewTenantSubscription = (tenantId: string, payload: RenewSubscriptionPayload) =>
+  apiClient.post<{ message: string; subscription: any }>(`/platform/v1/tenants/${tenantId}/subscription/renew`, payload)
+
+export const suspendTenantSubscription = (tenantId: string, reason?: string) =>
+  apiClient.post<{ message: string; subscription: any }>(`/platform/v1/tenants/${tenantId}/subscription/suspend`, { reason })
+
+export const reactivateTenantSubscription = (tenantId: string, notes?: string) =>
+  apiClient.post<{ message: string; subscription: any }>(`/platform/v1/tenants/${tenantId}/subscription/reactivate`, { notes })

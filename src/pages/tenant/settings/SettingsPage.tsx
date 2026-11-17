@@ -15,6 +15,7 @@ import {
   UploadCloud,
   ChevronLeft,
   LayoutGrid,
+  CreditCard,
   LucideIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,7 @@ export const SETTINGS_CATEGORIES: readonly Category[] = [
     tabs: [
       { id: 'companies', label: 'Companies', icon: Building2, description: 'Manage your companies and branches' },
       { id: 'modules', label: 'Active Modules', icon: Blocks, description: 'Enable or disable ERP modules' },
+      { id: 'subscription', label: 'Subscription & Plan', icon: CreditCard, description: 'View current plan tier, seat limits, and renewal dates' },
     ]
   },
   {

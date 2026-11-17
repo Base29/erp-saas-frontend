@@ -182,6 +182,7 @@ const navSections: NavSection[] = [
       { to: '/settings/customer-categories', label: 'Customer Categories', icon: Users },
       { to: '/settings/users', label: 'Users', icon: UserCog },
       { to: '/settings/roles', label: 'Roles & Permissions', icon: ShieldCheck },
+      { to: '/settings/subscription', label: 'Subscription', icon: CreditCard },
       { to: '/settings/data-migration', label: 'Bulk Upload & Migration', icon: UploadCloud },
     ],
     groupLabel: 'Settings',
