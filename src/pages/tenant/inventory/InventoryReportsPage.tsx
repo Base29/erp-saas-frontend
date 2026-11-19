@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatDate } from '@/utils/format'
+import { formatDate, formatQuantity } from '@/utils/format'
 
 // ── Stock Balance ─────────────────────────────────────────────────────────────
 function StockBalanceTab() {
@@ -93,7 +93,7 @@ function StockBalanceTab() {
                   <td className="px-4 py-3">{row.item_code}</td>
                   <td className="px-4 py-3">{row.item_name}</td>
                   <td className="px-4 py-3">{row.warehouse_name}</td>
-                  <td className="px-4 py-3 text-right font-mono">{row.quantity_on_hand}</td>
+                  <td className="px-4 py-3 text-right font-mono">{formatQuantity(row.quantity_on_hand)}</td>
                 </tr>
               ))}
             </tbody>
@@ -186,8 +186,8 @@ function StockLedgerTab() {
                   <td className="px-4 py-3">{formatDate(row.movement_date)}</td>
                   <td className="px-4 py-3">{row.movement_type}</td>
                   <td className="px-4 py-3">{row.source_document_type} #{row.source_document_id}</td>
-                  <td className={`px-4 py-3 text-right font-mono ${row.quantity < 0 ? 'text-destructive' : 'text-green-600'}`}>{row.quantity > 0 ? '+' : ''}{row.quantity}</td>
-                  <td className="px-4 py-3 text-right font-mono">{row.running_balance}</td>
+                  <td className={`px-4 py-3 text-right font-mono ${row.quantity < 0 ? 'text-destructive' : 'text-green-600'}`}>{row.quantity > 0 ? '+' : ''}{formatQuantity(row.quantity)}</td>
+                  <td className="px-4 py-3 text-right font-mono">{formatQuantity(row.running_balance)}</td>
                 </tr>
               ))}
             </tbody>

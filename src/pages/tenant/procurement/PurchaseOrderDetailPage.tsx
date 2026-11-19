@@ -92,7 +92,7 @@ export default function PurchaseOrderDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-6xl mx-auto print:p-0">
+    <div className="space-y-6 p-6 w-full print:p-0">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -183,25 +183,60 @@ export default function PurchaseOrderDetailPage() {
             </>
           )}
 
-          {po.approval_status === 'approved' && po.status !== 'cancelled' && po.status !== 'fully_received' && (
-            <Button
-              size="sm"
-              className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm"
-              onClick={() => setReceiveModalOpen(true)}
-            >
-              <PackageCheck className="h-4 w-4" /> Receive Goods
-            </Button>
+          {po.approval_status === 'approved' && po.status !== 'cancelled' && (
+            <>
+              {po.status === 'fully_received' ||
+              (po.lines && po.lines.length > 0 && po.lines.every((l) => (Number(l.received_quantity) || 0) >= (Number(l.quantity) || 0))) ? (
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1.5 py-1 px-2.5 text-xs font-medium"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Fully Received
+                </Badge>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm"
+                    onClick={() => setReceiveModalOpen(true)}
+                  >
+                    <PackageCheck className="h-4 w-4" /> Receive Goods
+                  </Button>
+                  {(po.goods_receipts || po.goodsReceipts || []).some((gr: any) => gr.posting_status !== 'posted') && (
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[11px] py-1"
+                    >
+                      GRN Pending Post
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {po.approval_status === 'approved' && po.status !== 'cancelled' && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 gap-1.5 shadow-sm"
-              onClick={() => setBillModalOpen(true)}
-            >
-              <FileText className="h-4 w-4" /> Create Bill
-            </Button>
+            <>
+              {po.lines &&
+              po.lines.length > 0 &&
+              po.lines.every((l) => (Number(l.billed_quantity) || 0) >= (Number(l.quantity) || 0)) ? (
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1.5 py-1 px-2.5 text-xs font-medium"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Fully Billed
+                </Badge>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 gap-1.5 shadow-sm"
+                  onClick={() => setBillModalOpen(true)}
+                >
+                  <FileText className="h-4 w-4" /> Create Bill
+                </Button>
+              )}
+            </>
           )}
 
           {po.approval_status === 'approved' && po.posting_status === 'unposted' && (
@@ -215,16 +250,20 @@ export default function PurchaseOrderDetailPage() {
             </Button>
           )}
 
-          {po.status !== 'cancelled' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground hover:text-destructive"
-              onClick={() => handleAction('cancel')}
-            >
-              Cancel
-            </Button>
-          )}
+          {po.status !== 'cancelled' &&
+            po.posting_status !== 'posted' &&
+            !po.lines?.some((l) => (Number(l.received_quantity) || 0) > 0 || (Number(l.billed_quantity) || 0) > 0) &&
+            (po.goods_receipts || po.goodsReceipts || []).length === 0 &&
+            (po.purchase_invoices || po.purchaseInvoices || []).length === 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => handleAction('cancel')}
+              >
+                Cancel
+              </Button>
+            )}
         </div>
       </div>
 
@@ -300,11 +339,15 @@ export default function PurchaseOrderDetailPage() {
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Goods Receipts:</span>
-              <span className="font-medium text-foreground">{po.goodsReceipts?.length || 0} GRN(s)</span>
+              <span className="font-medium text-foreground">
+                {(po.goods_receipts || po.goodsReceipts || []).length} GRN(s)
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Invoiced Bills:</span>
-              <span className="font-medium text-foreground">{po.purchaseInvoices?.length || 0} Bill(s)</span>
+              <span className="font-medium text-foreground">
+                {(po.purchase_invoices || po.purchaseInvoices || []).length} Bill(s)
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -332,9 +375,9 @@ export default function PurchaseOrderDetailPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {po.lines?.map((line) => {
-                  const ordQty = Number(line.quantity) || 0
-                  const recQty = Number(line.received_quantity) || 0
-                  const billedQty = Number(line.billed_quantity) || 0
+                  const ordQty = Math.round(Number(line.quantity)) || 0
+                  const recQty = Math.round(Number(line.received_quantity)) || 0
+                  const billedQty = Math.round(Number(line.billed_quantity)) || 0
                   return (
                     <tr key={line.id} className="hover:bg-muted/30">
                       <td className="p-3">

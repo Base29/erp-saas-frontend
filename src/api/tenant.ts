@@ -590,7 +590,20 @@ export const fetchNextItemCode = (itemType: string = 'stock') =>
 export const fetchItem = (id: string) =>
   apiClient.get<{ data: Item }>(`/v1/inventory/items/${id}`)
 
-export const createItem = (payload: Omit<Item, 'id' | 'category' | 'base_uom' | 'variants' | 'bundle_components'> & { variants?: ItemVariant[]; bundle_components?: ItemBundleComponent[] }) =>
+export const createItem = (payload: {
+  item_code?: string
+  item_name: string
+  item_type: 'stock' | 'service' | 'bundle'
+  base_unit_of_measure_id: string
+  category_id?: string | null
+  reorder_level?: number
+  is_batch_tracked?: boolean
+  is_serial_tracked?: boolean
+  is_expiry_tracked?: boolean
+  is_active?: boolean
+  variants?: ItemVariant[]
+  bundle_components?: ItemBundleComponent[]
+}) =>
   apiClient.post<{ data: Item }>('/v1/inventory/items', payload)
 
 export const updateItem = (id: string, payload: Partial<Parameters<typeof createItem>[0]>) =>

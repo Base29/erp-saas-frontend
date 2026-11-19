@@ -27,7 +27,7 @@ const variantSchema = z.object({
 
 const bundleSchema = z.object({
   component_item_id: z.string().min(1, 'Required'),
-  component_quantity: z.coerce.number().positive('Must be > 0'),
+  component_quantity: z.coerce.number().int('Must be a whole number').positive('Must be > 0'),
 })
 
 const schema = z.object({
@@ -36,7 +36,7 @@ const schema = z.object({
   item_type: z.enum(['stock', 'service', 'bundle']),
   category_id: z.string().nullable().default(null),
   base_unit_of_measure_id: z.string().min(1, 'Required'),
-  reorder_level: z.coerce.number().min(0).default(0),
+  reorder_level: z.coerce.number().int('Must be a whole number').min(0).default(0),
   is_batch_tracked: z.boolean().default(false),
   is_serial_tracked: z.boolean().default(false),
   is_expiry_tracked: z.boolean().default(false),
@@ -344,7 +344,7 @@ export default function ItemsPage() {
               </div>
               <div className="space-y-1">
                 <Label>Reorder Level</Label>
-                <Input type="number" step="0.0001" {...register('reorder_level')} />
+                <Input type="number" step="1" min="0" {...register('reorder_level')} />
               </div>
             </div>
 
@@ -403,7 +403,7 @@ export default function ItemsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input type="number" step="0.0001" placeholder="Qty" {...register(`bundle_components.${i}.component_quantity`)} className="w-24" />
+                    <Input type="number" step="1" min="1" placeholder="Qty" {...register(`bundle_components.${i}.component_quantity`)} className="w-24" />
                     <Button type="button" size="sm" variant="ghost" onClick={() => removeBundle(i)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                   </div>
                 ))}

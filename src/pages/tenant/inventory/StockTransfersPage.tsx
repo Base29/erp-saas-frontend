@@ -20,12 +20,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
-import { formatDate } from '@/utils/format'
+import { formatDate, formatQuantity } from '@/utils/format'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Required'),
-  quantity: z.coerce.number().positive('Must be > 0'),
+  quantity: z.coerce.number().int('Must be a whole number').positive('Must be > 0'),
   batch_id: z.string().nullable().default(null),
   serial_number_id: z.string().nullable().default(null),
 })
@@ -244,7 +244,7 @@ export default function StockTransfersPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input type="number" step="0.0001" placeholder="Qty" {...register(`lines.${i}.quantity`)} />
+                  <Input type="number" step="1" min="1" placeholder="Qty" {...register(`lines.${i}.quantity`)} />
                   <Input placeholder="Batch" {...register(`lines.${i}.batch_id`)} />
                   <Input placeholder="Serial" {...register(`lines.${i}.serial_number_id`)} />
                   <Button type="button" size="sm" variant="ghost" onClick={() => remove(i)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
@@ -285,7 +285,7 @@ export default function StockTransfersPage() {
                   {detail.lines?.map((l, i) => (
                     <tr key={i} className="border-t">
                       <td className="px-3 py-2">{l.item?.item_name ?? `Item #${l.item_id}`}</td>
-                      <td className="px-3 py-2 text-right">{l.quantity}</td>
+                      <td className="px-3 py-2 text-right font-mono">{formatQuantity(l.quantity)}</td>
                     </tr>
                   ))}
                 </tbody>

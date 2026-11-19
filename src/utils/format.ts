@@ -52,3 +52,14 @@ export function formatCurrency(amount: number | string | null | undefined): stri
     maximumFractionDigits: 2,
   }).format(val).replace('PKR', 'PKR ')
 }
+
+/**
+ * Formats a quantity as an integer.
+ * Example: 6.0010 -> "6", "100.00" -> "100"
+ */
+export function formatQuantity(qty: number | string | null | undefined): string {
+  if (qty === null || qty === undefined || qty === '') return '0'
+  const val = typeof qty === 'string' ? parseFloat(qty) : qty
+  if (isNaN(val)) return '0'
+  return Math.round(val).toLocaleString()
+}

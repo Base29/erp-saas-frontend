@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { PackageCheck, AlertCircle } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { PackageCheck, AlertCircle, Plus } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { fetchWarehouses, createGoodsReceipt, type Warehouse } from '@/api/tenant'
+import {
+  fetchWarehouses,
+  fetchItems,
+  fetchUoms,
+  createItem,
+  createGoodsReceipt,
+  type Warehouse,
+  type Item,
+} from '@/api/tenant'
 import { type PurchaseOrder } from '@/api/procurement'
+import { formatQuantity } from '@/utils/format'
 
 interface ReceiveGoodsModalProps {
   open: boolean
@@ -42,6 +51,7 @@ interface ReceiveLine {
   qc_notes: string
   unit_cost: number
   batch_number: string
+  is_originally_linked: boolean
 }
 
 export default function ReceiveGoodsModal({
@@ -50,6 +60,7 @@ export default function ReceiveGoodsModal({
   onSuccess,
   order,
 }: ReceiveGoodsModalProps) {
+  const qc = useQueryClient()
   const [warehouseId, setWarehouseId] = useState('')
   const [receiptDate, setReceiptDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [reference, setReference] = useState('')
@@ -64,25 +75,37 @@ export default function ReceiveGoodsModal({
 
   const warehouses: Warehouse[] = warehousesData ?? []
 
+  const { data: itemsData } = useQuery({
+    queryKey: ['items-all'],
+    queryFn: () => fetchItems({ per_page: 500 }).then((r) => r.data.data),
+  })
+
+  const items: Item[] = itemsData ?? []
+
   useEffect(() => {
     if (warehouses.length > 0 && !warehouseId) {
       setWarehouseId(warehouses[0].id)
     }
   }, [warehouses, warehouseId])
 
+  // Initialize lines when modal opens for a PO
   useEffect(() => {
-    if (order && order.lines) {
+    if (open && order && order.lines) {
       setReference(`Delivery against PO #${order.po_number}`)
       const itemsToReceive: ReceiveLine[] = order.lines
         .map((l) => {
-          const ord = Number(l.quantity) || 0
-          const rec = Number(l.received_quantity) || 0
+          const ord = Math.round(Number(l.quantity)) || 0
+          const rec = Math.round(Number(l.received_quantity)) || 0
           const rem = Math.max(0, ord - rec)
+          const itemName = l.item?.item_name || l.item_description || 'Item'
+          const origItemId = l.item_id || ''
+          const origItemCode = l.item?.item_code || ''
+
           return {
             purchase_order_line_id: l.id,
-            item_id: l.item_id || '',
-            item_name: l.item?.item_name || l.item_description,
-            item_code: l.item?.item_code || '',
+            item_id: origItemId,
+            item_name: itemName,
+            item_code: origItemCode,
             ordered_qty: ord,
             already_received_qty: rec,
             receive_qty: rem,
@@ -91,26 +114,85 @@ export default function ReceiveGoodsModal({
             qc_notes: '',
             unit_cost: Number(l.unit_price) || 0,
             batch_number: '',
+            is_originally_linked: Boolean(origItemId),
           }
         })
-        .filter((l) => l.item_id && l.receive_qty > 0)
+        .filter((l) => l.receive_qty > 0)
 
       setLines(itemsToReceive)
+      setErrorMsg('')
     }
-    setErrorMsg('')
-  }, [order, open])
+  }, [order?.id, open])
 
-  const handleLineChange = (index: number, field: keyof ReceiveLine, value: any) => {
-    const updated = [...lines]
-    updated[index] = { ...updated[index], [field]: value }
-
-    if (field === 'receive_qty' || field === 'rejected_qty') {
-      const rec = Number(updated[index].receive_qty) || 0
-      const rej = Number(updated[index].rejected_qty) || 0
-      updated[index].accepted_qty = Math.max(0, rec - rej)
+  // Try auto-matching unlinked lines when items catalog becomes available
+  useEffect(() => {
+    if (items.length > 0) {
+      setLines((prev) =>
+        prev.map((line) => {
+          if (!line.item_id) {
+            const found = items.find(
+              (it) =>
+                it.item_name.trim().toLowerCase() === line.item_name.trim().toLowerCase() ||
+                it.item_code.trim().toLowerCase() === line.item_name.trim().toLowerCase()
+            )
+            if (found) {
+              return { ...line, item_id: found.id, item_code: found.item_code }
+            }
+          }
+          return line
+        })
+      )
     }
+  }, [items])
 
-    setLines(updated)
+  const updateLine = (index: number, patch: Partial<ReceiveLine>) => {
+    setLines((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], ...patch }
+
+      if ('receive_qty' in patch || 'rejected_qty' in patch) {
+        const rec = Number(next[index].receive_qty) || 0
+        const rej = Number(next[index].rejected_qty) || 0
+        next[index].accepted_qty = Math.max(0, rec - rej)
+      }
+
+      return next
+    })
+  }
+
+  const handleQuickCreateItem = async (lineIdx: number, itemName: string) => {
+    try {
+      setIsSubmitting(true)
+      setErrorMsg('')
+      const uomRes = await fetchUoms({ per_page: 5 })
+      const uoms = uomRes.data.data ?? uomRes.data ?? []
+      const baseUomId = uoms[0]?.id
+
+      if (!baseUomId) {
+        setErrorMsg('Please configure at least one Unit of Measure in Inventory before creating items.')
+        return
+      }
+
+      const res = await createItem({
+        item_name: itemName,
+        item_type: 'stock',
+        base_unit_of_measure_id: baseUomId,
+        is_active: true,
+      })
+
+      const newItem = res.data.data
+      await qc.invalidateQueries({ queryKey: ['items-all'] })
+
+      updateLine(lineIdx, {
+        item_id: newItem.id,
+        item_name: newItem.item_name,
+        item_code: newItem.item_code,
+      })
+    } catch (err: any) {
+      setErrorMsg(err?.response?.data?.message || 'Failed to auto-create inventory item.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,6 +207,12 @@ export default function ReceiveGoodsModal({
     const validLines = lines.filter((l) => l.receive_qty > 0)
     if (validLines.length === 0) {
       setErrorMsg('No items selected for receipt.')
+      return
+    }
+
+    const missingItem = validLines.find((l) => !l.item_id)
+    if (missingItem) {
+      setErrorMsg(`Please select an inventory item for "${missingItem.item_name}" before creating Goods Receipt.`)
       return
     }
 
@@ -222,7 +310,7 @@ export default function ReceiveGoodsModal({
               <table className="w-full text-xs">
                 <thead className="bg-muted text-muted-foreground font-medium border-b">
                   <tr>
-                    <th className="p-2.5 text-left">Item</th>
+                    <th className="p-2.5 text-left">Item / Inventory Mapping</th>
                     <th className="p-2.5 text-right w-20">Ordered</th>
                     <th className="p-2.5 text-right w-20">Prior Rec.</th>
                     <th className="p-2.5 text-right w-24">Receiving</th>
@@ -232,53 +320,120 @@ export default function ReceiveGoodsModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {lines.map((line, idx) => (
-                    <tr key={line.purchase_order_line_id} className="hover:bg-muted/30">
-                      <td className="p-2.5">
-                        <div className="font-medium text-foreground">{line.item_name}</div>
-                        {line.item_code && (
-                          <div className="text-[10px] text-muted-foreground font-mono">{line.item_code}</div>
-                        )}
-                      </td>
-                      <td className="p-2.5 text-right font-medium">{line.ordered_qty}</td>
-                      <td className="p-2.5 text-right text-muted-foreground">{line.already_received_qty}</td>
-                      <td className="p-2.5">
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0"
-                          max={line.ordered_qty - line.already_received_qty}
-                          value={line.receive_qty}
-                          onChange={(e) => handleLineChange(idx, 'receive_qty', parseFloat(e.target.value) || 0)}
-                          className="h-8 text-xs text-right font-mono"
-                          required
-                        />
-                      </td>
-                      <td className="p-2.5 text-right font-mono font-medium text-emerald-600">
-                        {line.accepted_qty}
-                      </td>
-                      <td className="p-2.5">
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0"
-                          max={line.receive_qty}
-                          value={line.rejected_qty}
-                          onChange={(e) => handleLineChange(idx, 'rejected_qty', parseFloat(e.target.value) || 0)}
-                          className="h-8 text-xs text-right font-mono text-rose-600"
-                        />
-                      </td>
-                      <td className="p-2.5">
-                        <Input
-                          value={line.qc_notes}
-                          onChange={(e) => handleLineChange(idx, 'qc_notes', e.target.value)}
-                          placeholder="Damage, defect..."
-                          className="h-8 text-xs"
-                          disabled={line.rejected_qty === 0}
-                        />
+                  {lines.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        <PackageCheck className="h-8 w-8 mx-auto mb-2 text-emerald-500 opacity-80" />
+                        <div className="font-semibold text-foreground text-sm">No pending items to receive</div>
+                        <div className="text-xs mt-1">
+                          All ordered items on Purchase Order #{order.po_number} have already been received.
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    lines.map((line, idx) => (
+                      <tr key={line.purchase_order_line_id} className="hover:bg-muted/30">
+                        <td className="p-2.5 max-w-sm">
+                          <div className="font-medium text-foreground">{line.item_name}</div>
+                          {line.is_originally_linked ? (
+                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-muted border text-foreground font-mono font-semibold">
+                                {line.item_code || 'Linked'}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="mt-1.5 space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Select
+                                  value={line.item_id || '__none__'}
+                                  onValueChange={(val) => {
+                                    const actualVal = val === '__none__' ? '' : val
+                                    const selected = items.find((it) => it.id === actualVal)
+                                    updateLine(idx, {
+                                      item_id: actualVal,
+                                      item_code: selected?.item_code || '',
+                                    })
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 text-xs min-w-[210px] border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
+                                    <SelectValue placeholder="-- Select inventory item --" />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-60 overflow-y-auto">
+                                    <SelectItem value="__none__">-- Select inventory item --</SelectItem>
+                                    {items
+                                      .filter((it) => it.item_type !== 'service')
+                                      .map((it) => (
+                                        <SelectItem key={it.id} value={it.id}>
+                                          {it.item_code} — {it.item_name}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+
+                                {!items.some(
+                                  (it) => it.item_name.trim().toLowerCase() === line.item_name.trim().toLowerCase()
+                                ) && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px] text-primary border-primary/40 hover:bg-primary/10 whitespace-nowrap gap-1"
+                                    onClick={() => handleQuickCreateItem(idx, line.item_name)}
+                                    disabled={isSubmitting}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    Create "{line.item_name}"
+                                  </Button>
+                                )}
+                              </div>
+                              {line.item_id && line.item_code && (
+                                <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                                  ✓ Mapped to SKU: <span className="font-mono font-bold">{line.item_code}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-right font-medium">{formatQuantity(line.ordered_qty)}</td>
+                        <td className="p-2.5 text-right text-muted-foreground">{formatQuantity(line.already_received_qty)}</td>
+                        <td className="p-2.5">
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max={line.ordered_qty - line.already_received_qty}
+                            value={line.receive_qty}
+                            onChange={(e) => updateLine(idx, { receive_qty: parseInt(e.target.value, 10) || 0 })}
+                            className="h-8 text-xs text-right font-mono"
+                            required
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-medium text-emerald-600">
+                          {formatQuantity(line.accepted_qty)}
+                        </td>
+                        <td className="p-2.5">
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max={line.receive_qty}
+                            value={line.rejected_qty}
+                            onChange={(e) => updateLine(idx, { rejected_qty: parseInt(e.target.value, 10) || 0 })}
+                            className="h-8 text-xs text-right font-mono text-rose-600"
+                          />
+                        </td>
+                        <td className="p-2.5">
+                          <Input
+                            value={line.qc_notes}
+                            onChange={(e) => updateLine(idx, { qc_notes: e.target.value })}
+                            placeholder="Damage, defect..."
+                            className="h-8 text-xs"
+                            disabled={line.rejected_qty === 0}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
