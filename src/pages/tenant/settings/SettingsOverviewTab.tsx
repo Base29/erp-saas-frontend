@@ -571,7 +571,7 @@ export default function SettingsOverviewTab() {
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+        <div className="flex items-center flex-wrap gap-1.5 pb-1">
           {CATEGORY_TABS.map((cat) => {
             const count = categoryCounts[cat.key] ?? 0
             const isActive = activeCategory === cat.key

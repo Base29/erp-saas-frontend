@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Outlet, useLocation, Link, NavLink } from 'react-router-dom'
+import { Outlet, useLocation, Link, NavLink, useNavigate } from 'react-router-dom'
 import { 
   Building2, 
   Blocks, 
@@ -14,6 +14,7 @@ import {
   Settings2,
   UploadCloud,
   ChevronLeft,
+  ChevronDown,
   LayoutGrid,
   CreditCard,
   LucideIcon
@@ -69,6 +70,7 @@ export const SETTINGS_CATEGORIES: readonly Category[] = [
 
 export default function SettingsPage() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   const allTabs = useMemo(() => SETTINGS_CATEGORIES.flatMap(c => c.tabs), [])
 
@@ -121,33 +123,68 @@ export default function SettingsPage() {
 
         {/* Sub-navigation bar when viewing a sub-setting */}
         {!isOverview && (
-          <div className="mt-4 pt-3 border-t border-border/50 flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
-            <Link
-              to="/settings"
-              className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" /> Overview
-            </Link>
-            <span className="text-border">|</span>
-            {allTabs.map((t) => {
-              const Icon = t.icon
-              const isActive = t.id === currentTab?.id
-              return (
-                <NavLink
-                  key={t.id}
-                  to={`/settings/${t.id}`}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-                  )}
+          <div className="mt-4 pt-3 border-t border-border/50">
+            {/* Mobile: Compact Select Dropdown to avoid multi-row wrapping clutter */}
+            <div className="sm:hidden">
+              <label htmlFor="mobile-settings-nav" className="sr-only">
+                Select a settings page
+              </label>
+              <div className="relative">
+                <select
+                  id="mobile-settings-nav"
+                  value={currentTab?.id || ''}
+                  onChange={(e) => navigate(e.target.value ? `/settings/${e.target.value}` : '/settings')}
+                  className="w-full appearance-none rounded-xl border border-border/80 bg-background/90 py-2.5 pl-9 pr-9 text-xs font-semibold text-foreground shadow-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 backdrop-blur-md transition-all"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{t.label}</span>
-                </NavLink>
-              )
-            })}
+                  <option value="">Overview (All Settings)</option>
+                  {SETTINGS_CATEGORIES.map((category) => (
+                    <optgroup key={category.title} label={category.title}>
+                      {category.tabs.map((tab) => (
+                        <option key={tab.id} value={tab.id}>
+                          {tab.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                  {TabIcon ? <TabIcon className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground">
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop / Tablet: Clean wrapped pills (no horizontal scroll or scrollbar) */}
+            <div className="hidden sm:flex sm:items-center sm:flex-wrap gap-1.5">
+              <Link
+                to="/settings"
+                className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Overview
+              </Link>
+              <span className="h-4 w-px bg-border/70 mx-0.5" />
+              {allTabs.map((t) => {
+                const Icon = t.icon
+                const isActive = t.id === currentTab?.id
+                return (
+                  <NavLink
+                    key={t.id}
+                    to={`/settings/${t.id}`}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{t.label}</span>
+                  </NavLink>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
