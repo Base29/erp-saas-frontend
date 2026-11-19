@@ -81,7 +81,7 @@ export default function RequisitionModal({
           requisition.lines.map((l) => ({
             item_id: l.item_id || '',
             item_description: l.item_description,
-            quantity: Number(l.quantity),
+            quantity: Math.round(Number(l.quantity)) || 1,
             estimated_unit_cost: Number(l.estimated_unit_cost),
             estimated_total_cost: Number(l.estimated_total_cost),
             unit_of_measure_id: l.unit_of_measure_id || undefined,
@@ -122,7 +122,10 @@ export default function RequisitionModal({
     const newLines = [...lines]
     newLines[index] = { ...newLines[index], [field]: value }
     if (field === 'quantity' || field === 'estimated_unit_cost') {
-      const q = Number(newLines[index].quantity) || 0
+      const q = field === 'quantity' ? (parseInt(String(value), 10) || 0) : (Number(newLines[index].quantity) || 0)
+      if (field === 'quantity') {
+        newLines[index].quantity = q
+      }
       const c = Number(newLines[index].estimated_unit_cost) || 0
       newLines[index].estimated_total_cost = q * c
     }
@@ -168,7 +171,7 @@ export default function RequisitionModal({
         lines: lines.map((l) => ({
           item_id: l.item_id || null,
           item_description: l.item_description,
-          quantity: Number(l.quantity),
+          quantity: parseInt(String(l.quantity), 10) || 1,
           unit_of_measure_id: l.unit_of_measure_id || null,
           estimated_unit_cost: Number(l.estimated_unit_cost),
           estimated_total_cost: Number(l.estimated_total_cost),
@@ -298,11 +301,14 @@ export default function RequisitionModal({
                       <td className="p-2">
                         <Input
                           type="number"
-                          step="any"
-                          min="0.0001"
-                          value={line.quantity}
-                          onChange={(e) => handleLineChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="h-8 text-xs text-right"
+                          step="1"
+                          min="1"
+                          value={line.quantity || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10)
+                            handleLineChange(idx, 'quantity', isNaN(val) ? 0 : val)
+                          }}
+                          className="h-8 text-xs text-right font-mono"
                           required
                         />
                       </td>

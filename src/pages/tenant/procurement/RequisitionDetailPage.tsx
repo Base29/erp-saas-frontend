@@ -11,12 +11,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { useAuthStore } from '@/store/authStore'
+import { canApprove } from '@/utils/permissions'
 import ApprovalActionModal from './components/ApprovalActionModal'
 
 export default function RequisitionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.role)
 
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [actionType, setActionType] = useState<'submit' | 'approve' | 'reject' | 'cancel'>('submit')
@@ -112,7 +115,7 @@ export default function RequisitionDetailPage() {
             </Button>
           )}
 
-          {req.approval_status === 'pending_approval' && (
+          {req.approval_status === 'pending_approval' && canApprove(role) && (
             <>
               <Button
                 variant="outline"
@@ -236,8 +239,8 @@ export default function RequisitionDetailPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {req.lines?.map((line) => {
-                  const reqQty = Number(line.quantity) || 0
-                  const ordQty = Number(line.ordered_quantity) || 0
+                  const reqQty = Math.round(Number(line.quantity)) || 0
+                  const ordQty = Math.round(Number(line.ordered_quantity)) || 0
                   const remaining = Math.max(0, reqQty - ordQty)
                   return (
                     <tr key={line.id} className="hover:bg-muted/30">

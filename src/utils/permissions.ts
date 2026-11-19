@@ -104,6 +104,7 @@ export function hasPermission(permission: string): boolean {
 // Approval actions
 export function canApprove(role: UserRole | null): boolean {
   if (!role) return false
+  if (hasPermission('approvals.act') || hasPermission('procurement.po.approve') || hasPermission('procurement.write')) return true
   return ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager'].includes(role)
 }
 

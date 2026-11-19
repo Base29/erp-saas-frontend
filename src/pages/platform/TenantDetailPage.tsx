@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TenantSubscriptionTab } from '@/components/platform/TenantSubscriptionTab'
 
 function statusVariant(status: string) {
@@ -117,7 +118,65 @@ export default function TenantDetailPage() {
     },
   })
 
-  if (tenantLoading) return <div className="p-8 text-muted-foreground">Loading…</div>
+  if (tenantLoading) {
+    return (
+      <div className="p-8 w-full space-y-6">
+        <Skeleton className="h-8 w-28 rounded-xl mb-2" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-52 rounded-xl" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-32 rounded-md" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24 rounded-xl" />
+            <Skeleton className="h-9 w-24 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 border-b border-border/60 pb-2">
+          <Skeleton className="h-8.5 w-36 rounded-xl" />
+          <Skeleton className="h-8.5 w-44 rounded-xl" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+              <CardContent className="pt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3.5 w-20 rounded" />
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                </div>
+                <Skeleton className="h-6 w-28 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-5 w-44 rounded" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-border/40">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-4 w-36 rounded" />
+                  </div>
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
   if (!tenant) return <div className="p-8 text-muted-foreground">Tenant not found</div>
 
   return (

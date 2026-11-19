@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar,
@@ -10,6 +11,7 @@ import {
   Receipt,
   Mail,
   Loader2,
+  Hourglass,
 } from 'lucide-react'
 import { fetchSubscription } from '@/api/tenant'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +24,54 @@ export default function SubscriptionPage() {
     queryFn: () => fetchSubscription().then((res) => res.data.data),
   })
 
+  const sub = data?.subscription
+  const quota = data?.quota ?? { active_users: 1, max_users: 5, available: 4, percentage: 20 }
+  const history = data?.history ?? []
+
+  // Real-time calculation of remaining days until subscription expiration
+  const daysRemaining = useMemo(() => {
+    if (!sub?.current_period_ends_at) return sub?.days_remaining ?? 0
+    const diffMs = new Date(sub.current_period_ends_at).getTime() - Date.now()
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  }, [sub?.current_period_ends_at, sub?.days_remaining])
+
+  // Real-time calculation of remaining hours (when less than 24 hours remain)
+  const hoursRemaining = useMemo(() => {
+    if (!sub?.current_period_ends_at) return 0
+    const diffMs = new Date(sub.current_period_ends_at).getTime() - Date.now()
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)))
+  }, [sub?.current_period_ends_at])
+
+  // Formatted exact expiration date string
+  const expirationDateFormatted = useMemo(() => {
+    if (!sub?.current_period_ends_at) return null
+    return new Date(sub.current_period_ends_at).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }, [sub?.current_period_ends_at])
+
+  const startDateFormatted = useMemo(() => {
+    if (!sub?.current_period_starts_at) return null
+    return new Date(sub.current_period_starts_at).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }, [sub?.current_period_starts_at])
+
+  // Billing term progress percentage
+  const termPercent = useMemo(() => {
+    if (!sub?.current_period_starts_at || !sub?.current_period_ends_at) return 0
+    const start = new Date(sub.current_period_starts_at).getTime()
+    const end = new Date(sub.current_period_ends_at).getTime()
+    const now = Date.now()
+    if (end <= start) return 100
+    const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100))
+    return Math.round(progress)
+  }, [sub?.current_period_starts_at, sub?.current_period_ends_at])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-16 text-muted-foreground">
@@ -30,10 +80,6 @@ export default function SubscriptionPage() {
       </div>
     )
   }
-
-  const sub = data?.subscription
-  const quota = data?.quota ?? { active_users: 1, max_users: 5, available: 4, percentage: 20 }
-  const history = data?.history ?? []
 
   const statusVariant = (status?: string) => {
     switch (status) {
@@ -50,6 +96,8 @@ export default function SubscriptionPage() {
   }
 
   const userPercent = Math.min(100, quota.percentage)
+  const isExpiringSoon = daysRemaining <= 7 && daysRemaining > 0
+  const isExpired = daysRemaining === 0 || sub?.is_expired
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
@@ -62,25 +110,25 @@ export default function SubscriptionPage() {
       </div>
 
       {/* Expiration or Warning Notice */}
-      {sub?.is_expiring_soon && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+      {isExpiringSoon && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 animate-fade-in">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <div className="text-xs">
             <p className="font-semibold">Subscription Expiring Soon</p>
             <p className="opacity-90">
-              Your subscription is scheduled to expire in <strong>{sub.days_remaining} days</strong>. Please coordinate with the platform administrator to extend your term.
+              Your subscription is scheduled to expire on <strong>{expirationDateFormatted ?? 'N/A'}</strong> (<strong>{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining</strong>). Please coordinate with the platform administrator to extend your term.
             </p>
           </div>
         </div>
       )}
 
-      {sub?.is_expired && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive">
+      {isExpired && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive animate-fade-in">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <div className="text-xs">
             <p className="font-semibold">Subscription Term Expired</p>
             <p className="opacity-90">
-              Your subscription period has ended. Certain operations like adding users may be restricted. Please contact support.
+              Your subscription period ended on <strong>{expirationDateFormatted ?? 'N/A'}</strong>. Certain operations like adding users may be restricted. Please contact support to renew.
             </p>
           </div>
         </div>
@@ -98,8 +146,8 @@ export default function SubscriptionPage() {
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
                   {sub?.plan.name ?? 'Standard Plan'}
                 </h2>
-                <Badge variant={statusVariant(sub?.status)} className="capitalize text-xs font-semibold">
-                  {sub?.status ?? 'Active'}
+                <Badge variant={statusVariant(isExpired ? 'expired' : sub?.status)} className="capitalize text-xs font-semibold">
+                  {isExpired ? 'Expired' : (sub?.status ?? 'Active')}
                 </Badge>
                 {sub?.tenure && (
                   <Badge variant="outline" className="capitalize text-xs font-mono">
@@ -110,18 +158,14 @@ export default function SubscriptionPage() {
               <p className="text-xs text-muted-foreground mt-1 max-w-xl">
                 {sub?.plan.description ?? 'Full-featured enterprise tier supporting core accounting, inventory management, and sales operations.'}
               </p>
-              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
                   <Calendar className="h-3.5 w-3.5 text-primary" />
-                  {sub?.current_period_ends_at ? (
-                    <span>Renews on <strong>{new Date(sub.current_period_ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</strong></span>
-                  ) : (
-                    <span>Active Subscription</span>
-                  )}
+                  <span>Expiration Date: <strong className="text-foreground">{expirationDateFormatted ?? 'Active'}</strong></span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 text-primary" />
-                  <strong>{sub?.days_remaining ?? 0} days</strong> remaining in term
+                  <span>Countdown: <strong className="text-primary font-bold">{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}</strong> remaining in term</span>
                 </span>
               </div>
             </div>
@@ -143,8 +187,52 @@ export default function SubscriptionPage() {
         </div>
       </div>
 
-      {/* Grid: Quota & Entitlements */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Grid: Term Countdown, Seats Quota, Included Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Subscription Countdown & Expiration Date Card */}
+        <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Term Countdown
+              </span>
+              <Hourglass className="h-4 w-4 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold mt-1 flex items-baseline gap-2">
+              <span className={daysRemaining <= 7 ? (daysRemaining === 0 ? 'text-destructive' : 'text-amber-500') : 'text-foreground'}>
+                {daysRemaining}
+              </span>
+              <span className="text-sm font-normal text-muted-foreground">
+                {daysRemaining === 1 ? (hoursRemaining > 0 ? `day (${hoursRemaining}h left)` : 'day left') : 'days left'}
+              </span>
+            </CardTitle>
+            <CardDescription className="text-xs flex items-center gap-1 mt-0.5">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate">Expires on <strong className="text-foreground">{expirationDateFormatted ?? 'N/A'}</strong></span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            <div className="h-2.5 w-full rounded-full bg-secondary/80 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  daysRemaining === 0
+                    ? 'bg-destructive'
+                    : daysRemaining <= 7
+                    ? 'bg-amber-500'
+                    : 'bg-primary'
+                }`}
+                style={{ width: `${Math.max(5, 100 - termPercent)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{startDateFormatted ? `Started ${startDateFormatted}` : `${termPercent}% elapsed`}</span>
+              <Badge variant={daysRemaining <= 7 ? (daysRemaining === 0 ? 'destructive' : 'warning') : 'outline'} className="text-[10px] py-0 px-1.5 font-mono">
+                {daysRemaining > 0 ? `${daysRemaining}d left` : 'Expired'}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* User Seats Quota */}
         <Card className="bg-card/85 backdrop-blur-xl border-border/70 shadow-sm">
           <CardHeader className="pb-3">

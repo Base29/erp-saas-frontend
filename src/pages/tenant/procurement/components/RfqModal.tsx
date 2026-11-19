@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { fetchSuppliers, fetchItems } from '@/api/tenant'
-import { procurementApi, type Rfq } from '@/api/procurement'
+import { procurementApi, type Rfq, type PurchaseRequisition } from '@/api/procurement'
 
 interface RfqModalProps {
   open: boolean
@@ -32,6 +32,7 @@ interface RfqModalProps {
 
 interface RfqLineItem {
   id?: string
+  purchase_requisition_line_id?: string | null
   item_id: string
   item_description: string
   quantity: number
@@ -45,6 +46,7 @@ export default function RfqModal({
   onSuccess,
   rfq,
 }: RfqModalProps) {
+  const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>('')
   const [title, setTitle] = useState('')
   const [rfqDate, setRfqDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [bidDeadline, setBidDeadline] = useState(() => {
@@ -60,6 +62,14 @@ export default function RfqModal({
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  const { data: requisitionsData } = useQuery({
+    queryKey: ['approved-requisitions-for-rfq'],
+    queryFn: () => procurementApi.getRequisitions({ approval_status: 'approved', per_page: 100 }),
+    enabled: open,
+  })
+
+  const approvedRequisitions: PurchaseRequisition[] = requisitionsData?.data || []
 
   const { data: suppliersData } = useQuery({
     queryKey: ['suppliers-list'],
@@ -81,6 +91,7 @@ export default function RfqModal({
     setErrorMsg('')
 
     if (rfq) {
+      setSelectedRequisitionId(rfq.purchase_requisition_id || '')
       setTitle(rfq.title)
       setRfqDate(rfq.rfq_date?.slice(0, 10) || new Date().toISOString().slice(0, 10))
       setBidDeadline(rfq.bid_deadline?.slice(0, 10) || '')
@@ -90,14 +101,16 @@ export default function RfqModal({
       setLines(
         (rfq.lines || []).map((l) => ({
           id: l.id,
+          purchase_requisition_line_id: l.purchase_requisition_line_id || null,
           item_id: l.item_id || '',
           item_description: l.item_description,
-          quantity: Number(l.quantity) || 1,
+          quantity: Math.round(Number(l.quantity)) || 1,
           target_price: l.target_price ?? '',
           notes: l.notes || '',
         }))
       )
     } else {
+      setSelectedRequisitionId('')
       setTitle('')
       setRfqDate(new Date().toISOString().slice(0, 10))
       const d = new Date()
@@ -109,6 +122,37 @@ export default function RfqModal({
       setNotes('')
     }
   }, [open, rfq])
+
+  const handleSelectRequisition = (reqId: string) => {
+    setSelectedRequisitionId(reqId)
+    if (!reqId || reqId === '__none__') return
+
+    const selectedReq = approvedRequisitions.find((r) => r.id === reqId)
+    if (!selectedReq) return
+
+    // Auto-fill title if empty or default
+    if (!title || title.startsWith('RFQ for PR-')) {
+      setTitle(`RFQ for ${selectedReq.requisition_number}: ${selectedReq.purpose || 'Material Request'}`)
+    }
+
+    // Auto-populate lines from approved requisition lines
+    if (selectedReq.lines && selectedReq.lines.length > 0) {
+      setLines(
+        selectedReq.lines.map((l: any) => ({
+          purchase_requisition_line_id: l.id,
+          item_id: l.item_id || '',
+          item_description: l.item_description,
+          quantity: Math.max(1, Math.round(Number(l.quantity) - Number(l.ordered_quantity || 0))),
+          target_price: l.estimated_unit_cost ? Number(l.estimated_unit_cost) : '',
+          notes: l.notes || '',
+        }))
+      )
+    }
+
+    if (selectedReq.notes && !notes) {
+      setNotes(selectedReq.notes)
+    }
+  }
 
   const handleAddLine = () => {
     setLines([...lines, { item_id: '', item_description: '', quantity: 1, target_price: '' }])
@@ -158,13 +202,15 @@ export default function RfqModal({
         title: title.trim(),
         rfq_date: rfqDate,
         bid_deadline: bidDeadline || null,
+        purchase_requisition_id: selectedRequisitionId && selectedRequisitionId !== '__none__' ? selectedRequisitionId : null,
         supplier_ids: selectedSuppliers,
         terms_and_conditions: terms.trim() || null,
         notes: notes.trim() || null,
         lines: lines.map((l) => ({
+          purchase_requisition_line_id: l.purchase_requisition_line_id || null,
           item_id: l.item_id || null,
           item_description: l.item_description,
-          quantity: l.quantity,
+          quantity: Math.round(Number(l.quantity)) || 1,
           target_price: l.target_price ? Number(l.target_price) : null,
           notes: l.notes || null,
         })),
@@ -201,8 +247,28 @@ export default function RfqModal({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div className="md:col-span-3 space-y-1.5">
+            <Label className="text-xs font-semibold flex items-center justify-between">
+              <span>Link Approved Purchase Requisition (PR)</span>
+              <span className="text-[11px] font-normal text-muted-foreground">Optional: Select an approved requisition to auto-fill items</span>
+            </Label>
+            <Select value={selectedRequisitionId || '__none__'} onValueChange={handleSelectRequisition}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue placeholder="-- Direct RFQ (No Requisition Linked) --" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">-- Direct RFQ (No Requisition Linked) --</SelectItem>
+                {approvedRequisitions.map((req) => (
+                  <SelectItem key={req.id} value={req.id}>
+                    {req.requisition_number} — {req.purpose || 'Material Request'} ({req.lines_count ?? req.lines?.length ?? 0} items)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="md:col-span-2 space-y-1.5">
-            <Label className="text-xs">RFQ Title / Tender Subject *</Label>
+            <Label className="text-xs font-semibold">RFQ Title / Tender Subject *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -212,7 +278,7 @@ export default function RfqModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Bid Submission Deadline</Label>
+            <Label className="text-xs font-semibold">Bid Submission Deadline</Label>
             <Input
               type="date"
               value={bidDeadline}
@@ -307,10 +373,13 @@ export default function RfqModal({
                     <td className="p-2">
                       <Input
                         type="number"
-                        min="0.0001"
-                        step="any"
-                        value={line.quantity}
-                        onChange={(e) => handleLineChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                        min="1"
+                        step="1"
+                        value={line.quantity || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          handleLineChange(idx, 'quantity', isNaN(val) ? 0 : val)
+                        }}
                         className="h-8 text-xs text-right font-mono"
                       />
                     </td>

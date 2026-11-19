@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -38,6 +38,7 @@ import {
   Wrench,
   AlertTriangle,
   AlertOctagon,
+  Clock,
   Megaphone,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -45,9 +46,9 @@ import { tenantLogout, tenantMe } from '@/api/tenant'
 import { canAccessSection, isModuleActive, ROLE_LABELS, hasPermission } from '@/utils/permissions'
 import { Button } from '@/components/ui/button'
 import NotificationBell from '@/components/NotificationBell'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import apiClient from '@/api/client'
-import { fetchCompanies, type Company } from '@/api/tenant'
+import { fetchCompanies, fetchSubscription, type Company } from '@/api/tenant'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -197,6 +198,22 @@ export default function TenantLayout() {
   const location = useLocation()
   const queryClient = useQueryClient()
   const [companies, setCompanies] = useState<Company[]>([])
+
+  // Live subscription status & remaining days countdown for tenant admin
+  const { data: subData } = useQuery({
+    queryKey: ['tenant', 'subscription'],
+    queryFn: () => fetchSubscription().then((res) => res.data.data),
+    enabled: Boolean(token && role === 'tenant_admin'),
+    staleTime: 60_000,
+  })
+
+  const subDaysRemaining = useMemo(() => {
+    const s = subData?.subscription
+    if (!s) return null
+    if (!s.current_period_ends_at) return s.days_remaining ?? 0
+    const diffMs = new Date(s.current_period_ends_at).getTime() - Date.now()
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  }, [subData])
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed')
     return saved === 'true'
@@ -295,7 +312,7 @@ export default function TenantLayout() {
       .then((res) => setActiveModules(res.data.data ?? []))
       .catch(() => {})
 
-    fetchCompanies()
+    fetchCompanies({ per_page: 100 })
       .then((res) => {
         const list = res.data.data ?? []
         setCompanies(list)
@@ -597,6 +614,29 @@ export default function TenantLayout() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Subscription Term Countdown for Tenant Admin */}
+            {role === 'tenant_admin' && subDaysRemaining !== null && (
+              <Link
+                to="/settings/subscription"
+                className={cn(
+                  'gap-1.5 text-xs h-8 px-2.5 rounded-lg border hidden sm:inline-flex items-center font-medium transition-colors shadow-xs',
+                  subDaysRemaining <= 7
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                    : subDaysRemaining === 0
+                    ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20'
+                    : 'bg-card/70 border-border/70 text-muted-foreground hover:text-foreground hover:bg-accent/60'
+                )}
+                title={
+                  subData?.subscription?.current_period_ends_at
+                    ? `Subscription expires on ${new Date(subData.subscription.current_period_ends_at).toLocaleDateString()}`
+                    : 'Subscription Details'
+                }
+              >
+                <Clock className={cn('h-3.5 w-3.5', subDaysRemaining <= 7 ? 'text-amber-500 animate-pulse' : 'text-primary')} />
+                <span>{subDaysRemaining}d remaining</span>
+              </Link>
+            )}
+
             {canAccessSettings && (
               <Button
                 variant="outline"

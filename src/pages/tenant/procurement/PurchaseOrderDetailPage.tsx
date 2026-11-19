@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { useAuthStore } from '@/store/authStore'
+import { canApprove } from '@/utils/permissions'
 import ApprovalActionModal from './components/ApprovalActionModal'
 import ReceiveGoodsModal from './components/ReceiveGoodsModal'
 import GenerateBillModal from './components/GenerateBillModal'
@@ -26,6 +28,7 @@ export default function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.role)
 
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [receiveModalOpen, setReceiveModalOpen] = useState(false)
@@ -160,7 +163,7 @@ export default function PurchaseOrderDetailPage() {
             </Button>
           )}
 
-          {po.approval_status === 'pending_approval' && (
+          {po.approval_status === 'pending_approval' && canApprove(role) && (
             <>
               <Button
                 variant="outline"
