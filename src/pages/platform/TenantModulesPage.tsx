@@ -51,6 +51,7 @@ export default function TenantModulesPage() {
   const { id: tenantId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
   const [historyModule, setHistoryModule] = useState<TenantModule | null>(null)
+  const [cascadeConfirmModule, setCascadeConfirmModule] = useState<{ module: TenantModule; message: string } | null>(null)
 
   const { data: modules, isLoading } = useQuery({
     queryKey: ['tenant-modules', tenantId],
@@ -70,19 +71,31 @@ export default function TenantModulesPage() {
   })
 
   const deactivate = useMutation({
-    mutationFn: (moduleKey: string) => deactivateTenantModule(tenantId!, moduleKey),
+    mutationFn: ({ moduleKey, cascade }: { moduleKey: string; cascade?: boolean }) =>
+      deactivateTenantModule(tenantId!, moduleKey, cascade),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] })
+      setCascadeConfirmModule(null)
       toast.success('Module deactivated successfully')
     },
-    onError: (err: any) => {
+    onError: (err: any, variables) => {
+      if (err?.response?.data?.code === 'DEPENDENT_EXTENSIONS_ACTIVE') {
+        const mod = modules?.find((m) => m.module_key === variables.moduleKey)
+        if (mod) {
+          setCascadeConfirmModule({
+            module: mod,
+            message: err.response.data.message || 'Active dependent extensions exist.',
+          })
+          return
+        }
+      }
       toast.error(err?.response?.data?.message || 'Failed to deactivate module')
     },
   })
 
   const handleToggle = (mod: TenantModule) => {
     if (mod.is_active) {
-      deactivate.mutate(mod.module_key)
+      deactivate.mutate({ moduleKey: mod.module_key, cascade: false })
     } else {
       activate.mutate(mod.module_key)
     }
@@ -126,8 +139,21 @@ export default function TenantModulesPage() {
                   ) : (
                     <Badge variant="secondary">Inactive</Badge>
                   )}
-                  {mod.is_core && (
-                    <Badge variant="outline" className="border-primary/40 text-primary">Core</Badge>
+                  {mod.type === 'extension' ? (
+                    <Badge variant="outline" className="border-purple-500/40 text-purple-600 dark:text-purple-400">
+                      Extension
+                    </Badge>
+                  ) : (
+                    mod.is_core ? (
+                      <Badge variant="outline" className="border-primary/40 text-primary">Core</Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">Module</Badge>
+                    )
+                  )}
+                  {!mod.is_active && mod.type === 'extension' && mod.requires_parent && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-500/40 bg-amber-500/10">
+                      {mod.requires_parent}
+                    </Badge>
                   )}
                   {!mod.is_available && (
                     <Badge variant="outline" className="text-destructive border-destructive">
@@ -137,6 +163,11 @@ export default function TenantModulesPage() {
                 </div>
                 {mod.description && (
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">{mod.description}</p>
+                )}
+                {mod.type === 'extension' && mod.parent_display_name && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Industry extension for <span className="font-medium text-foreground">{mod.parent_display_name}</span>.
+                  </p>
                 )}
               </div>
 
@@ -153,8 +184,9 @@ export default function TenantModulesPage() {
                 <Button
                   size="sm"
                   variant={mod.is_active ? 'outline' : 'default'}
-                  disabled={!mod.is_available || isPending}
+                  disabled={!mod.is_available || isPending || (!mod.is_active && mod.can_activate === false)}
                   onClick={() => handleToggle(mod)}
+                  title={!mod.is_active && mod.requires_parent ? mod.requires_parent : undefined}
                   className={cn(
                     'h-8 px-3 text-xs font-medium',
                     mod.is_active && 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
@@ -177,6 +209,41 @@ export default function TenantModulesPage() {
           {historyModule && tenantId && (
             <HistoryTimeline tenantId={tenantId} moduleKey={historyModule.module_key} />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cascade Deactivation Confirmation Dialog */}
+      <Dialog open={!!cascadeConfirmModule} onOpenChange={(open) => !open && setCascadeConfirmModule(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              Dependent Extensions Active
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 text-sm text-muted-foreground space-y-3">
+            <p>
+              {cascadeConfirmModule?.message}
+            </p>
+            <p className="text-foreground font-medium">
+              Would you like to deactivate <span className="font-semibold text-primary">{cascadeConfirmModule?.module.display_name}</span> along with all its active dependent industry extensions?
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <Button variant="outline" size="sm" onClick={() => setCascadeConfirmModule(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (cascadeConfirmModule) {
+                  deactivate.mutate({ moduleKey: cascadeConfirmModule.module.module_key, cascade: true })
+                }
+              }}
+            >
+              Cascade Deactivate
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

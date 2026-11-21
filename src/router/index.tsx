@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { isModuleActive, canAccessSection } from '@/utils/permissions'
+import { isModuleActive, isExtensionActive, canAccessSection } from '@/utils/permissions'
 import { getSubdomain } from '@/utils/subdomain'
 import { useEffect, useState } from 'react'
 
@@ -78,6 +78,18 @@ import PurchaseOrderDetailPage from '@/pages/tenant/procurement/PurchaseOrderDet
 import RfqsPage from '@/pages/tenant/procurement/RfqsPage'
 import RfqDetailPage from '@/pages/tenant/procurement/RfqDetailPage'
 
+// Manufacturing & Plastics Molding Extension
+import ManufacturingOverviewPage from '@/pages/tenant/manufacturing/ManufacturingOverviewPage'
+import WorkCentersPage from '@/pages/tenant/manufacturing/WorkCentersPage'
+import BomBuilderPage from '@/pages/tenant/manufacturing/BomBuilderPage'
+import ProductionPlansPage from '@/pages/tenant/manufacturing/ProductionPlansPage'
+import ProductionOrdersPage from '@/pages/tenant/manufacturing/ProductionOrdersPage'
+import DailyProductionPage from '@/pages/tenant/manufacturing/DailyProductionPage'
+import PackingPage from '@/pages/tenant/manufacturing/PackingPage'
+import MouldsPage from '@/pages/tenant/manufacturing/MouldsPage'
+import CrusherRecoveryPage from '@/pages/tenant/manufacturing/CrusherRecoveryPage'
+import ManufacturingReportsPage from '@/pages/tenant/manufacturing/ManufacturingReportsPage'
+
 import GoodsReceiptsPage from '@/pages/tenant/inventory/GoodsReceiptsPage'
 import GoodsIssuesPage from '@/pages/tenant/inventory/GoodsIssuesPage'
 import StockTransfersPage from '@/pages/tenant/inventory/StockTransfersPage'
@@ -131,6 +143,17 @@ function ModuleGuard({ moduleKey, section }: { moduleKey?: string; section?: str
   const role = useAuthStore((s) => s.role)
   if (moduleKey && !isModuleActive(moduleKey)) return <ModuleNotActivePage />
   const targetSection = section || moduleKey
+  if (targetSection && !canAccessSection(role, targetSection)) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <Outlet />
+}
+
+function ExtensionGuard({ extensionKey, parentModuleKey = 'manufacturing', section }: { extensionKey: string; parentModuleKey?: string; section?: string }) {
+  const role = useAuthStore((s) => s.role)
+  if (parentModuleKey && !isModuleActive(parentModuleKey)) return <ModuleNotActivePage />
+  if (extensionKey && !isExtensionActive(extensionKey)) return <ModuleNotActivePage />
+  const targetSection = section || parentModuleKey
   if (targetSection && !canAccessSection(role, targetSection)) {
     return <Navigate to="/dashboard" replace />
   }
@@ -317,6 +340,28 @@ export const router = createBrowserRouter([
               { path: 'orders/new', element: <PurchaseOrderFormPage /> },
               { path: 'orders/:id', element: <PurchaseOrderDetailPage /> },
               { path: 'orders/:id/edit', element: <PurchaseOrderFormPage /> },
+            ],
+          },
+          // Manufacturing module & Plastics Extension
+          {
+            path: 'manufacturing',
+            element: <ModuleGuard moduleKey="manufacturing" />,
+            children: [
+              { index: true, element: <ManufacturingOverviewPage /> },
+              { path: 'work-centers', element: <WorkCentersPage /> },
+              { path: 'boms', element: <BomBuilderPage /> },
+              { path: 'plans', element: <ProductionPlansPage /> },
+              { path: 'orders', element: <ProductionOrdersPage /> },
+              { path: 'daily-production', element: <DailyProductionPage /> },
+              { path: 'packing', element: <PackingPage /> },
+              { path: 'reports', element: <ManufacturingReportsPage /> },
+              {
+                element: <ExtensionGuard extensionKey="plastics_molding" />,
+                children: [
+                  { path: 'moulds', element: <MouldsPage /> },
+                  { path: 'crusher', element: <CrusherRecoveryPage /> },
+                ],
+              },
             ],
           },
         ],

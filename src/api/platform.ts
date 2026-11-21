@@ -94,17 +94,24 @@ export const fetchPlatformDashboard = () =>
 
 // Module management
 export interface Module {
-  id: string
+  id?: string
   module_key: string
   display_name: string
   version: string
   description: string | null
   is_core: boolean
   is_available: boolean
+  type?: 'module' | 'extension'
+  parent_module_id?: string | null
+  parent_module_key?: string | null
+  parent_display_name?: string | null
+  dependencies?: string[]
 }
 
 export interface TenantModule extends Module {
   is_active: boolean
+  can_activate?: boolean
+  requires_parent?: string | null
   activated_at: string | null
   activated_by: string | null
   deactivated_at: string | null
@@ -128,8 +135,10 @@ export const fetchTenantModules = (tenantId: string) =>
 export const activateTenantModule = (tenantId: string, moduleKey: string) =>
   apiClient.post(`/platform/v1/tenants/${tenantId}/modules/${moduleKey}/activate`)
 
-export const deactivateTenantModule = (tenantId: string, moduleKey: string) =>
-  apiClient.post(`/platform/v1/tenants/${tenantId}/modules/${moduleKey}/deactivate`)
+export const deactivateTenantModule = (tenantId: string, moduleKey: string, cascade: boolean = false) =>
+  apiClient.post(`/platform/v1/tenants/${tenantId}/modules/${moduleKey}/deactivate`, null, {
+    params: { cascade },
+  })
 
 export const fetchModuleHistory = (tenantId: string, moduleKey: string) =>
   apiClient.get<{ data: ModuleActivationHistory[] }>(

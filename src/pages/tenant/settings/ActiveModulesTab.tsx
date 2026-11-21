@@ -9,16 +9,20 @@ interface ModuleInfo {
   label: string
   description: string
   is_core?: boolean
+  type?: 'module' | 'extension'
+  parent_module_key?: string | null
   is_active?: boolean
 }
 
 // Fallback modules if API is loading or unavailable
 const FALLBACK_MODULES: ModuleInfo[] = [
-  { key: 'accounts', label: 'Accounts', description: 'Double-entry accounting, chart of accounts, journal vouchers, and financial reports.', is_core: true },
-  { key: 'inventory', label: 'Inventory', description: 'Stock management, goods receipts, goods issues, stock transfers, and inventory reports.', is_core: true },
-  { key: 'sales', label: 'Sales', description: 'Quotations, sale orders, invoices, receipts, credit notes, and sales reports.', is_core: true },
-  { key: 'procurement', label: 'Procurement', description: 'Purchase requests, request for proposals (RFP), sealed bidding, vendor evaluation, and purchase orders.', is_core: true },
-  { key: 'projects', label: 'Projects', description: 'Lightweight project management integrated with Accounts module for project accounting, budgeting, and profitability reporting.', is_core: false },
+  { key: 'accounts', label: 'Accounts', description: 'Double-entry accounting, chart of accounts, journal vouchers, and financial reports.', is_core: true, type: 'module' },
+  { key: 'inventory', label: 'Inventory', description: 'Stock management, goods receipts, goods issues, stock transfers, and inventory reports.', is_core: true, type: 'module' },
+  { key: 'sales', label: 'Sales', description: 'Quotations, sale orders, invoices, receipts, credit notes, and sales reports.', is_core: true, type: 'module' },
+  { key: 'procurement', label: 'Procurement', description: 'Purchase requests, request for proposals (RFP), sealed bidding, vendor evaluation, and purchase orders.', is_core: false, type: 'module' },
+  { key: 'projects', label: 'Projects', description: 'Lightweight project management integrated with Accounts module for project accounting, budgeting, and profitability reporting.', is_core: false, type: 'module' },
+  { key: 'manufacturing', label: 'Manufacturing', description: 'Discrete manufacturing, work centers, bills of materials, production planning, daily production entries, and packing.', is_core: false, type: 'module' },
+  { key: 'plastics_molding', label: 'Plastics & Injection Molding', description: 'Injection molding extension with mould/cavity tracking, shot logs, and scrap crusher recovery.', is_core: false, type: 'extension', parent_module_key: 'manufacturing' },
 ]
 
 export default function ActiveModulesTab() {
@@ -59,6 +63,11 @@ export default function ActiveModulesTab() {
                   <Badge variant={active ? 'default' : 'secondary'} className="text-xs">
                     {active ? 'Active' : 'Inactive'}
                   </Badge>
+                  {mod.type === 'extension' && (
+                    <Badge variant="outline" className="border-purple-500/40 text-purple-600 dark:text-purple-400 text-xs">
+                      Extension
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">{mod.description}</p>
               </div>

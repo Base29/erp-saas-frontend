@@ -40,10 +40,11 @@ import {
   AlertOctagon,
   Clock,
   Megaphone,
+  Factory,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout, tenantMe } from '@/api/tenant'
-import { canAccessSection, isModuleActive, ROLE_LABELS, hasPermission } from '@/utils/permissions'
+import { canAccessSection, isModuleActive, isExtensionActive, ROLE_LABELS, hasPermission } from '@/utils/permissions'
 import { Button } from '@/components/ui/button'
 import NotificationBell from '@/components/NotificationBell'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
@@ -68,6 +69,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
   section?: string | null
   moduleKey?: string | null
+  extensionKey?: string | null
 }
 
 interface NavSection {
@@ -151,6 +153,23 @@ const navSections: NavSection[] = [
     icon: ShoppingBag,
   },
   {
+    section: 'manufacturing',
+    moduleKey: 'manufacturing',
+    items: [
+      { to: '/manufacturing', label: 'Overview', icon: LayoutDashboard },
+      { to: '/manufacturing/work-centers', label: 'Work Centers', icon: Building2 },
+      { to: '/manufacturing/boms', label: 'Bills of Materials', icon: Layers },
+      { to: '/manufacturing/plans', label: 'Production Plans', icon: ClipboardList },
+      { to: '/manufacturing/orders', label: 'Work Orders', icon: ListOrdered },
+      { to: '/manufacturing/daily-production', label: 'Daily Production', icon: Clock },
+      { to: '/manufacturing/packing', label: 'Packing Station', icon: Package },
+      { to: '/manufacturing/moulds', label: 'Plastics Moulds', icon: Wrench, extensionKey: 'plastics_molding' },
+      { to: '/manufacturing/crusher', label: 'Crusher & Regrind', icon: RefreshCcw, extensionKey: 'plastics_molding' },
+    ],
+    groupLabel: 'Manufacturing',
+    icon: Factory,
+  },
+  {
     section: 'reports',
     moduleKey: null,
     items: [
@@ -164,6 +183,7 @@ const navSections: NavSection[] = [
       { to: '/accounts/reports/supplier-statement', label: 'Supplier Statement', icon: BookOpen, section: 'accounts', moduleKey: 'accounts' },
       { to: '/sales/reports', label: 'Sales Reports', icon: BookOpen, section: 'sales', moduleKey: 'sales' },
       { to: '/inventory/reports', label: 'Inventory Reports', icon: BookOpen, section: 'inventory', moduleKey: 'inventory' },
+      { to: '/manufacturing/reports', label: 'Manufacturing Reports', icon: BarChart3, section: 'manufacturing', moduleKey: 'manufacturing' },
     ],
     groupLabel: 'Reports',
     icon: BarChart3,
@@ -387,6 +407,7 @@ export default function TenantLayout() {
           const visibleItems = group.items.filter((item) => {
             if (item.section && !canAccessSection(role, item.section)) return false
             if (item.moduleKey && !isModuleActive(item.moduleKey)) return false
+            if (item.extensionKey && !isExtensionActive(item.extensionKey)) return false
             return true
           })
 
@@ -439,7 +460,7 @@ export default function TenantLayout() {
                   <NavLink
                     key={to}
                     to={to}
-                    end={to === '/settings' || to === '/dashboard'}
+                    end={to === '/settings' || to === '/dashboard' || to === '/manufacturing' || to === '/projects'}
                     onClick={onNavItemClick}
                     title={collapsed ? label : undefined}
                     className={({ isActive }) =>
