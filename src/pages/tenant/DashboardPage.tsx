@@ -34,16 +34,21 @@ import {
   RefreshCw,
   ArrowUpRight,
   Filter,
+  Factory,
+  Layers,
+  Clock,
+  Wrench,
+  ListOrdered,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Link } from 'react-router-dom'
-import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive } from '@/utils/permissions'
+import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive, isExtensionActive } from '@/utils/permissions'
 import type { UserRole } from '@/store/authStore'
 
-type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
+type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
 
 interface QuickAccessTile {
   id: string
@@ -54,7 +59,8 @@ interface QuickAccessTile {
   actionTo?: string
   requiredPermission?: string
   moduleKey?: string
-  category: 'accounts' | 'sales' | 'inventory' | 'projects' | 'settings'
+  extensionKey?: string
+  category: 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
   icon: React.ComponentType<{ className?: string }>
   colorScheme: {
     bg: string
@@ -67,6 +73,9 @@ interface QuickAccessTile {
 function isTileAccessible(tile: QuickAccessTile, role: UserRole | null): boolean {
   const module = tile.moduleKey ?? (tile.category !== 'settings' ? tile.category : undefined)
   if (module && !isModuleActive(module)) {
+    return false
+  }
+  if (tile.extensionKey && !isExtensionActive(tile.extensionKey)) {
     return false
   }
   if (!canAccessSection(role, tile.category)) {
@@ -333,6 +342,127 @@ const QUICK_ACCESS_TILES: QuickAccessTile[] = [
     },
   },
 
+  // Manufacturing
+  {
+    id: 'mfg-overview',
+    title: 'Manufacturing Dashboard',
+    description: 'Shop floor KPIs, work order statuses & downtime alerts',
+    to: '/manufacturing',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    icon: Factory,
+    colorScheme: {
+      bg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      borderHover: 'hover:border-emerald-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(16,185,129,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-orders',
+    title: 'Work Orders',
+    description: 'Dispatch, schedule and track shop floor orders',
+    to: '/manufacturing/orders',
+    actionLabel: '+ Order',
+    actionTo: '/manufacturing/orders',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    icon: ListOrdered,
+    colorScheme: {
+      bg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
+      text: 'text-indigo-600 dark:text-indigo-400',
+      borderHover: 'hover:border-indigo-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(99,102,241,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-daily-production',
+    title: 'Daily Production',
+    description: 'Operator shift logs, expected vs actual & downtime',
+    to: '/manufacturing/daily-production',
+    actionLabel: '+ Entry',
+    actionTo: '/manufacturing/daily-production',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    icon: Clock,
+    colorScheme: {
+      bg: 'bg-amber-500/10 dark:bg-amber-500/20',
+      text: 'text-amber-600 dark:text-amber-400',
+      borderHover: 'hover:border-amber-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(245,158,11,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-boms',
+    title: 'Bills of Materials',
+    description: 'Multi-part BOM engineering, scrap & cycle times',
+    to: '/manufacturing/boms',
+    actionLabel: '+ BOM',
+    actionTo: '/manufacturing/boms',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    icon: Layers,
+    colorScheme: {
+      bg: 'bg-cyan-500/10 dark:bg-cyan-500/20',
+      text: 'text-cyan-600 dark:text-cyan-400',
+      borderHover: 'hover:border-cyan-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(6,182,212,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-packing',
+    title: 'Packing Station',
+    description: 'Carton boxing, loose pieces and inventory handoff',
+    to: '/manufacturing/packing',
+    actionLabel: '+ Pack',
+    actionTo: '/manufacturing/packing',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    icon: Package,
+    colorScheme: {
+      bg: 'bg-purple-500/10 dark:bg-purple-500/20',
+      text: 'text-purple-600 dark:text-purple-400',
+      borderHover: 'hover:border-purple-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(168,85,247,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-moulds',
+    title: 'Plastics Moulds',
+    description: 'Injection tooling master, active cavities & shots counter',
+    to: '/manufacturing/moulds',
+    actionLabel: '+ Mould',
+    actionTo: '/manufacturing/moulds',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    extensionKey: 'plastics_molding',
+    icon: Wrench,
+    colorScheme: {
+      bg: 'bg-rose-500/10 dark:bg-rose-500/20',
+      text: 'text-rose-600 dark:text-rose-400',
+      borderHover: 'hover:border-rose-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(244,63,94,0.25)]',
+    },
+  },
+  {
+    id: 'mfg-crusher',
+    title: 'Crusher & Regrind',
+    description: 'Runner scrap recovery, net loss & reusable balance',
+    to: '/manufacturing/crusher',
+    actionLabel: '+ Regrind',
+    actionTo: '/manufacturing/crusher',
+    category: 'manufacturing',
+    moduleKey: 'manufacturing',
+    extensionKey: 'plastics_molding',
+    icon: RefreshCcw,
+    colorScheme: {
+      bg: 'bg-teal-500/10 dark:bg-teal-500/20',
+      text: 'text-teal-600 dark:text-teal-400',
+      borderHover: 'hover:border-teal-500/40',
+      glow: 'group-hover:shadow-[0_12px_30px_-8px_rgba(20,184,166,0.25)]',
+    },
+  },
+
   // Projects
   {
     id: 'all-projects',
@@ -434,6 +564,7 @@ export default function TenantDashboardPage() {
       { id: 'accounts', label: 'Finance & Accounts', section: 'accounts', moduleKey: 'accounts' },
       { id: 'sales', label: 'Sales & Orders', section: 'sales', moduleKey: 'sales' },
       { id: 'inventory', label: 'Inventory & Stock', section: 'inventory', moduleKey: 'inventory' },
+      { id: 'manufacturing', label: 'Manufacturing', section: 'manufacturing', moduleKey: 'manufacturing' },
       { id: 'projects', label: 'Projects', section: 'projects', moduleKey: 'projects' },
       { id: 'settings', label: 'Settings & Admin', section: 'settings' },
     ]

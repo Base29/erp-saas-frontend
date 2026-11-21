@@ -4,6 +4,9 @@ import { useAuthStore } from '@/store/authStore'
 export const isModuleActive = (moduleKey: string): boolean =>
   useAuthStore.getState().activeModules.includes(moduleKey)
 
+export const isExtensionActive = (extensionKey: string): boolean =>
+  useAuthStore.getState().activeModules.includes(extensionKey)
+
 // Which roles can access each nav section
 const sectionRoles: Record<string, UserRole[]> = {
   accounts: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
@@ -11,6 +14,8 @@ const sectionRoles: Record<string, UserRole[]> = {
   inventory: ['tenant_admin', 'inventory_manager', 'sales_manager', 'sales_person', 'accountant', 'viewer'],
   projects: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
   procurement: ['tenant_admin', 'accountant', 'inventory_manager', 'sales_manager', 'viewer'],
+  manufacturing: ['tenant_admin', 'accountant', 'inventory_manager', 'viewer'],
+  plastics_molding: ['tenant_admin', 'accountant', 'inventory_manager', 'viewer'],
   reports: ['tenant_admin', 'accountant', 'sales_manager', 'sales_person', 'inventory_manager', 'viewer'],
   settings: ['tenant_admin'],
   genie: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager', 'viewer'],
@@ -60,6 +65,8 @@ const writeRoles: Record<string, UserRole[]> = {
   inventory: ['tenant_admin', 'inventory_manager'],
   projects: ['tenant_admin', 'accountant', 'sales_manager'],
   procurement: ['tenant_admin', 'accountant', 'inventory_manager'],
+  manufacturing: ['tenant_admin', 'accountant', 'inventory_manager'],
+  plastics_molding: ['tenant_admin', 'accountant', 'inventory_manager'],
   settings: ['tenant_admin'],
   genie: ['tenant_admin', 'accountant', 'sales_manager', 'inventory_manager'],
 }
