@@ -34,6 +34,7 @@ export default function BomFormPage() {
   const queryClient = useQueryClient()
 
   const [sectionsDialogOpen, setSectionsDialogOpen] = useState(false)
+  const [targetRowIndexForNewSection, setTargetRowIndexForNewSection] = useState<number | null>(null)
   const [activeSectionFilter, setActiveSectionFilter] = useState<string>('all')
 
   const [formData, setFormData] = useState({
@@ -72,9 +73,11 @@ export default function BomFormPage() {
   })
 
   // Pre-configured BOM Sections managed by tenant admin
-  const { data: bomSections } = useQuery({
-    queryKey: ['bom-sections-active'],
+  const { data: bomSections, refetch: refetchBomSections } = useQuery({
+    queryKey: ['bom-sections', 'active'],
     queryFn: () => fetchBomSections({ is_active: true }).then((r) => r.data.data),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   // Fetch BOM if in edit mode
@@ -394,6 +397,19 @@ export default function BomFormPage() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  onClick={() => {
+                    setTargetRowIndexForNewSection(null)
+                    setSectionsDialogOpen(true)
+                  }}
+                  className="h-8 text-xs gap-1.5 border-border/80"
+                >
+                  <FolderTree className="h-3.5 w-3.5 text-primary" />
+                  Manage Sections
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => addComponentRow()}
                   className="h-8 text-xs"
                 >
@@ -516,10 +532,22 @@ export default function BomFormPage() {
 
                       {/* Process Section Select */}
                       <div className="sm:col-span-3 space-y-1">
-                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-                          <FolderTree className="h-3 w-3 text-indigo-500" />
-                          Process Section
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                            <FolderTree className="h-3 w-3 text-indigo-500" />
+                            Process Section
+                          </Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetRowIndexForNewSection(originalIndex)
+                              setSectionsDialogOpen(true)
+                            }}
+                            className="text-[10px] text-primary hover:underline font-medium cursor-pointer"
+                          >
+                            + New
+                          </button>
+                        </div>
                         <select
                           className="w-full h-9 px-2.5 rounded-md border border-input bg-background text-xs"
                           value={row.bom_section_id || ''}
@@ -668,7 +696,19 @@ export default function BomFormPage() {
       {/* BOM Section Manager Dialog */}
       <BomSectionManagerDialog
         open={sectionsDialogOpen}
-        onOpenChange={setSectionsDialogOpen}
+        onOpenChange={(isOpen) => {
+          setSectionsDialogOpen(isOpen)
+          if (!isOpen) {
+            refetchBomSections()
+          }
+        }}
+        onSectionCreated={(newSection) => {
+          refetchBomSections()
+          if (targetRowIndexForNewSection !== null && targetRowIndexForNewSection < formData.items.length) {
+            handleRowChange(targetRowIndexForNewSection, 'bom_section_id', newSection.id)
+            setTargetRowIndexForNewSection(null)
+          }
+        }}
       />
     </div>
   )

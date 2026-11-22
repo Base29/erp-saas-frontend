@@ -795,7 +795,13 @@ export default function BomBuilderPage() {
       {/* ── 5. BOM Section Management Dialog for Tenant Admins ──────────────── */}
       <BomSectionManagerDialog
         open={sectionsDialogOpen}
-        onOpenChange={setSectionsDialogOpen}
+        onOpenChange={(isOpen) => {
+          setSectionsDialogOpen(isOpen)
+          if (!isOpen) {
+            queryClient.invalidateQueries({ queryKey: ['bom-sections'] })
+            queryClient.invalidateQueries({ queryKey: ['bom-sections-active'] })
+          }
+        }}
       />
     </div>
   )

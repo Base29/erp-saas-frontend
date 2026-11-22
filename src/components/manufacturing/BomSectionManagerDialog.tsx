@@ -72,7 +72,23 @@ export function BomSectionManagerDialog({
         ? updateBomSection(editingSection.id, payload)
         : createBomSection(payload),
     onSuccess: (res) => {
+      const savedSection = res?.data?.data
+      if (savedSection) {
+        // Immediately update all ['bom-sections', ...] cache entries in memory
+        queryClient.setQueriesData({ queryKey: ['bom-sections'] }, (old: any) => {
+          if (!Array.isArray(old)) return old
+          const exists = old.some((s: any) => s.id === savedSection.id)
+          if (exists) {
+            return old.map((s: any) => (s.id === savedSection.id ? savedSection : s))
+          }
+          if (savedSection.is_active !== false) {
+            return [...old, savedSection].sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+          }
+          return old
+        })
+      }
       queryClient.invalidateQueries({ queryKey: ['bom-sections'] })
+      queryClient.invalidateQueries({ queryKey: ['bom-sections-active'] })
       toast.success(editingSection ? 'Section updated' : 'Section created')
       setFormOpen(false)
       setEditingSection(null)
@@ -87,8 +103,13 @@ export function BomSectionManagerDialog({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteBomSection(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      queryClient.setQueriesData({ queryKey: ['bom-sections'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        return old.filter((s: any) => s.id !== id)
+      })
       queryClient.invalidateQueries({ queryKey: ['bom-sections'] })
+      queryClient.invalidateQueries({ queryKey: ['bom-sections-active'] })
       toast.success('Section deleted')
     },
     onError: (err: any) => {
