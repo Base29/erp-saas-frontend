@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Trash2, ArrowLeft, ShoppingCart } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, ShoppingCart, FileText, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,8 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import SearchableSelect, { type SearchableSelectOption } from '@/components/ui/SearchableSelect'
 import { fetchSuppliers, fetchItems } from '@/api/tenant'
-import { procurementApi, type PurchaseRequisitionLine } from '@/api/procurement'
+import { procurementApi, type PurchaseRequisition, type PurchaseRequisitionLine } from '@/api/procurement'
 import { formatCurrency } from '@/utils/format'
 
 interface DraftPOLine {
@@ -36,7 +37,10 @@ interface DraftPOLine {
 export default function PurchaseOrderFormPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const requisitionId = searchParams.get('requisition_id')
+  const urlRequisitionId = searchParams.get('requisition_id') || ''
+
+  const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>(urlRequisitionId)
+  const lastPopulatedPrId = useRef<string>('')
 
   const [supplierId, setSupplierId] = useState('')
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -79,43 +83,165 @@ export default function PurchaseOrderFormPage() {
   })
   const items = itemsData ?? []
 
-  // Pre-load from requisition if linked
-  const { data: requisitionData } = useQuery({
-    queryKey: ['requisition-preload', requisitionId],
-    queryFn: () => procurementApi.getRequisition(requisitionId!),
-    enabled: Boolean(requisitionId),
+  // Load approved & incomplete purchase requisitions for direct selection
+  const { data: requisitionsData, isLoading: isLoadingRequisitions } = useQuery({
+    queryKey: ['procurement-approved-incomplete-requisitions'],
+    queryFn: () => procurementApi.getRequisitions({ incomplete_only: true, per_page: 100 }),
   })
 
-  useEffect(() => {
-    if (requisitionData?.data) {
-      const req = requisitionData.data
-      setNotes(`Imported from Requisition #${req.requisition_number}. ${req.purpose || ''}`)
-      if (req.lines && req.lines.length > 0) {
-        setLines(
-          req.lines.map((l: PurchaseRequisitionLine) => {
-            const reqQty = Number(l.quantity) || 0
-            const ordQty = Number(l.ordered_quantity) || 0
-            const remQty = Math.max(1, reqQty - ordQty)
-            const unitPrice = Number(l.estimated_unit_cost) || 0
-            const lineSub = remQty * unitPrice
-            return {
-              purchase_requisition_line_id: l.id,
-              item_id: l.item_id || '',
-              item_description: l.item_description,
-              quantity: remQty,
-              unit_of_measure_id: l.unit_of_measure_id || undefined,
-              unit_price: unitPrice,
-              discount_percent: 0,
-              discount_amount: 0,
-              tax_rate: 0,
-              tax_amount: 0,
-              line_total: lineSub,
-            }
-          })
-        )
-      }
+  // Filter requisitions to only approved and incomplete ones with remaining lines
+  const approvedIncompleteRequisitions = useMemo(() => {
+    const list: PurchaseRequisition[] = requisitionsData?.data || []
+    return list.filter((req) => {
+      const isApproved = req.status === 'approved' || req.status === 'partially_ordered' || req.approval_status === 'approved'
+      const isNotComplete = req.status !== 'fully_ordered' && req.status !== 'cancelled' && req.status !== 'rejected'
+      const hasRemainingLines = !req.lines || req.lines.length === 0 || req.lines.some(
+        (l) => (Number(l.quantity) || 0) > (Number(l.ordered_quantity) || 0)
+      )
+      return isApproved && isNotComplete && hasRemainingLines
+    })
+  }, [requisitionsData])
+
+  // Pre-load from requisition if linked
+  const { data: requisitionResponse } = useQuery({
+    queryKey: ['requisition-preload', selectedRequisitionId],
+    queryFn: () => procurementApi.getRequisition(selectedRequisitionId),
+    enabled: Boolean(selectedRequisitionId && selectedRequisitionId !== 'none'),
+  })
+
+  // Resolved active requisition
+  const activeRequisition: PurchaseRequisition | null = useMemo(() => {
+    if (!selectedRequisitionId || selectedRequisitionId === 'none') return null
+    if (requisitionResponse?.data?.id === selectedRequisitionId) {
+      return requisitionResponse.data
     }
-  }, [requisitionData])
+    return approvedIncompleteRequisitions.find((r) => r.id === selectedRequisitionId) || null
+  }, [selectedRequisitionId, requisitionResponse, approvedIncompleteRequisitions])
+
+  // Populate line items and notes from requisition
+  const populateFromRequisition = (req: PurchaseRequisition) => {
+    setNotes((prev) => {
+      if (!prev || prev.startsWith('Imported from Requisition #')) {
+        return `Imported from Requisition #${req.requisition_number}. ${req.purpose || ''}`.trim()
+      }
+      return prev
+    })
+
+    if (req.lines && req.lines.length > 0) {
+      const remainingLines = req.lines.filter((l: PurchaseRequisitionLine) => {
+        const reqQty = Number(l.quantity) || 0
+        const ordQty = Number(l.ordered_quantity) || 0
+        return reqQty > ordQty
+      })
+
+      const linesToUse = remainingLines.length > 0 ? remainingLines : req.lines
+
+      setLines(
+        linesToUse.map((l: PurchaseRequisitionLine) => {
+          const reqQty = Number(l.quantity) || 0
+          const ordQty = Number(l.ordered_quantity) || 0
+          const remQty = Math.max(1, reqQty - ordQty)
+          const unitPrice = Number(l.estimated_unit_cost) || 0
+          const lineSub = remQty * unitPrice
+          return {
+            purchase_requisition_line_id: l.id,
+            item_id: l.item_id || '',
+            item_description: l.item_description,
+            quantity: remQty,
+            unit_of_measure_id: l.unit_of_measure_id || undefined,
+            unit_price: unitPrice,
+            discount_percent: 0,
+            discount_amount: 0,
+            tax_rate: 0,
+            tax_amount: 0,
+            line_total: lineSub,
+          }
+        })
+      )
+    }
+  }
+
+  // Effect to load requisition lines when requisitionResponse resolves
+  useEffect(() => {
+    if (
+      requisitionResponse?.data &&
+      requisitionResponse.data.id === selectedRequisitionId &&
+      lastPopulatedPrId.current !== selectedRequisitionId
+    ) {
+      lastPopulatedPrId.current = selectedRequisitionId
+      populateFromRequisition(requisitionResponse.data)
+    }
+  }, [requisitionResponse, selectedRequisitionId])
+
+  const handleRequisitionChange = (id: string) => {
+    if (!id || id === 'none') {
+      setSelectedRequisitionId('')
+      lastPopulatedPrId.current = ''
+      setLines([
+        {
+          item_id: '',
+          item_description: '',
+          quantity: 1,
+          unit_price: 0,
+          discount_percent: 0,
+          discount_amount: 0,
+          tax_rate: 0,
+          tax_amount: 0,
+          line_total: 0,
+        },
+      ])
+      setNotes((prev) => (prev.startsWith('Imported from Requisition #') ? '' : prev))
+      return
+    }
+
+    setSelectedRequisitionId(id)
+    const found = approvedIncompleteRequisitions.find((r) => r.id === id)
+    if (found && found.lines && found.lines.length > 0) {
+      lastPopulatedPrId.current = id
+      populateFromRequisition(found)
+    }
+  }
+
+  // Options for SearchableSelect
+  const requisitionOptions: SearchableSelectOption[] = useMemo(() => {
+    const prOptions: SearchableSelectOption[] = approvedIncompleteRequisitions.map((req) => {
+      const remainingItems = req.lines?.filter(
+        (l) => (Number(l.quantity) || 0) > (Number(l.ordered_quantity) || 0)
+      ).length ?? (req.lines_count || 0)
+
+      const parts: string[] = []
+      if (req.purpose) parts.push(req.purpose)
+      if (req.requester?.name) parts.push(`By ${req.requester.name}`)
+      parts.push(`${remainingItems} item${remainingItems === 1 ? '' : 's'} remaining`)
+      if (Number(req.total_estimated_amount) > 0) {
+        parts.push(formatCurrency(req.total_estimated_amount))
+      }
+
+      return {
+        value: req.id,
+        label: `PR #${req.requisition_number}`,
+        sublabel: parts.join(' • '),
+        badge: req.status === 'partially_ordered' ? 'Partially Ordered' : 'Approved',
+      }
+    })
+
+    // If there is an active requisition loaded from URL not in the list, keep it available
+    if (
+      selectedRequisitionId &&
+      !prOptions.some((opt) => opt.value === selectedRequisitionId) &&
+      requisitionResponse?.data
+    ) {
+      const r = requisitionResponse.data
+      prOptions.unshift({
+        value: r.id,
+        label: `PR #${r.requisition_number}`,
+        sublabel: r.purpose || 'Selected Requisition',
+        badge: r.status === 'partially_ordered' ? 'Partially Ordered' : 'Approved',
+      })
+    }
+
+    return prOptions
+  }, [approvedIncompleteRequisitions, selectedRequisitionId, requisitionResponse])
 
   const handleItemSelect = (index: number, itemId: string) => {
     const selected = items.find((i) => i.id === itemId)
@@ -201,7 +327,7 @@ export default function PurchaseOrderFormPage() {
         exchange_rate: Number(exchangeRate) || 1.0,
         payment_terms: paymentTerms,
         delivery_address: deliveryAddress || null,
-        purchase_requisition_id: requisitionId || null,
+        purchase_requisition_id: (selectedRequisitionId && selectedRequisitionId !== 'none') ? selectedRequisitionId : null,
         notes: notes || null,
         terms_and_conditions: terms || null,
         lines: lines.map((l) => ({
@@ -229,7 +355,7 @@ export default function PurchaseOrderFormPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-6xl mx-auto">
+    <div className="space-y-6 p-6 w-full">
       {/* Top Header */}
       <div className="flex items-center gap-3">
         <Button
@@ -243,7 +369,9 @@ export default function PurchaseOrderFormPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Purchase Order</h1>
           <p className="text-sm text-muted-foreground">
-            {requisitionId ? `Converting from Requisition #${requisitionData?.data?.requisition_number || ''}` : 'Issue a new supplier purchase agreement.'}
+            {activeRequisition
+              ? `Linked to Requisition #${activeRequisition.requisition_number}`
+              : 'Issue a new supplier purchase agreement directly or from an approved requisition.'}
           </p>
         </div>
       </div>
@@ -258,13 +386,43 @@ export default function PurchaseOrderFormPage() {
         {/* Order Header Card */}
         <Card>
           <CardHeader className="pb-3 border-b">
-            <CardTitle className="text-sm font-semibold">Vendor & Order Settings</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <CardTitle className="text-sm font-semibold">Vendor & Order Settings</CardTitle>
+              {activeRequisition && (
+                <div className="flex items-center gap-2 text-xs text-primary font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  <span>Linked to PR #{activeRequisition.requisition_number}</span>
+                </div>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1.5 md:col-span-1">
-              <Label htmlFor="supplier">Supplier / Vendor *</Label>
+          <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            {/* PR Selection Dropdown with Search */}
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="purchase-requisition" className="block">
+                Purchase Requisition (Optional)
+              </Label>
+              <SearchableSelect
+                id="purchase-requisition"
+                value={selectedRequisitionId}
+                onValueChange={handleRequisitionChange}
+                placeholder="Select approved PR..."
+                searchPlaceholder="Search PR #, purpose, requester, status…"
+                isLoading={isLoadingRequisitions}
+                options={requisitionOptions}
+                clearable
+                triggerClassName="h-9 w-full"
+                contentClassName="w-[450px] max-w-[90vw]"
+              />
+            </div>
+
+            {/* Supplier Selection */}
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="supplier" className="block">
+                Supplier / Vendor *
+              </Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger id="supplier">
+                <SelectTrigger id="supplier" className="h-9 w-full">
                   <SelectValue placeholder="Select supplier..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -277,8 +435,44 @@ export default function PurchaseOrderFormPage() {
               </Select>
             </div>
 
+            {/* Requisition Info Banner if PR is Linked */}
+            {activeRequisition && (
+              <div className="col-span-full flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <span className="font-semibold text-foreground">
+                      PR #{activeRequisition.requisition_number}
+                    </span>
+                    {activeRequisition.purpose && (
+                      <span className="text-muted-foreground ml-2">
+                        — {activeRequisition.purpose}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-muted-foreground">
+                  {activeRequisition.requester && (
+                    <span>Requester: <strong className="text-foreground">{activeRequisition.requester.name}</strong></span>
+                  )}
+                  {activeRequisition.lines && (
+                    <span>Lines populated: <strong className="text-foreground">{lines.length}</strong></span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRequisitionChange('none')}
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    Unlink PR
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <Label htmlFor="orderDate">Order Date *</Label>
+              <Label htmlFor="orderDate" className="block">Order Date *</Label>
               <Input
                 id="orderDate"
                 type="date"
@@ -289,7 +483,7 @@ export default function PurchaseOrderFormPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="expectedDeliveryDate">Expected Delivery</Label>
+              <Label htmlFor="expectedDeliveryDate" className="block">Expected Delivery</Label>
               <Input
                 id="expectedDeliveryDate"
                 type="date"
@@ -299,7 +493,7 @@ export default function PurchaseOrderFormPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="currencyCode">Currency</Label>
+              <Label htmlFor="currencyCode" className="block">Currency</Label>
               <div className="flex gap-2">
                 <Select value={currencyCode} onValueChange={setCurrencyCode}>
                   <SelectTrigger id="currencyCode" className="w-2/3">
@@ -328,7 +522,7 @@ export default function PurchaseOrderFormPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="paymentTerms">Payment Terms</Label>
+              <Label htmlFor="paymentTerms" className="block">Payment Terms</Label>
               <Input
                 id="paymentTerms"
                 value={paymentTerms}
@@ -337,8 +531,8 @@ export default function PurchaseOrderFormPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="deliveryAddress">Delivery Warehouse / Address</Label>
+            <div className="space-y-1.5 md:col-span-2 lg:col-span-4">
+              <Label htmlFor="deliveryAddress" className="block">Delivery Warehouse / Address</Label>
               <Input
                 id="deliveryAddress"
                 value={deliveryAddress}
@@ -352,7 +546,14 @@ export default function PurchaseOrderFormPage() {
         {/* Dynamic Line Items */}
         <Card>
           <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Line Items</CardTitle>
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-semibold">Line Items</CardTitle>
+              {activeRequisition && (
+                <p className="text-xs text-muted-foreground">
+                  Showing remaining quantities from Requisition #{activeRequisition.requisition_number}
+                </p>
+              )}
+            </div>
             <Button type="button" variant="outline" size="sm" onClick={addLine} className="gap-1.5 text-xs">
               <Plus className="h-3.5 w-3.5" /> Add Line
             </Button>

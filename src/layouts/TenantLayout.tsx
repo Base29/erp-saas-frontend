@@ -43,7 +43,7 @@ import {
   Factory,
   Cpu,
 } from 'lucide-react'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, type UserRole } from '@/store/authStore'
 import { tenantLogout, tenantMe } from '@/api/tenant'
 import { canAccessSection, isModuleActive, isExtensionActive, ROLE_LABELS, hasPermission } from '@/utils/permissions'
 import { Button } from '@/components/ui/button'
@@ -212,6 +212,197 @@ const navSections: NavSection[] = [
   },
 ]
 
+const EXACT_MATCH_ROUTES = new Set(['/dashboard', '/manufacturing', '/projects', '/settings'])
+
+export function isItemActive(itemTo: string, pathname: string): boolean {
+  if (EXACT_MATCH_ROUTES.has(itemTo)) {
+    return pathname === itemTo
+  }
+  return pathname === itemTo || pathname.startsWith(`${itemTo}/`)
+}
+
+export function getActiveGroup(pathname: string, role?: UserRole | null): string | null {
+  for (const group of navSections) {
+    if (group.groupLabel) {
+      if (group.section && role && !canAccessSection(role, group.section)) continue
+      if (group.moduleKey && !isModuleActive(group.moduleKey)) continue
+      const hasActiveItem = group.items.some((item) => {
+        if (item.section && role && !canAccessSection(role, item.section)) return false
+        if (item.moduleKey && !isModuleActive(item.moduleKey)) return false
+        if (item.extensionKey && !isExtensionActive(item.extensionKey)) return false
+        return isItemActive(item.to, pathname)
+      })
+      if (hasActiveItem) {
+        return group.groupLabel
+      }
+    }
+  }
+  return null
+}
+
+interface SidebarContentProps {
+  collapsed?: boolean
+  onNavItemClick?: () => void
+  role: UserRole | null
+  user: { name?: string; email?: string } | null
+  onLogout: () => void
+  pathname: string
+  expandedGroup: string | null
+  onToggleGroup: (groupLabel: string) => void
+}
+
+function SidebarContent({
+  collapsed = false,
+  onNavItemClick = () => {},
+  role,
+  user,
+  onLogout,
+  pathname,
+  expandedGroup,
+  onToggleGroup,
+}: SidebarContentProps) {
+  return (
+    <>
+      <div className={cn('h-16 px-4 border-b border-border/70 shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
+        {!collapsed ? (
+          <div className="flex items-center gap-2 px-1 overflow-hidden select-none">
+            <span className="text-xl font-extrabold tracking-tight text-foreground">
+              Genie{' '}
+              <span className="bg-gradient-to-r from-primary via-indigo-500 to-purple-500 bg-clip-text text-transparent font-bold">
+                Cloud
+              </span>
+            </span>
+          </div>
+        ) : (
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-base shadow-subtle select-none">
+            G
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
+        {navSections.map((group, gi) => {
+          if (group.section && !canAccessSection(role, group.section)) return null
+          if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
+
+          const visibleItems = group.items.filter((item) => {
+            if (item.section && !canAccessSection(role, item.section)) return false
+            if (item.moduleKey && !isModuleActive(item.moduleKey)) return false
+            if (item.extensionKey && !isExtensionActive(item.extensionKey)) return false
+            return true
+          })
+
+          if (visibleItems.length === 0) return null
+
+          const isExpanded = !group.groupLabel || expandedGroup === group.groupLabel
+
+          return (
+            <div key={gi} className="space-y-0.5">
+              {group.groupLabel && !collapsed && (
+                <button
+                  type="button"
+                  onClick={() => onToggleGroup(group.groupLabel!)}
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors group select-none rounded-md"
+                >
+                  <span>{group.groupLabel}</span>
+                  <ChevronDown
+                    size={13}
+                    className={cn('transition-transform duration-200 text-muted-foreground/60 group-hover:text-foreground', isExpanded ? 'rotate-0' : '-rotate-90')}
+                  />
+                </button>
+              )}
+
+              {collapsed && group.icon && (
+                <div className="flex justify-center py-1">
+                  <NavLink
+                    to={visibleItems[0].to}
+                    title={group.groupLabel || visibleItems[0].label}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center justify-center rounded-lg p-2.5 transition-all duration-150',
+                        isActive || visibleItems.some((item) => isItemActive(item.to, pathname))
+                          ? 'bg-primary text-primary-foreground shadow-subtle'
+                          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
+                      )
+                    }
+                  >
+                    <group.icon className="h-4 w-4" />
+                  </NavLink>
+                </div>
+              )}
+
+              <div
+                className={cn(
+                  'space-y-0.5 overflow-hidden transition-all duration-200',
+                  !isExpanded || collapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[1000px] opacity-100'
+                )}
+              >
+                {visibleItems.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={EXACT_MATCH_ROUTES.has(to)}
+                    onClick={onNavItemClick}
+                    title={collapsed ? label : undefined}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
+                        isActive
+                          ? 'bg-primary text-primary-foreground shadow-subtle font-semibold'
+                          : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
+                        collapsed && 'hidden'
+                      )
+                    }
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                    {!collapsed && <span className="truncate">{label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </nav>
+
+      {/* User & Logout Footer */}
+      <div className={cn('p-3 border-t border-border/70 shrink-0 bg-card/50', collapsed && 'p-2 flex justify-center')}>
+        {!collapsed ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 overflow-hidden min-w-0">
+              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center shrink-0">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="overflow-hidden min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{role ? ROLE_LABELS[role] : user?.email}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+              title="Logout"
+              onClick={onLogout}
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            title="Logout"
+            onClick={onLogout}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </>
+  )
+}
+
 export default function TenantLayout() {
   const { user, role, logout, setActiveModules, token, activeCompanyId, setActiveCompanyId } = useAuthStore()
   const { toggleOpen } = useGenieStore()
@@ -241,38 +432,20 @@ export default function TenantLayout() {
   })
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Accordion state: track which group labels are expanded
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    navSections.forEach((section) => {
-      if (section.groupLabel) {
-        const isActive = section.items.some((item) => location.pathname.startsWith(item.to))
-        if (isActive) {
-          initial[section.groupLabel] = true
-        }
-      }
-    })
-    return initial
+  // Accordion state: track which single group label is expanded to minimize vertical scroll
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(() => {
+    return getActiveGroup(location.pathname, role)
   })
 
-  const toggleSection = (label: string) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [label]: !prev[label],
-    }))
+  const toggleGroup = (groupLabel: string) => {
+    setExpandedGroup((prev) => (prev === groupLabel ? null : groupLabel))
   }
 
-  // Auto-expand section containing active item on navigation
+  // Auto-expand section containing active item on navigation and close others
   useEffect(() => {
-    navSections.forEach((section) => {
-      if (section.groupLabel) {
-        const isActive = section.items.some((item) => location.pathname.startsWith(item.to))
-        if (isActive) {
-          setExpandedSections((prev) => (prev[section.groupLabel!] ? prev : { ...prev, [section.groupLabel!]: true }))
-        }
-      }
-    })
-  }, [location.pathname])
+    const activeGroup = getActiveGroup(location.pathname, role)
+    setExpandedGroup(activeGroup)
+  }, [location.pathname, role])
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(isCollapsed))
@@ -381,147 +554,6 @@ export default function TenantLayout() {
     }
   }
 
-  const SidebarContent = ({ collapsed = false, onNavItemClick = () => {} }) => (
-    <>
-      <div className={cn('h-16 px-4 border-b border-border/70 shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
-        {!collapsed ? (
-          <div className="flex items-center gap-2 px-1 overflow-hidden select-none">
-            <span className="text-xl font-extrabold tracking-tight text-foreground">
-              Genie{' '}
-              <span className="bg-gradient-to-r from-primary via-indigo-500 to-purple-500 bg-clip-text text-transparent font-bold">
-                Cloud
-              </span>
-            </span>
-          </div>
-        ) : (
-          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-base shadow-subtle select-none">
-            G
-          </div>
-        )}
-      </div>
-
-      <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
-        {navSections.map((group, gi) => {
-          if (group.section && !canAccessSection(role, group.section)) return null
-          if (group.moduleKey && !isModuleActive(group.moduleKey)) return null
-
-          const visibleItems = group.items.filter((item) => {
-            if (item.section && !canAccessSection(role, item.section)) return false
-            if (item.moduleKey && !isModuleActive(item.moduleKey)) return false
-            if (item.extensionKey && !isExtensionActive(item.extensionKey)) return false
-            return true
-          })
-
-          if (visibleItems.length === 0) return null
-
-          const isExpanded = group.groupLabel ? expandedSections[group.groupLabel] : true
-
-          return (
-            <div key={gi} className="space-y-0.5">
-              {group.groupLabel && !collapsed && (
-                <button
-                  type="button"
-                  onClick={() => toggleSection(group.groupLabel!)}
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors group select-none rounded-md"
-                >
-                  <span>{group.groupLabel}</span>
-                  <ChevronDown
-                    size={13}
-                    className={cn('transition-transform duration-200 text-muted-foreground/60 group-hover:text-foreground', isExpanded ? 'rotate-0' : '-rotate-90')}
-                  />
-                </button>
-              )}
-
-              {collapsed && group.icon && (
-                <div className="flex justify-center py-1">
-                  <NavLink
-                    to={visibleItems[0].to}
-                    title={group.groupLabel || visibleItems[0].label}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center justify-center rounded-lg p-2.5 transition-all duration-150',
-                        isActive || visibleItems.some((item) => location.pathname.startsWith(item.to))
-                          ? 'bg-primary text-primary-foreground shadow-subtle'
-                          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-                      )
-                    }
-                  >
-                    <group.icon className="h-4 w-4" />
-                  </NavLink>
-                </div>
-              )}
-
-              <div
-                className={cn(
-                  'space-y-0.5 overflow-hidden transition-all duration-200',
-                  !isExpanded || collapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[1000px] opacity-100'
-                )}
-              >
-                {visibleItems.map(({ to, label, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/settings' || to === '/dashboard' || to === '/manufacturing' || to === '/projects'}
-                    onClick={onNavItemClick}
-                    title={collapsed ? label : undefined}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
-                        isActive
-                          ? 'bg-primary text-primary-foreground shadow-subtle font-semibold'
-                          : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
-                        collapsed && 'hidden'
-                      )
-                    }
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                    {!collapsed && <span className="truncate">{label}</span>}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </nav>
-
-      {/* User & Logout Footer */}
-      <div className={cn('p-3 border-t border-border/70 shrink-0 bg-card/50', collapsed && 'p-2 flex justify-center')}>
-        {!collapsed ? (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 overflow-hidden min-w-0">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center shrink-0">
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-              </div>
-              <div className="overflow-hidden min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{role ? ROLE_LABELS[role] : user?.email}</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-              title="Logout"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            title="Logout"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </>
-  )
-
   return (
     <div className="flex h-screen bg-background/50 overflow-hidden text-foreground relative">
       {/* Antigravity Atmospheric Mesh Orbs */}
@@ -535,7 +567,15 @@ export default function TenantLayout() {
           isCollapsed ? 'w-16' : 'w-56'
         )}
       >
-        <SidebarContent collapsed={isCollapsed} />
+        <SidebarContent
+          collapsed={isCollapsed}
+          role={role}
+          user={user}
+          onLogout={handleLogout}
+          pathname={location.pathname}
+          expandedGroup={expandedGroup}
+          onToggleGroup={toggleGroup}
+        />
 
         {/* Toggle Button */}
         <Button
@@ -569,7 +609,15 @@ export default function TenantLayout() {
             <X size={18} />
           </Button>
         </div>
-        <SidebarContent onNavItemClick={() => setIsMobileMenuOpen(false)} />
+        <SidebarContent
+          onNavItemClick={() => setIsMobileMenuOpen(false)}
+          role={role}
+          user={user}
+          onLogout={handleLogout}
+          pathname={location.pathname}
+          expandedGroup={expandedGroup}
+          onToggleGroup={toggleGroup}
+        />
       </aside>
 
       {/* Main area */}

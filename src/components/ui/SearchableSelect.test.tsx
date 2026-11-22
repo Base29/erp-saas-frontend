@@ -74,4 +74,22 @@ describe('SearchableSelect', () => {
 
     expect(handleValueChange).toHaveBeenCalledWith('opt-2')
   })
+
+  it('renders clear button when clearable is true and value is selected', () => {
+    const handleValueChange = vi.fn()
+    render(
+      <SearchableSelect
+        value="opt-1"
+        onValueChange={handleValueChange}
+        options={mockOptions}
+        clearable
+      />
+    )
+
+    const clearButton = screen.getByTitle('Clear selection')
+    expect(clearButton).toBeInTheDocument()
+
+    fireEvent.click(clearButton)
+    expect(handleValueChange).toHaveBeenCalledWith('')
+  })
 })

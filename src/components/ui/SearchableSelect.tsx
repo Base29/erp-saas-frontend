@@ -29,6 +29,7 @@ export interface SearchableSelectProps {
   contentClassName?: string
   align?: 'start' | 'end' | 'center'
   id?: string
+  clearable?: boolean
 }
 
 export default function SearchableSelect({
@@ -45,6 +46,7 @@ export default function SearchableSelect({
   contentClassName,
   align = 'start',
   id,
+  clearable = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -147,7 +149,29 @@ export default function SearchableSelect({
               <span>{placeholder}</span>
             )}
           </div>
-          <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0 ml-2" />
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            {clearable && selectedOption && !disabled && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSelect('')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation()
+                    handleSelect('')
+                  }
+                }}
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                title="Clear selection"
+              >
+                <X className="h-3.5 w-3.5" />
+              </span>
+            )}
+            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          </div>
         </button>
       </DropdownMenuTrigger>
 

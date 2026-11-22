@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import TenantLayout from './TenantLayout'
 import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -86,5 +86,79 @@ describe('TenantLayout', () => {
     expect(screen.queryByText('Bulk Upload')).not.toBeInTheDocument()
     expect(screen.queryByText('Genie AI')).not.toBeInTheDocument()
     expect(screen.queryByText('Ask Genie AI or Search...')).not.toBeInTheDocument()
+  })
+
+  it('closes open menu group when opening another menu group', () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <TenantLayout />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const accountsBtn = screen.getAllByRole('button', { name: /Accounts/i })[0]
+    const salesBtn = screen.getAllByRole('button', { name: /Sales/i })[0]
+
+    // Open Accounts group
+    fireEvent.click(accountsBtn)
+
+    const chartOfAccountsLink = screen.getAllByText('Chart of Accounts')[0].closest('a')
+    const chartOfAccountsContainer = chartOfAccountsLink?.parentElement
+    expect(chartOfAccountsContainer).toHaveClass('max-h-[1000px]')
+    expect(chartOfAccountsContainer).not.toHaveClass('max-h-0')
+
+    // Open Sales group -> Accounts should automatically close
+    fireEvent.click(salesBtn)
+
+    const customersLink = screen.getAllByText('Customers')[0].closest('a')
+    const customersContainer = customersLink?.parentElement
+
+    // Sales is now open
+    expect(customersContainer).toHaveClass('max-h-[1000px]')
+    expect(customersContainer).not.toHaveClass('max-h-0')
+
+    // Accounts is closed
+    expect(chartOfAccountsContainer).toHaveClass('max-h-0')
+    expect(chartOfAccountsContainer).not.toHaveClass('max-h-[1000px]')
+  })
+
+  it('collapses open menu group when clicking its header button again', () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <TenantLayout />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const accountsBtn = screen.getAllByRole('button', { name: /Accounts/i })[0]
+
+    // Open Accounts group
+    fireEvent.click(accountsBtn)
+    const chartOfAccountsContainer = screen.getAllByText('Chart of Accounts')[0].closest('a')?.parentElement
+    expect(chartOfAccountsContainer).toHaveClass('max-h-[1000px]')
+
+    // Click Accounts again to collapse it
+    fireEvent.click(accountsBtn)
+    expect(chartOfAccountsContainer).toHaveClass('max-h-0')
+  })
+
+  it('auto-expands matching menu group on initial load of deep link', () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/sales/orders']}>
+          <TenantLayout />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const customersContainer = screen.getAllByText('Customers')[0].closest('a')?.parentElement
+    const chartOfAccountsContainer = screen.getAllByText('Chart of Accounts')[0].closest('a')?.parentElement
+
+    // Sales group should be expanded
+    expect(customersContainer).toHaveClass('max-h-[1000px]')
+    // Other groups like Accounts should be closed
+    expect(chartOfAccountsContainer).toHaveClass('max-h-0')
   })
 })
