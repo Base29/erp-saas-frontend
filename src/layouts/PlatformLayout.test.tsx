@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import PlatformLayout from './PlatformLayout'
 import { useAuthStore } from '@/store/authStore'
 import { BrowserRouter } from 'react-router-dom'
+import { APP_VERSION } from '@/utils/version'
 
 describe('PlatformLayout', () => {
   beforeEach(() => {
@@ -22,6 +23,7 @@ describe('PlatformLayout', () => {
     )
 
     expect(screen.getByText('Platform Admin')).toBeInTheDocument()
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Tenants')).toBeInTheDocument()
   })

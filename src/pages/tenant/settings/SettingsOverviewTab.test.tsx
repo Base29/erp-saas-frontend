@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { APP_VERSION } from '@/utils/version'
 
 // Mock the API calls
 vi.mock('@/api/tenant', () => ({
@@ -58,6 +59,8 @@ describe('SettingsOverviewTab', () => {
     expect(screen.getByText('Platform Status')).toBeInTheDocument()
     expect(screen.getByText('Operational')).toBeInTheDocument()
     expect(screen.getByText(`${SETTING_TILES.length} Modules`)).toBeInTheDocument()
+    expect(screen.getByText('System Version')).toBeInTheDocument()
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument()
   })
 
   it('renders quick access tiles for every setting on the platform', () => {

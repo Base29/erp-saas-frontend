@@ -5,6 +5,7 @@ import { platformLogout } from '@/api/platform'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { cn } from '@/lib/utils'
+import { APP_VERSION } from '@/utils/version'
 
 const navItems = [
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,9 +42,14 @@ export default function PlatformLayout() {
               <ShieldCheck className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                Platform Admin
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Platform Admin
+                </span>
+                <span className="text-[9px] font-mono font-medium px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                  {APP_VERSION}
+                </span>
+              </div>
               <p className="text-[10px] text-muted-foreground">Genie Cloud System</p>
             </div>
           </div>

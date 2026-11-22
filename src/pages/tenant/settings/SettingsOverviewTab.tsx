@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { ROLE_LABELS } from '@/utils/permissions'
 import { useTheme } from '@/components/ThemeProvider'
+import { APP_VERSION } from '@/utils/version'
 import {
   fetchCompanies,
   fetchFiscalPeriods,
@@ -504,6 +505,14 @@ export default function SettingsOverviewTab() {
               <div className="text-left">
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Total Settings</p>
                 <p className="text-xs font-semibold text-foreground">{SETTING_TILES.length} Modules</p>
+              </div>
+            </div>
+
+            <div className="px-3.5 py-2.5 rounded-xl bg-background/70 border border-border/80 backdrop-blur-md shadow-subtle flex items-center gap-3">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <div className="text-left">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">System Version</p>
+                <p className="text-xs font-semibold font-mono text-foreground">{APP_VERSION}</p>
               </div>
             </div>
           </div>
