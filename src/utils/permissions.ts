@@ -108,6 +108,48 @@ export function hasPermission(permission: string): boolean {
   return false
 }
 
+export function canManageUoms(role: UserRole | null): boolean {
+  if (!role) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  if (
+    hasPermission('inventory.uom.manage') ||
+    hasPermission('inventory.uoms.manage') ||
+    hasPermission('inventory.write') ||
+    hasPermission('inventory.items.manage')
+  ) {
+    return true
+  }
+  return role === 'inventory_manager'
+}
+
+export function canManageItemTypes(role: UserRole | null): boolean {
+  if (!role) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  if (
+    hasPermission('inventory.types.manage') ||
+    hasPermission('inventory.type.manage') ||
+    hasPermission('inventory.write') ||
+    hasPermission('inventory.items.manage')
+  ) {
+    return true
+  }
+  return role === 'inventory_manager'
+}
+
+export function canManageItemCategories(role: UserRole | null): boolean {
+  if (!role) return false
+  if (role === 'tenant_admin' || role === 'super_admin') return true
+  if (
+    hasPermission('inventory.categories.manage') ||
+    hasPermission('inventory.category.manage') ||
+    hasPermission('inventory.write') ||
+    hasPermission('inventory.items.manage')
+  ) {
+    return true
+  }
+  return role === 'inventory_manager'
+}
+
 // Approval actions
 export function canApprove(role: UserRole | null): boolean {
   if (!role) return false

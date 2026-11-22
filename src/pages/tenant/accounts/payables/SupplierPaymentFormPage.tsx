@@ -16,13 +16,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import AccountCombobox, { isBankOrCashAccount } from '@/components/accounts/AccountCombobox'
+import SupplierCombobox from '@/components/accounts/SupplierCombobox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { format } from 'date-fns'
 
@@ -43,13 +38,13 @@ export default function SupplierPaymentFormPage() {
   const [allocations, setAllocations] = useState<Record<string, number>>({})
   const [allocationError, setAllocationError] = useState<string | null>(null)
 
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => fetchSuppliers({ is_active: 1 }).then((r) => r.data.data),
   })
 
   // We only want Bank/Cash accounts for payments
-  const { data: accountsData } = useQuery({
+  const { data: accountsData, isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts-all'],
     queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
@@ -62,18 +57,7 @@ export default function SupplierPaymentFormPage() {
   }, [accountsData])
 
   const bankAccounts = useMemo(() => {
-    return accounts.filter((a) => {
-      const name = a.account_name.toLowerCase()
-      const code = a.account_code || ''
-      return (
-        name.includes('bank') ||
-        name.includes('cash') ||
-        name.includes('checking') ||
-        name.includes('petty') ||
-        code.startsWith('111') ||
-        code.startsWith('10')
-      )
-    })
+    return accounts.filter(isBankOrCashAccount)
   }, [accounts])
 
   const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
@@ -187,7 +171,7 @@ export default function SupplierPaymentFormPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/supplier-payments')}>
           <ArrowLeft className="h-4 w-4" />
@@ -213,19 +197,13 @@ export default function SupplierPaymentFormPage() {
                 control={control}
                 name="supplier_id"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name} ({s.supplier_code})
-                          {s.current_balance !== undefined && ` — Bal: $${Number(s.current_balance).toFixed(2)}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SupplierCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    suppliers={suppliers}
+                    placeholder="Select supplier…"
+                    isLoading={suppliersLoading}
+                  />
                 )}
               />
               {errors.supplier_id && <p className="text-xs text-destructive">{errors.supplier_id.message}</p>}
@@ -263,18 +241,13 @@ export default function SupplierPaymentFormPage() {
                   control={control}
                   name="bank_account_id"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select bank/cash account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(bankAccounts.length > 0 ? bankAccounts : accounts).map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.account_code} - {a.account_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <AccountCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      accounts={bankAccounts}
+                      placeholder="Select bank/cash account…"
+                      isLoading={accountsLoading}
+                    />
                   )}
                 />
                 {errors.bank_account_id && <p className="text-xs text-destructive">{errors.bank_account_id.message}</p>}

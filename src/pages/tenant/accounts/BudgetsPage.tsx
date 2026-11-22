@@ -7,13 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import BudgetModal from './BudgetModal'
 import DataTable from '@/components/DataTable'
 import type { ColumnDef } from '@tanstack/react-table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 export default function BudgetsPage() {
   const navigate = useNavigate()
@@ -145,23 +139,23 @@ export default function BudgetsPage() {
         onClearFilters={clearFilters}
         toolbarExtra={
           <div className="w-56">
-            <Select
+            <SearchableSelect
               value={fiscalPeriodId || '__all__'}
               onValueChange={(val) => {
                 setFiscalPeriodId(val === '__all__' ? '' : val)
                 setPage(1)
               }}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="All Fiscal Periods" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All Fiscal Periods</SelectItem>
-                {periods.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              triggerClassName="h-9 text-sm"
+              placeholder="All Fiscal Periods"
+              searchPlaceholder="Search periods…"
+              options={[
+                { value: '__all__', label: 'All Fiscal Periods' },
+                ...periods.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                })),
+              ]}
+            />
           </div>
         }
       />

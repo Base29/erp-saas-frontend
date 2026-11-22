@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Eye } from 'lucide-react'
+import { Plus, Trash2, Eye, ArrowLeft } from 'lucide-react'
 import {
   fetchSaleReceipts, fetchSaleReceipt, createSaleReceipt, postSaleReceipt,
   fetchCustomersFull, fetchOutstandingInvoices,
@@ -39,16 +40,48 @@ type FormValues = z.infer<typeof schema>
 
 export default function ReceiptsPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const location = useLocation()
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'sales')
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const returnTo = location.state?.returnTo || searchParams.get('return_to')
+  const backLabel = returnTo?.includes('general-ledger')
+    ? 'Back to General Ledger'
+    : returnTo?.includes('statement')
+    ? 'Back to Statement'
+    : 'Back'
+
+  const initialSearch = searchParams.get('search') || ''
+  const initialId = searchParams.get('id') || null
+
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [postingStatus, setPostingStatus] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(initialId)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+
+  const handleCloseDetail = () => {
+    setDetailId(null)
+    if (returnTo) {
+      navigate(returnTo)
+    } else if (searchParams.get('id')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('id')
+      next.delete('return_to')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id) {
+      setDetailId(id)
+    }
+  }, [searchParams])
 
   const queryParams: Record<string, string | number> = { page }
   if (search.trim()) queryParams.search = search.trim()
@@ -94,7 +127,13 @@ export default function ReceiptsPage() {
   })
 
   const { register, handleSubmit, reset, setValue, watch, control, formState: { errors, isSubmitting } } =
-    useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { allocations: [] } })
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: {
+        receipt_date: new Date().toISOString().slice(0, 10),
+        allocations: [],
+      },
+    })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'allocations' })
 
@@ -264,9 +303,25 @@ export default function ReceiptsPage() {
       </Dialog>
 
       {/* Detail dialog */}
-      <Dialog open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+      <Dialog open={!!detailId} onOpenChange={(o) => !o && handleCloseDetail()}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Receipt — {detail?.receipt_number}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              {returnTo && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseDetail}
+                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                  title={backLabel}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>{backLabel}</span>
+                </Button>
+              )}
+              <DialogTitle>Receipt — {detail?.receipt_number}</DialogTitle>
+            </div>
+          </DialogHeader>
           {detail && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -302,6 +357,13 @@ export default function ReceiptsPage() {
                   Post
                 </Button>
               )}
+
+              <DialogFooter className="border-t pt-3 mt-4">
+                <Button variant="outline" size="sm" onClick={handleCloseDetail} className="gap-1.5">
+                  <ArrowLeft className="h-4 w-4" />
+                  {returnTo ? backLabel : 'Close'}
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>

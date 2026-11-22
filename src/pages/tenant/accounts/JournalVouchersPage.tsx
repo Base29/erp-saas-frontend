@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Plus, Eye, Search, X, Upload, Pencil, Undo2, Loader2 } from 'lucide-react'
 import BulkImportModal from '@/components/import/BulkImportModal'
 import {
@@ -24,13 +24,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
 import { formatDate } from '@/utils/format'
@@ -66,6 +60,16 @@ export default function JournalVouchersPage() {
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
   const [importOpen, setImportOpen] = useState(false)
+
+  const location = useLocation()
+  const jvId = searchParams.get('id')
+  const returnTo = searchParams.get('return_to') || location.state?.returnTo
+  useEffect(() => {
+    if (jvId) {
+      const targetUrl = `/accounts/journal-vouchers/${jvId}${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ''}`
+      navigate(targetUrl, { replace: true, state: { returnTo } })
+    }
+  }, [jvId, returnTo, navigate])
 
   const [activeTab, setActiveTab]           = useState<VoucherTab>('all')
   const [page, setPage]                     = useState(1)
@@ -376,33 +380,37 @@ export default function JournalVouchersPage() {
         {/* Approval status */}
         <div className="space-y-1">
           <Label className="text-xs">Approval</Label>
-          <Select value={approvalFilter || '__all__'} onValueChange={(v) => { setApprovalFilter(v === '__all__' ? '' : v); setPage(1) }}>
-            <SelectTrigger className="h-8 text-sm w-36">
-              <SelectValue placeholder="Any" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Any</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="pending_approval">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={approvalFilter || '__all__'}
+            onValueChange={(v) => { setApprovalFilter(v === '__all__' ? '' : v); setPage(1) }}
+            triggerClassName="h-8 text-sm w-36"
+            placeholder="Any"
+            searchPlaceholder="Search status…"
+            options={[
+              { value: '__all__', label: 'Any' },
+              { value: 'draft', label: 'Draft' },
+              { value: 'pending_approval', label: 'Pending' },
+              { value: 'approved', label: 'Approved' },
+              { value: 'rejected', label: 'Rejected' },
+            ]}
+          />
         </div>
 
         {/* Posting status */}
         <div className="space-y-1">
           <Label className="text-xs">Posting</Label>
-          <Select value={postingFilter || '__all__'} onValueChange={(v) => { setPostingFilter(v === '__all__' ? '' : v); setPage(1) }}>
-            <SelectTrigger className="h-8 text-sm w-32">
-              <SelectValue placeholder="Any" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Any</SelectItem>
-              <SelectItem value="unposted">Unposted</SelectItem>
-              <SelectItem value="posted">Posted</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={postingFilter || '__all__'}
+            onValueChange={(v) => { setPostingFilter(v === '__all__' ? '' : v); setPage(1) }}
+            triggerClassName="h-8 text-sm w-32"
+            placeholder="Any"
+            searchPlaceholder="Search status…"
+            options={[
+              { value: '__all__', label: 'Any' },
+              { value: 'unposted', label: 'Unposted' },
+              { value: 'posted', label: 'Posted' },
+            ]}
+          />
         </div>
 
         {/* Clear filters */}
@@ -461,18 +469,17 @@ export default function JournalVouchersPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="page_fiscal_period" className="text-xs font-medium">Fiscal Period</Label>
-              <Select value={reversalPeriodId} onValueChange={setReversalPeriodId}>
-                <SelectTrigger id="page_fiscal_period">
-                  <SelectValue placeholder="Select open fiscal period…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {openPeriods.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name} ({formatDate(p.start_date)} - {formatDate(p.end_date)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="page_fiscal_period"
+                value={reversalPeriodId}
+                onValueChange={setReversalPeriodId}
+                placeholder="Select open fiscal period…"
+                searchPlaceholder="Search fiscal period…"
+                options={openPeriods.map((p: any) => ({
+                  value: String(p.id),
+                  label: `${p.name} (${formatDate(p.start_date)} - ${formatDate(p.end_date)})`,
+                }))}
+              />
             </div>
 
             <div className="space-y-1.5">

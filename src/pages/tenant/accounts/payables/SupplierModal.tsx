@@ -20,14 +20,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -161,21 +155,12 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
 
           <div className="space-y-2">
             <Label>Default Payable Account</Label>
-            <Select
-              onValueChange={(val) => setValue('default_payable_account_id', val)}
+            <AccountCombobox
               value={watch('default_payable_account_id') || ''}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select account..." />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.account_code} - {a.account_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => setValue('default_payable_account_id', val)}
+              accounts={accounts}
+              placeholder="Select account…"
+            />
           </div>
 
           <div className="flex items-center gap-2">

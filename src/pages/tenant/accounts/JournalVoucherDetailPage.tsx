@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Printer, Undo2, Loader2, ExternalLink } from 'lucide-react'
 import {
@@ -26,13 +26,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { useAuthStore } from '@/store/authStore'
 import { canWrite } from '@/utils/permissions'
 import { formatDate, formatDateTime } from '@/utils/format'
@@ -51,6 +45,27 @@ function fmt(n: number) {
 export default function JournalVoucherDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const returnTo = location.state?.returnTo || searchParams.get('return_to')
+  const backLabel = returnTo?.includes('general-ledger')
+    ? 'Back to General Ledger'
+    : returnTo?.includes('customer-statement')
+    ? 'Back to Customer Statement'
+    : returnTo?.includes('supplier-statement')
+    ? 'Back to Supplier Statement'
+    : 'Back to Journal Vouchers'
+
+  const handleBack = () => {
+    if (returnTo) {
+      navigate(returnTo)
+    } else if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/accounts/journal-vouchers')
+    }
+  }
+
   const qc = useQueryClient()
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
@@ -180,8 +195,15 @@ export default function JournalVoucherDetailPage() {
       <div className="p-6 space-y-6 w-full">
         {/* Header */}
         <div className="flex items-center gap-3 print-hidden">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/journal-vouchers')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="gap-1.5"
+            title={backLabel}
+          >
             <ArrowLeft className="h-4 w-4" />
+            <span className="text-xs hidden sm:inline">{backLabel}</span>
           </Button>
           <div className="flex-1">
             <h1 className="text-xl font-semibold flex items-center gap-2">
@@ -332,6 +354,34 @@ export default function JournalVoucherDetailPage() {
               <p className="text-muted-foreground">Reference</p>
               <p className="font-medium">{jv.reference ?? '—'}</p>
             </div>
+            {(jv as any).source_document && (
+              <div>
+                <p className="text-muted-foreground">Related Document</p>
+                {(jv as any).source_document.url ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const docUrl = (jv as any).source_document.url
+                      const currentReturn = returnTo || (location.pathname + location.search)
+                      const sep = docUrl.includes('?') ? '&' : '?'
+                      navigate(`${docUrl}${sep}return_to=${encodeURIComponent(currentReturn)}`, {
+                        state: { returnTo: currentReturn },
+                      })
+                    }}
+                    className="font-medium text-primary hover:underline inline-flex items-center gap-1 font-mono text-left"
+                    title={`View ${(jv as any).source_document.type_label}`}
+                  >
+                    <span>{(jv as any).source_document.number}</span>
+                    <ExternalLink className="h-3 w-3 opacity-70 shrink-0" />
+                  </button>
+                ) : (
+                  <p className="font-medium font-mono">{(jv as any).source_document.number}</p>
+                )}
+                <span className="block text-[11px] text-muted-foreground">
+                  {(jv as any).source_document.type_label}
+                </span>
+              </div>
+            )}
             <div className="col-span-2 md:col-span-4">
               <p className="text-muted-foreground">Narration</p>
               <p className="font-medium">{jv.narration ?? '—'}</p>
@@ -421,18 +471,17 @@ export default function JournalVoucherDetailPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="fiscal_period" className="text-xs font-medium">Fiscal Period</Label>
-              <Select value={reversalPeriodId} onValueChange={setReversalPeriodId}>
-                <SelectTrigger id="fiscal_period">
-                  <SelectValue placeholder="Select open fiscal period…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {openPeriods.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name} ({formatDate(p.start_date)} - {formatDate(p.end_date)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="fiscal_period"
+                value={reversalPeriodId}
+                onValueChange={setReversalPeriodId}
+                placeholder="Select open fiscal period…"
+                searchPlaceholder="Search fiscal period…"
+                options={openPeriods.map((p: any) => ({
+                  value: String(p.id),
+                  label: `${p.name} (${formatDate(p.start_date)} - ${formatDate(p.end_date)})`,
+                }))}
+              />
             </div>
 
             <div className="space-y-1.5">

@@ -21,13 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -417,52 +412,46 @@ export default function BankReconciliationWorkspacePage() {
                   <Label className="text-xs font-medium">
                     Offset Account <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={offsetAccountId} onValueChange={setOffsetAccountId}>
-                    <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="Select offset account..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 min-w-[20rem]">
-                      {offsetAccounts.map((acc) => (
-                        <SelectItem key={acc.id} value={String(acc.id)}>
-                          {acc.account_code} — {acc.account_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AccountCombobox
+                    value={offsetAccountId}
+                    onChange={setOffsetAccountId}
+                    accounts={offsetAccounts}
+                    placeholder="Select offset account…"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Voucher Type</Label>
-                    <Select value={voucherType} onValueChange={setVoucherType}>
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(VOUCHER_TYPE_LABELS).map(([k, label]) => (
-                          <SelectItem key={k} value={k}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={voucherType}
+                      onValueChange={setVoucherType}
+                      triggerClassName="text-xs"
+                      placeholder="Select voucher type…"
+                      searchPlaceholder="Search voucher type…"
+                      options={Object.entries(VOUCHER_TYPE_LABELS).map(([k, label]) => ({
+                        value: k,
+                        label,
+                      }))}
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Cost Center (Optional)</Label>
-                    <Select value={costCenterId} onValueChange={setCostCenterId}>
-                      <SelectTrigger className="text-xs">
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60">
-                        <SelectItem value="none">None</SelectItem>
-                        {costCenters.map((cc) => (
-                          <SelectItem key={cc.id} value={String(cc.id)}>
-                            {cc.code} — {cc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={costCenterId}
+                      onValueChange={setCostCenterId}
+                      triggerClassName="text-xs"
+                      placeholder="None"
+                      searchPlaceholder="Search cost center…"
+                      options={[
+                        { value: 'none', label: 'None' },
+                        ...costCenters.map((cc) => ({
+                          value: String(cc.id),
+                          label: `${cc.code} — ${cc.name}`,
+                        })),
+                      ]}
+                    />
                   </div>
                 </div>
 

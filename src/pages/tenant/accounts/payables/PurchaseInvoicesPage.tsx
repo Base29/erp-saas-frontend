@@ -1,16 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchPurchaseInvoices,
+  fetchPurchaseInvoice,
   postPurchaseInvoice,
   unpostPurchaseInvoice,
   type PurchaseInvoice,
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Eye, Plus, Send, CheckCircle2, Pencil, RotateCcw } from 'lucide-react'
+import { Eye, Plus, Send, CheckCircle2, Pencil, RotateCcw, ExternalLink, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import AttachmentUpload from '@/components/AttachmentUpload'
 import DataTable from '@/components/DataTable'
@@ -20,13 +21,57 @@ import type { ColumnDef } from '@tanstack/react-table'
 
 export default function PurchaseInvoicesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const qc = useQueryClient()
   const role = useAuthStore((s) => s.role)
   const canEdit = canWrite(role, 'accounts')
 
-  const [search, setSearch] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const returnTo = location.state?.returnTo || searchParams.get('return_to')
+  const backLabel = returnTo?.includes('general-ledger')
+    ? 'Back to General Ledger'
+    : returnTo?.includes('statement')
+    ? 'Back to Statement'
+    : 'Back'
+
+  const initialSearch = searchParams.get('search') || ''
+  const initialId = searchParams.get('id') || null
+  const [search, setSearch] = useState(initialSearch)
   const [page, setPage] = useState(1)
+  const [detailId, setDetailId] = useState<string | null>(initialId)
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null)
+
+  const handleCloseDetail = () => {
+    setSelectedInvoice(null)
+    setDetailId(null)
+    if (returnTo) {
+      navigate(returnTo)
+    } else if (searchParams.get('id')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('id')
+      next.delete('return_to')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id) {
+      setDetailId(id)
+    }
+  }, [searchParams])
+
+  const { data: fetchedInvoiceData } = useQuery({
+    queryKey: ['purchase-invoice', detailId],
+    queryFn: () => fetchPurchaseInvoice(detailId!).then((r) => r.data.data),
+    enabled: !!detailId,
+  })
+
+  useEffect(() => {
+    if (fetchedInvoiceData) {
+      setSelectedInvoice(fetchedInvoiceData)
+    }
+  }, [fetchedInvoiceData])
 
   const queryParams = useMemo(() => {
     const params: Record<string, string | number> = { page }
@@ -153,7 +198,10 @@ export default function PurchaseInvoicesPage() {
               size="sm"
               className="h-7 w-7 p-0"
               title="View Invoice"
-              onClick={() => setSelectedInvoice(inv)}
+              onClick={() => {
+                setDetailId(inv.id)
+                setSelectedInvoice(inv)
+              }}
             >
               <Eye className="h-3.5 w-3.5" />
             </Button>
@@ -237,10 +285,24 @@ export default function PurchaseInvoicesPage() {
       />
 
       {/* Invoice Detail Dialog */}
-      <Dialog open={!!selectedInvoice} onOpenChange={(o) => !o && setSelectedInvoice(null)}>
+      <Dialog open={Boolean(selectedInvoice || detailId)} onOpenChange={(o) => !o && handleCloseDetail()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between pb-2 border-b">
-            <DialogTitle>Purchase Invoice #{selectedInvoice?.invoice_number}</DialogTitle>
+            <div className="flex items-center gap-2">
+              {returnTo && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseDetail}
+                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                  title={backLabel}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>{backLabel}</span>
+                </Button>
+              )}
+              <DialogTitle>Purchase Invoice #{selectedInvoice?.invoice_number}</DialogTitle>
+            </div>
             <div className="flex items-center gap-2">
               {canEdit && selectedInvoice && selectedInvoice.status !== 'paid' && (
                 <Button
@@ -297,7 +359,52 @@ export default function PurchaseInvoicesPage() {
                   <span className="text-xs text-muted-foreground block">Payment Status</span>
                   <span className="capitalize font-medium">{selectedInvoice.status ? selectedInvoice.status.replace('_', ' ') : 'Approved'}</span>
                 </div>
+                {selectedInvoice.journal_voucher_id && (
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Journal Voucher</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/accounts/journal-vouchers/${selectedInvoice.journal_voucher_id}`)}
+                      className="text-primary hover:underline font-mono text-xs inline-flex items-center gap-1 font-semibold"
+                    >
+                      <span>View Journal Voucher</span>
+                      <ExternalLink className="h-3 w-3 opacity-70" />
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {(selectedInvoice as any).lines && (selectedInvoice as any).lines.length > 0 && (
+                <div className="space-y-2 border-t pt-3">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Line Items</p>
+                  <div className="rounded border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-1.5 text-left font-medium">Item</th>
+                          <th className="px-3 py-1.5 text-right font-medium">Qty</th>
+                          <th className="px-3 py-1.5 text-right font-medium">Unit Price</th>
+                          <th className="px-3 py-1.5 text-right font-medium">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {(selectedInvoice as any).lines.map((ln: any, idx: number) => (
+                          <tr key={ln.id ?? idx}>
+                            <td className="px-3 py-1.5 font-medium">{ln.item?.name ?? ln.description ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-right font-mono">{ln.quantity}</td>
+                            <td className="px-3 py-1.5 text-right font-mono">
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ln.unit_price)}
+                            </td>
+                            <td className="px-3 py-1.5 text-right font-mono font-medium">
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(ln.quantity) * Number(ln.unit_price))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {selectedInvoice.posting_status !== 'posted' && canEdit && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
@@ -348,8 +455,9 @@ export default function PurchaseInvoicesPage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setSelectedInvoice(null)}>
-              Close
+            <Button variant="outline" size="sm" onClick={handleCloseDetail} className="gap-1.5">
+              <ArrowLeft className="h-4 w-4" />
+              {returnTo ? backLabel : 'Close'}
             </Button>
           </DialogFooter>
         </DialogContent>

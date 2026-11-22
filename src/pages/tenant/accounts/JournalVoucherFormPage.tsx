@@ -20,18 +20,12 @@ import { getProjects, type Project } from '@/api/projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 const lineSchema = z.object({
   account_id: z.string().min(1, 'Required'),
@@ -247,12 +241,16 @@ export default function JournalVoucherFormPage() {
   })
   const projects: Project[] = projectsData?.data ?? []
 
-  const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
+  const { register, control, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } =
     useForm<FormValues>({
       resolver: zodResolver(schema),
       defaultValues: {
+        voucher_date: new Date().toISOString().split('T')[0],
         fiscal_period_id: '',
-        lines: [{ account_id: '', cost_center_id: '', project_id: '', debit_amount: '0', credit_amount: '0' }],
+        lines: [
+          { account_id: '', cost_center_id: '', project_id: '', debit_amount: '0', credit_amount: '0' },
+          { account_id: '', cost_center_id: '', project_id: '', debit_amount: '0', credit_amount: '0' },
+        ],
       },
     })
 
@@ -317,9 +315,21 @@ export default function JournalVoucherFormPage() {
             },
           ],
         })
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        if (!watch('voucher_date')) {
+          setValue('voucher_date', today)
+        }
+        if (periods.length > 0 && !watch('fiscal_period_id')) {
+          const matchPeriod = periods.find(p => p.status === 'open' && p.start_date <= today && p.end_date >= today)
+            || periods.find(p => p.status === 'open')
+          if (matchPeriod) {
+            setValue('fiscal_period_id', String(matchPeriod.id))
+          }
+        }
       }
     }
-  }, [jv, isEdit, searchParams, periods, reset])
+  }, [jv, isEdit, searchParams, periods, reset, watch, setValue])
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
@@ -388,7 +398,12 @@ export default function JournalVoucherFormPage() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/journal-vouchers')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/accounts/journal-vouchers'))}
+          title="Back"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-xl font-semibold">
@@ -419,14 +434,14 @@ export default function JournalVoucherFormPage() {
               control={control}
               name="voucher_type"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isReadOnly}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {VOUCHER_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isReadOnly}
+                  options={VOUCHER_TYPES}
+                  placeholder="Select voucher type…"
+                  searchPlaceholder="Search voucher type…"
+                />
               )}
             />
           </div>
@@ -441,14 +456,17 @@ export default function JournalVoucherFormPage() {
               control={control}
               name="fiscal_period_id"
               render={({ field }) => (
-                <Select value={field.value || undefined} onValueChange={field.onChange} disabled={isReadOnly}>
-                  <SelectTrigger><SelectValue placeholder="Select period…" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {periods.filter((p) => p.status === 'open').map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={field.value || ''}
+                  onValueChange={field.onChange}
+                  disabled={isReadOnly}
+                  options={periods.filter((p) => p.status === 'open').map((p) => ({
+                    value: String(p.id),
+                    label: p.name,
+                  }))}
+                  placeholder="Select period…"
+                  searchPlaceholder="Search fiscal period…"
+                />
               )}
             />
             {errors.fiscal_period_id && <p className="text-xs text-destructive">{errors.fiscal_period_id.message}</p>}
@@ -515,23 +533,21 @@ export default function JournalVoucherFormPage() {
                         control={control}
                         name={`lines.${i}.cost_center_id`}
                         render={({ field: f }) => (
-                          <Select 
-                            value={f.value || 'none'} 
-                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)} 
+                          <SearchableSelect
+                            value={f.value || 'none'}
+                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)}
                             disabled={isReadOnly}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="No cost center" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-72">
-                              <SelectItem value="none">None</SelectItem>
-                              {costCenters.map((cc) => (
-                                <SelectItem key={cc.id} value={String(cc.id)}>
-                                  {cc.code} — {cc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            triggerClassName="h-8 text-xs"
+                            placeholder="No cost center"
+                            searchPlaceholder="Search cost center…"
+                            options={[
+                              { value: 'none', label: 'None' },
+                              ...costCenters.map((cc) => ({
+                                value: String(cc.id),
+                                label: `${cc.code} — ${cc.name}`,
+                              })),
+                            ]}
+                          />
                         )}
                       />
                     </td>
@@ -540,23 +556,21 @@ export default function JournalVoucherFormPage() {
                         control={control}
                         name={`lines.${i}.project_id`}
                         render={({ field: f }) => (
-                          <Select 
-                            value={f.value || 'none'} 
-                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)} 
+                          <SearchableSelect
+                            value={f.value || 'none'}
+                            onValueChange={(val) => f.onChange(val === 'none' ? '' : val)}
                             disabled={isReadOnly}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="No project" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-72">
-                              <SelectItem value="none">None</SelectItem>
-                              {projects.map((p) => (
-                                <SelectItem key={p.id} value={String(p.id)}>
-                                  {p.project_code} — {p.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            triggerClassName="h-8 text-xs"
+                            placeholder="No project"
+                            searchPlaceholder="Search project…"
+                            options={[
+                              { value: 'none', label: 'None' },
+                              ...projects.map((p) => ({
+                                value: String(p.id),
+                                label: `${p.project_code} — ${p.name}`,
+                              })),
+                            ]}
+                          />
                         )}
                       />
                     </td>

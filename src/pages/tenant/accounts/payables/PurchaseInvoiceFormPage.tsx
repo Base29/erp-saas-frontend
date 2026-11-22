@@ -19,15 +19,10 @@ import { getProjects, type Project } from '@/api/projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import AccountCombobox from '@/components/accounts/AccountCombobox'
+import SupplierCombobox from '@/components/accounts/SupplierCombobox'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 const schema = z.object({
   supplier_id: z.string().min(1, 'Supplier is required'),
@@ -163,7 +158,12 @@ export default function PurchaseInvoiceFormPage() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/purchase-invoices')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/accounts/purchase-invoices'))}
+          title="Back"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -183,16 +183,12 @@ export default function PurchaseInvoiceFormPage() {
                 control={control}
                 name="supplier_id"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name} ({s.supplier_code})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SupplierCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    suppliers={suppliers}
+                    placeholder="Select supplier…"
+                  />
                 )}
               />
               {errors.supplier_id && <p className="text-xs text-destructive">{errors.supplier_id.message}</p>}
@@ -248,17 +244,19 @@ export default function PurchaseInvoiceFormPage() {
                   control={control}
                   name="cost_center_id"
                   render={({ field }) => (
-                    <Select value={field.value || 'none'} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="No cost center" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {costCenters.map((cc) => (
-                          <SelectItem key={cc.id} value={cc.id}>{cc.code} - {cc.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={field.value || 'none'}
+                      onValueChange={field.onChange}
+                      placeholder="No cost center"
+                      searchPlaceholder="Search cost center…"
+                      options={[
+                        { value: 'none', label: 'None' },
+                        ...costCenters.map((cc) => ({
+                          value: String(cc.id),
+                          label: `${cc.code} - ${cc.name}`,
+                        })),
+                      ]}
+                    />
                   )}
                 />
               </div>
@@ -269,17 +267,19 @@ export default function PurchaseInvoiceFormPage() {
                   control={control}
                   name="project_id"
                   render={({ field }) => (
-                    <Select value={field.value || 'none'} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="No project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.project_code} - {p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={field.value || 'none'}
+                      onValueChange={field.onChange}
+                      placeholder="No project"
+                      searchPlaceholder="Search project…"
+                      options={[
+                        { value: 'none', label: 'None' },
+                        ...projects.map((p) => ({
+                          value: String(p.id),
+                          label: `${p.project_code} - ${p.name}`,
+                        })),
+                      ]}
+                    />
                   )}
                 />
               </div>

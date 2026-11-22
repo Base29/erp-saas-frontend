@@ -520,6 +520,9 @@ export interface ItemCategory {
   name: string
   parent_category_id: string | null
   description: string | null
+  parent?: ItemCategory | null
+  items_count?: number
+  created_at?: string
 }
 
 export interface ItemVariant {
@@ -537,11 +540,25 @@ export interface ItemBundleComponent {
   component_item?: Item
 }
 
+export interface ItemType {
+  id: string
+  company_id?: string
+  name: string
+  code: string
+  nature: 'stock' | 'service' | 'bundle'
+  description?: string | null
+  is_active: boolean
+  is_system?: boolean
+  items_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Item {
   id: string
   item_code: string
   item_name: string
-  item_type: 'stock' | 'service' | 'bundle'
+  item_type: 'stock' | 'service' | 'bundle' | string
   category_id: string | null
   base_unit_of_measure_id: string
   reorder_level: number
@@ -566,8 +583,44 @@ export interface Warehouse {
 export const fetchUoms = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<UnitOfMeasure>>('/v1/inventory/uoms', { params })
 
+export const createUom = (payload: { name: string; abbreviation: string; is_active?: boolean }) =>
+  apiClient.post<{ data: UnitOfMeasure }>('/v1/inventory/uoms', payload)
+
+export const updateUom = (id: string, payload: Partial<UnitOfMeasure>) =>
+  apiClient.patch<{ data: UnitOfMeasure }>(`/v1/inventory/uoms/${id}`, payload)
+
+export const deleteUom = (id: string) =>
+  apiClient.delete(`/v1/inventory/uoms/${id}`)
+
 export const fetchItemCategories = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<ItemCategory>>('/v1/inventory/item-categories', { params })
+
+export const createInventoryCategory = (payload: { name: string; parent_category_id?: string | null; description?: string | null }) =>
+  apiClient.post<{ data: ItemCategory }>('/v1/inventory/item-categories', payload)
+
+export const updateInventoryCategory = (id: string, payload: Partial<ItemCategory>) =>
+  apiClient.patch<{ data: ItemCategory }>(`/v1/inventory/item-categories/${id}`, payload)
+
+export const deleteInventoryCategory = (id: string) =>
+  apiClient.delete(`/v1/inventory/item-categories/${id}`)
+
+export const fetchItemTypes = (params?: Record<string, string | number | boolean>) =>
+  apiClient.get<PaginatedResponse<ItemType>>('/v1/inventory/item-types', { params })
+
+export const createItemType = (payload: {
+  name: string
+  code?: string
+  nature: 'stock' | 'service' | 'bundle'
+  description?: string | null
+  is_active?: boolean
+}) =>
+  apiClient.post<{ data: ItemType }>('/v1/inventory/item-types', payload)
+
+export const updateItemType = (id: string, payload: Partial<ItemType>) =>
+  apiClient.patch<{ data: ItemType }>(`/v1/inventory/item-types/${id}`, payload)
+
+export const deleteItemType = (id: string) =>
+  apiClient.delete(`/v1/inventory/item-types/${id}`)
 
 export const fetchProductCategories = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<ItemCategory>>('/v1/settings/product-categories', { params })
@@ -593,7 +646,7 @@ export const fetchItem = (id: string) =>
 export const createItem = (payload: {
   item_code?: string
   item_name: string
-  item_type: 'stock' | 'service' | 'bundle'
+  item_type: 'stock' | 'service' | 'bundle' | string
   base_unit_of_measure_id: string
   category_id?: string | null
   reorder_level?: number

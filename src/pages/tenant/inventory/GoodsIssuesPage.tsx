@@ -103,7 +103,13 @@ export default function GoodsIssuesPage() {
   })
 
   const { register, handleSubmit, reset, setValue, watch, control, formState: { errors, isSubmitting } } =
-    useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { lines: [{ item_id: '', quantity: 1, batch_id: null, serial_number_id: null }] } })
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: {
+        issue_date: new Date().toISOString().slice(0, 10),
+        lines: [{ item_id: '', quantity: 1, batch_id: null, serial_number_id: null }],
+      },
+    })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' })
 

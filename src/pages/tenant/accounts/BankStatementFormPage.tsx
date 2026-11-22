@@ -10,16 +10,10 @@ import {
   createBankStatement,
   type Account,
 } from '@/api/tenant'
+import AccountCombobox, { isBankOrCashAccount } from '@/components/accounts/AccountCombobox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const lineSchema = z.object({
@@ -43,7 +37,7 @@ export default function BankStatementFormPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
-  const { data: accountsData } = useQuery({
+  const { data: accountsData, isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts-all'],
     queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
@@ -54,6 +48,10 @@ export default function BankStatementFormPage() {
     if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
     return []
   }, [accountsData])
+
+  const bankAccounts = useMemo(() => {
+    return accounts.filter(isBankOrCashAccount)
+  }, [accounts])
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -109,16 +107,14 @@ export default function BankStatementFormPage() {
                 control={control}
                 name="bank_account_id"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select bank account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_code} - {a.account_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AccountCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    accounts={bankAccounts}
+                    placeholder="Select bank account…"
+                    filterType="bank_cash"
+                    isLoading={accountsLoading}
+                  />
                 )}
               />
               {errors.bank_account_id && <p className="text-xs text-destructive">{errors.bank_account_id.message}</p>}

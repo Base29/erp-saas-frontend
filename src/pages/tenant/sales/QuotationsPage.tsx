@@ -117,7 +117,13 @@ export default function QuotationsPage() {
   })
 
   const { register, handleSubmit, reset, setValue, watch, control, formState: { errors, isSubmitting } } =
-    useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { lines: [{ item_id: '', description: null, quantity: 1, unit_of_measure_id: '', unit_price: 0, discount_percentage: 0, tax_amount: 0, line_total: 0 }] } })
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: {
+        quotation_date: new Date().toISOString().slice(0, 10),
+        lines: [{ item_id: '', description: null, quantity: 1, unit_of_measure_id: '', unit_price: 0, discount_percentage: 0, tax_amount: 0, line_total: 0 }],
+      },
+    })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' })
 

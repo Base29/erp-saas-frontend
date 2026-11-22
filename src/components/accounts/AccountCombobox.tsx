@@ -15,8 +15,85 @@ interface AccountComboboxProps {
   placeholder?: string
   disabled?: boolean
   isLoading?: boolean
-  filterType?: 'expense' | 'asset' | 'all'
+  filterType?: 'expense' | 'asset' | 'bank_cash' | 'all'
   className?: string
+  allowAll?: boolean
+  allLabel?: string
+}
+
+export function isBankOrCashAccount(a: Account): boolean {
+  if (a.is_active === false) return false
+
+  const cat = (a.account_category?.name ?? '').toLowerCase()
+  const catCode = (a.account_category?.code ?? '').toLowerCase()
+  const name = (a.account_name ?? '').toLowerCase()
+  const code = a.account_code || ''
+  const type = (a.account_type?.name ?? '').toLowerCase()
+  const group = (a.account_type?.account_group?.name ?? '').toLowerCase()
+
+  // 1. Reject non-asset classifications (expenses, revenues, equity, payables, receivables, liabilities)
+  if (
+    group.includes('expense') ||
+    group.includes('revenue') ||
+    group.includes('income') ||
+    group.includes('equity') ||
+    group.includes('liability') ||
+    cat.includes('expense') ||
+    cat.includes('revenue') ||
+    cat.includes('income') ||
+    cat.includes('equity') ||
+    cat.includes('liability') ||
+    cat.includes('payable') ||
+    cat.includes('receivable') ||
+    type.includes('expense') ||
+    type.includes('revenue') ||
+    type.includes('income') ||
+    type.includes('equity') ||
+    type.includes('liability')
+  ) {
+    return false
+  }
+
+  // 2. Reject expense / fee / contra accounts that happen to mention "bank" or "cash"
+  if (
+    name.includes('charge') ||
+    name.includes('fee') ||
+    name.includes('discount') ||
+    name.includes('interest') ||
+    name.includes('suspense')
+  ) {
+    return false
+  }
+
+  // 3. Category or Type explicitly indicates Cash / Bank
+  if (
+    cat.includes('bank') ||
+    cat.includes('cash') ||
+    catCode.startsWith('111') ||
+    type.includes('bank') ||
+    type.includes('cash')
+  ) {
+    return true
+  }
+
+  // 4. Standard Cash & Bank account codes (111x)
+  if (code.startsWith('111')) {
+    return true
+  }
+
+  // 5. Account names representing bank / cash accounts (e.g., checking, savings, petty cash, till float)
+  if (
+    name.includes('bank') ||
+    name.includes('cash') ||
+    name.includes('checking') ||
+    name.includes('savings') ||
+    name.includes('petty') ||
+    name.includes('till')
+  ) {
+    return true
+  }
+
+  return false
 }
 
 export default function AccountCombobox({
@@ -28,6 +105,8 @@ export default function AccountCombobox({
   isLoading,
   filterType = 'all',
   className,
+  allowAll = false,
+  allLabel = 'All Accounts',
 }: AccountComboboxProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -35,14 +114,23 @@ export default function AccountCombobox({
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const isAllSelected = allowAll && (!value || value === '' || value === 'all')
+
+  const safeAccounts: Account[] = useMemo(() => {
+    if (!accounts) return []
+    if (Array.isArray(accounts)) return accounts
+    if (Array.isArray((accounts as any).data)) return (accounts as any).data
+    return []
+  }, [accounts])
+
   const selectedAccount = useMemo(
-    () => accounts.find((a) => String(a.id) === String(value)),
-    [accounts, value]
+    () => safeAccounts.find((a) => String(a.id) === String(value)),
+    [safeAccounts, value]
   )
 
   const baseAccounts = useMemo(() => {
     if (filterType === 'expense') {
-      return accounts.filter((a) => {
+      return safeAccounts.filter((a) => {
         const catName = a.account_category?.name?.toLowerCase() || ''
         const code = a.account_code || ''
         return (
@@ -57,14 +145,17 @@ export default function AccountCombobox({
       })
     }
     if (filterType === 'asset') {
-      return accounts.filter((a) => {
+      return safeAccounts.filter((a) => {
         const catName = a.account_category?.name?.toLowerCase() || ''
         const code = a.account_code || ''
         return catName.includes('asset') || code.startsWith('1') || code.startsWith('3')
       })
     }
-    return accounts
-  }, [accounts, filterType])
+    if (filterType === 'bank_cash') {
+      return safeAccounts.filter(isBankOrCashAccount)
+    }
+    return safeAccounts
+  }, [safeAccounts, filterType])
 
   const filteredAccounts = useMemo(() => {
     if (!search.trim()) return baseAccounts
@@ -76,6 +167,26 @@ export default function AccountCombobox({
       return code.includes(q) || name.includes(q) || cat.includes(q)
     })
   }, [baseAccounts, search])
+
+  const showAllOption = useMemo(() => {
+    if (!allowAll) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase().trim()
+    return allLabel.toLowerCase().includes(q) || 'all'.includes(q) || 'all accounts'.includes(q)
+  }, [allowAll, search, allLabel])
+
+  type ItemType = { isAll: true } | { isAll: false; account: Account }
+
+  const items = useMemo<ItemType[]>(() => {
+    const list: ItemType[] = []
+    if (showAllOption) {
+      list.push({ isAll: true })
+    }
+    filteredAccounts.forEach((account) => {
+      list.push({ isAll: false, account })
+    })
+    return list
+  }, [showAllOption, filteredAccounts])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -100,14 +211,19 @@ export default function AccountCombobox({
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex((prev) => Math.min(prev + 1, filteredAccounts.length - 1))
+      setSelectedIndex((prev) => Math.min(prev + 1, Math.max(0, items.length - 1)))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setSelectedIndex((prev) => Math.max(prev - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (filteredAccounts[selectedIndex]) {
-        onChange(String(filteredAccounts[selectedIndex].id))
+      const item = items[selectedIndex]
+      if (item) {
+        if (item.isAll) {
+          onChange('')
+        } else {
+          onChange(String(item.account.id))
+        }
         setOpen(false)
       }
     } else if (e.key === 'Escape') {
@@ -122,13 +238,15 @@ export default function AccountCombobox({
           type="button"
           className={cn(
             'flex h-9 w-full items-center justify-between rounded-xl border border-border/80 bg-background/70 backdrop-blur-md px-3 py-1.5 text-xs font-medium ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-left transition-all duration-150 shadow-xs',
-            !selectedAccount && 'text-muted-foreground',
+            !selectedAccount && !isAllSelected && 'text-muted-foreground',
             className
           )}
         >
           <div className="flex items-center gap-2 truncate min-w-0">
             {isLoading ? (
               <span className="text-muted-foreground">Loading accounts…</span>
+            ) : isAllSelected ? (
+              <span className="truncate text-foreground font-semibold">{allLabel}</span>
             ) : selectedAccount ? (
               <>
                 <span className="font-mono font-bold text-primary shrink-0">
@@ -153,7 +271,7 @@ export default function AccountCombobox({
 
       <DropdownMenuContent
         align="start"
-        className="w-[360px] sm:w-[420px] p-2 bg-popover/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_15px_40px_-10px_rgba(0,0,0,0.25)] dark:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] z-50"
+        className="w-[var(--radix-dropdown-menu-trigger-width,360px)] min-w-[320px] max-w-[500px] p-2 bg-popover/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_15px_40px_-10px_rgba(0,0,0,0.25)] dark:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] z-50"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Search Input Bar */}
@@ -165,11 +283,16 @@ export default function AccountCombobox({
             placeholder={
               filterType === 'expense'
                 ? 'Search expense by code or name (e.g. 5210, Utilities)…'
+                : filterType === 'bank_cash'
+                ? 'Search bank or cash accounts…'
                 : 'Search accounts by code, name, category…'
             }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              handleKeyDown(e)
+            }}
             className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
           />
           {search && (
@@ -205,12 +328,41 @@ export default function AccountCombobox({
         >
           {isLoading ? (
             <div className="p-4 text-xs text-muted-foreground text-center">Loading accounts…</div>
-          ) : filteredAccounts.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground text-center">
               No matching accounts found for &ldquo;{search}&rdquo;
             </div>
           ) : (
-            filteredAccounts.map((a, idx) => {
+            items.map((item, idx) => {
+              if (item.isAll) {
+                const isSelected = isAllSelected
+                const isHighlighted = idx === selectedIndex
+
+                return (
+                  <div
+                    key="__all__"
+                    onClick={() => {
+                      onChange('')
+                      setOpen(false)
+                    }}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={cn(
+                      'flex items-center justify-between px-2.5 py-2 rounded-xl text-xs cursor-pointer select-none transition-all duration-150',
+                      isSelected && 'bg-primary/10 text-primary font-semibold',
+                      isHighlighted && !isSelected && 'bg-accent/80 text-accent-foreground',
+                      !isHighlighted && !isSelected && 'hover:bg-muted/40'
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <span className="font-semibold text-foreground">{allLabel}</span>
+                      <span className="text-[10px] text-muted-foreground">(Show ledger for all accounts)</span>
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-primary ml-2" />}
+                  </div>
+                )
+              }
+
+              const a = item.account
               const isSelected = String(a.id) === String(value)
               const isHighlighted = idx === selectedIndex
 

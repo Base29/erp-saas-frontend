@@ -1,17 +1,12 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, X } from 'lucide-react'
+import { Printer, X, ExternalLink } from 'lucide-react'
 import { fetchCustomers, fetchCustomerStatement } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { ReportPagination } from '@/components/ReportPagination'
 import { formatDate } from '@/utils/format'
 
@@ -43,6 +38,8 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 export default function CustomerStatementPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [params, setParams] = useState({ customer_id: '', date_from: '', date_to: '' })
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(25)
@@ -108,25 +105,22 @@ export default function CustomerStatementPage() {
       <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
         <div className="space-y-1 flex-1 min-w-52">
           <Label>Customer</Label>
-          <Select
+          <SearchableSelect
             value={params.customer_id || 'all'}
             onValueChange={(v) => {
               setParams((p) => ({ ...p, customer_id: v === 'all' ? '' : v }))
               setPage(1)
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Customers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Customers</SelectItem>
-              {customers.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="All Customers"
+            searchPlaceholder="Search customer…"
+            options={[
+              { value: 'all', label: 'All Customers' },
+              ...customers.map((c) => ({
+                value: String(c.id),
+                label: c.customer_code ? `${c.name} (${c.customer_code})` : c.name,
+              })),
+            ]}
+          />
         </div>
         <div className="space-y-1">
           <Label>From</Label>
@@ -237,7 +231,35 @@ export default function CustomerStatementPage() {
                         {TYPE_LABELS[row.type] ?? row.type.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{row.reference}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">
+                      {row.reference ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const docId = (row as any).document_id
+                            const targetUrl =
+                              (row as any).document_url ||
+                              (row.type === 'invoice'
+                                ? (docId ? `/sales/invoices?id=${docId}` : `/sales/invoices?search=${encodeURIComponent(row.reference)}`)
+                                : row.type === 'receipt'
+                                ? (docId ? `/sales/receipts?id=${docId}` : `/sales/receipts?search=${encodeURIComponent(row.reference)}`)
+                                : (docId ? `/sales/credit-notes?id=${docId}` : `/sales/credit-notes?search=${encodeURIComponent(row.reference)}`))
+                            const currentPath = location.pathname + location.search
+                            const sep = targetUrl.includes('?') ? '&' : '?'
+                            navigate(`${targetUrl}${sep}return_to=${encodeURIComponent(currentPath)}`, {
+                              state: { returnTo: currentPath },
+                            })
+                          }}
+                          className="text-primary hover:underline inline-flex items-center gap-1 font-semibold"
+                          title={`View ${TYPE_LABELS[row.type] || 'document'}`}
+                        >
+                          <span>{row.reference}</span>
+                          <ExternalLink className="h-3 w-3 opacity-70 shrink-0" />
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-2.5 text-right font-mono">
                       {row.debit > 0 ? fmt(row.debit) : <span className="text-muted-foreground">—</span>}

@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, X } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { Printer, X, ExternalLink } from 'lucide-react'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { fetchSuppliers, fetchSupplierStatement, type SupplierStatementRow } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { ReportPagination } from '@/components/ReportPagination'
 import { formatDate } from '@/utils/format'
 
@@ -31,6 +25,8 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 export default function SupplierStatementPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const initialSupplierId = searchParams.get('supplier_id') || ''
 
@@ -114,25 +110,22 @@ export default function SupplierStatementPage() {
       <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
         <div className="space-y-1 flex-1 min-w-56">
           <Label>Supplier</Label>
-          <Select
+          <SearchableSelect
             value={params.supplier_id || 'all'}
             onValueChange={(v) => {
               setParams((p) => ({ ...p, supplier_id: v === 'all' ? '' : v }))
               setPage(1)
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Suppliers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Suppliers</SelectItem>
-              {suppliers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name} ({s.supplier_code})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="All Suppliers"
+            searchPlaceholder="Search supplier…"
+            options={[
+              { value: 'all', label: 'All Suppliers' },
+              ...suppliers.map((s) => ({
+                value: String(s.id),
+                label: `${s.name} (${s.supplier_code})`,
+              })),
+            ]}
+          />
         </div>
 
         <div className="space-y-1">
@@ -268,7 +261,33 @@ export default function SupplierStatementPage() {
                             {TYPE_LABELS[r.type] || r.type}
                           </span>
                         </td>
-                        <td className="py-2 px-3 font-medium text-foreground font-mono">{r.reference}</td>
+                        <td className="py-2 px-3 font-medium font-mono">
+                          {r.reference ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const docId = (r as any).document_id
+                                const targetUrl =
+                                  (r as any).document_url ||
+                                  (r.type === 'invoice'
+                                    ? (docId ? `/accounts/purchase-invoices?id=${docId}` : `/accounts/purchase-invoices?search=${encodeURIComponent(r.reference)}`)
+                                    : (docId ? `/accounts/supplier-payments?id=${docId}` : `/accounts/supplier-payments?search=${encodeURIComponent(r.reference)}`))
+                                const currentPath = location.pathname + location.search
+                                const sep = targetUrl.includes('?') ? '&' : '?'
+                                navigate(`${targetUrl}${sep}return_to=${encodeURIComponent(currentPath)}`, {
+                                  state: { returnTo: currentPath },
+                                })
+                              }}
+                              className="text-primary hover:underline inline-flex items-center gap-1 font-semibold"
+                              title={`View ${TYPE_LABELS[r.type] || 'document'}`}
+                            >
+                              <span>{r.reference}</span>
+                              <ExternalLink className="h-3 w-3 opacity-70 shrink-0" />
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-right font-mono">
                           {r.debit > 0 ? `$${fmt(r.debit)}` : '—'}
                         </td>

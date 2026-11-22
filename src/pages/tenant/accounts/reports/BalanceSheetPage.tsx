@@ -5,13 +5,7 @@ import { fetchBalanceSheet, fetchFiscalPeriods } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 type BSRow = {
   account_code: string
@@ -173,20 +167,21 @@ export default function BalanceSheetPage() {
         {periods.length > 0 && (
           <div className="space-y-1.5 min-w-56">
             <Label className="text-xs font-bold uppercase text-muted-foreground">Fiscal Period</Label>
-            <Select value={periodId || 'all'} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Periods (Today)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Periods (As of Today)</SelectItem>
-                {periods.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                    <span className="ml-2 text-xs text-muted-foreground capitalize">({p.status})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={periodId || 'all'}
+              onValueChange={handlePeriodChange}
+              triggerClassName="h-9"
+              placeholder="All Periods (Today)"
+              searchPlaceholder="Search fiscal period…"
+              options={[
+                { value: 'all', label: 'All Periods (As of Today)' },
+                ...periods.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                  badge: p.status,
+                })),
+              ]}
+            />
           </div>
         )}
         <div className="space-y-1.5">

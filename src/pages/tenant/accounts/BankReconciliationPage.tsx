@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchBankStatements, fetchAccounts } from '@/api/tenant'
+import AccountCombobox, { isBankOrCashAccount } from '@/components/accounts/AccountCombobox'
 import { Button } from '@/components/ui/button'
 import { Plus, RefreshCcw, Landmark, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import BulkImportModal from '@/components/import/BulkImportModal'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function BankReconciliationPage() {
   const navigate = useNavigate()
@@ -26,10 +26,7 @@ export default function BankReconciliationPage() {
     queryFn: () => fetchAccounts({ is_active: 1, per_page: 200 }).then((r) => r.data),
   })
 
-  const bankAccounts = (accountsData?.data ?? []).filter((a) => {
-    const cat = (a.account_category?.name ?? '').toLowerCase()
-    return cat.includes('bank') || cat.includes('cash') || a.account_code.startsWith('111')
-  })
+  const bankAccounts = (accountsData?.data ?? []).filter(isBankOrCashAccount)
 
   // Pre-select first bank account once loaded
   useEffect(() => {
@@ -108,18 +105,13 @@ export default function BankReconciliationPage() {
         extraFields={
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Target Bank Account *</Label>
-            <Select value={selectedBankAccountId} onValueChange={setSelectedBankAccountId}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Select bank account…" />
-              </SelectTrigger>
-              <SelectContent>
-                {bankAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.account_code} - {a.account_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountCombobox
+              value={selectedBankAccountId}
+              onChange={setSelectedBankAccountId}
+              accounts={bankAccounts}
+              placeholder="Select bank account…"
+              filterType="bank_cash"
+            />
           </div>
         }
         extraOptions={{ bank_account_id: selectedBankAccountId }}

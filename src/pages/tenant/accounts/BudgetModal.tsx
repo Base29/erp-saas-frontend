@@ -22,13 +22,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 const schema = z.object({
   fiscal_period_id: z.string().min(1, 'Period is required'),
@@ -136,16 +131,16 @@ export default function BudgetModal({ budget, open, onOpenChange, defaultPeriodI
               control={control}
               name="fiscal_period_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periods.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Select period…"
+                  searchPlaceholder="Search fiscal period…"
+                  options={periods.map((p) => ({
+                    value: String(p.id),
+                    label: p.name,
+                  }))}
+                />
               )}
             />
             {errors.fiscal_period_id && <p className="text-xs text-destructive">{errors.fiscal_period_id.message}</p>}
@@ -157,16 +152,12 @@ export default function BudgetModal({ budget, open, onOpenChange, defaultPeriodI
               control={control}
               name="account_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.account_code} - {a.account_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AccountCombobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  accounts={accounts}
+                  placeholder="Select account…"
+                />
               )}
             />
             {errors.account_id && <p className="text-xs text-destructive">{errors.account_id.message}</p>}
@@ -178,17 +169,19 @@ export default function BudgetModal({ budget, open, onOpenChange, defaultPeriodI
               control={control}
               name="cost_center_id"
               render={({ field }) => (
-                <Select value={field.value || 'none'} onValueChange={(val) => field.onChange(val === 'none' ? '' : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No cost center" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None (Global)</SelectItem>
-                    {costCenters.map((cc) => (
-                      <SelectItem key={cc.id} value={cc.id}>{cc.code} - {cc.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={field.value || 'none'}
+                  onValueChange={(val) => field.onChange(val === 'none' ? '' : val)}
+                  placeholder="No cost center"
+                  searchPlaceholder="Search cost center…"
+                  options={[
+                    { value: 'none', label: 'None (Global)' },
+                    ...costCenters.map((cc) => ({
+                      value: String(cc.id),
+                      label: `${cc.code} - ${cc.name}`,
+                    })),
+                  ]}
+                />
               )}
             />
           </div>

@@ -1,24 +1,23 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import React, { useState } from 'react'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Printer, Info, X } from 'lucide-react'
-import { fetchAccounts, fetchGeneralLedger } from '@/api/tenant'
+import { Printer, Info, X, ChevronRight, ChevronDown, ExternalLink, FileText } from 'lucide-react'
+import { fetchAccounts, fetchGeneralLedger, type Account } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
 import { ReportPagination } from '@/components/ReportPagination'
 import { formatDate } from '@/utils/format'
 
 type GLRow = {
+  id?: string
+  journal_voucher_id?: string
   voucher_number: string
+  voucher_type?: string
   voucher_date: string
+  reference?: string | null
   account_id?: string
   account_code?: string
   account_name?: string
@@ -27,16 +26,53 @@ type GLRow = {
   debit: number
   credit: number
   balance: number
+  source_document?: {
+    type: string
+    type_label: string
+    id: string | null
+    number: string
+    url: string | null
+  } | null
+  voucher_lines?: Array<{
+    id: string
+    account_id: string
+    account_code?: string
+    account_name?: string
+    debit: number
+    credit: number
+    narration?: string | null
+  }>
 }
 
 function fmt(n: number) {
-  return n.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return (n || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const VOUCHER_TYPE_LABELS: Record<string, string> = {
+  general: 'Journal Entry',
+  bank_payment: 'Bank Payment',
+  cash_payment: 'Cash Payment',
+  bank_receipt: 'Bank Receipt',
+  cash_receipt: 'Cash Receipt',
+  sale_invoice: 'Sales Invoice',
+  purchase_invoice: 'Purchase Bill',
+  purchase_debit_note: 'Debit Note',
+  credit_note: 'Credit Note',
+  goods_receipt: 'Goods Receipt',
 }
 
 export default function GeneralLedgerPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const prefilledAccount = searchParams.get('account_id') ?? ''
+
+  const navigateToDocument = (url: string) => {
+    const currentPath = location.pathname + location.search
+    const separator = url.includes('?') ? '&' : '?'
+    const urlWithReturn = `${url}${separator}return_to=${encodeURIComponent(currentPath)}`
+    navigate(urlWithReturn, { state: { returnTo: currentPath } })
+  }
 
   const [params, setParams] = useState({
     account_id: prefilledAccount,
@@ -45,11 +81,26 @@ export default function GeneralLedgerPage() {
   })
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(25)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
 
-  const { data: accounts = [] } = useQuery({
+  const toggleRow = (key: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts-all'],
-    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data.data),
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
   })
+
+  const accounts: Account[] = React.useMemo(() => {
+    if (!accountsData) return []
+    if (Array.isArray(accountsData)) return accountsData
+    if (Array.isArray((accountsData as any).data)) return (accountsData as any).data
+    return []
+  }, [accountsData])
 
   const selectedAccount = accounts.find((a) => a.id === params.account_id)
 
@@ -116,27 +167,19 @@ export default function GeneralLedgerPage() {
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
-        <div className="space-y-1 flex-1 min-w-52">
+        <div className="space-y-1 flex-1 min-w-64">
           <Label>Account</Label>
-          <Select
-            value={params.account_id || 'all'}
-            onValueChange={(v) => {
-              setParams((p) => ({ ...p, account_id: v === 'all' ? '' : v }))
+          <AccountCombobox
+            accounts={accounts}
+            value={params.account_id}
+            onChange={(val) => {
+              setParams((p) => ({ ...p, account_id: val }))
               setPage(1)
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Accounts" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
-              {accounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.account_code} — {a.account_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            allowAll
+            placeholder="All Accounts"
+            isLoading={isLoadingAccounts}
+          />
         </div>
         <div className="space-y-1">
           <Label>From</Label>
@@ -224,84 +267,281 @@ export default function GeneralLedgerPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/60">
                   <tr>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="w-8 px-2 py-2.5 print:hidden"></th>
+                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Voucher #
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Date
                     </th>
+                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                      Related Doc / Ref
+                    </th>
                     {!params.account_id && (
-                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                      <th className="px-3 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                         Account
                       </th>
                     )}
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Narration
                     </th>
-                    <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Debit
                     </th>
-                    <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Credit
                     </th>
-                    <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       {params.account_id ? 'Running Balance' : 'Net Movement'}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, i) => (
-                    <tr key={i} className="border-t hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-2.5">
-                        <button
-                          className="font-mono text-xs text-primary hover:underline"
-                          onClick={() => {
-                            navigate(`/accounts/journal-vouchers?search=${row.voucher_number}`)
-                          }}
-                        >
-                          {row.voucher_number}
-                        </button>
-                      </td>
-                      <td className="px-4 py-2.5 text-sm whitespace-nowrap">{formatDate(row.voucher_date)}</td>
-                      {!params.account_id && (
-                        <td className="px-4 py-2.5 text-sm">
-                          <span className="font-mono text-xs text-muted-foreground mr-1.5">
-                            {row.account_code}
-                          </span>
-                          <span className="font-medium">{row.account_name}</span>
-                        </td>
-                      )}
-                      <td className="px-4 py-2.5 text-muted-foreground text-sm max-w-xs">
-                        <div>{row.narration ?? '—'}</div>
-                        {row.line_narration && row.line_narration !== row.narration && (
-                          <div className="text-xs text-muted-foreground/70 mt-0.5">
-                            {row.line_narration}
-                          </div>
+                  {rows.map((row, i) => {
+                    const rowKey = row.id ?? `${row.voucher_number}-${i}`
+                    const isExpanded = !!expandedRows[rowKey]
+                    const hasLines = Array.isArray(row.voucher_lines) && row.voucher_lines.length > 0
+
+                    return (
+                      <React.Fragment key={rowKey}>
+                        <tr className={`border-t hover:bg-muted/30 transition-colors ${isExpanded ? 'bg-muted/20' : ''}`}>
+                          <td className="w-8 px-2 py-2.5 text-center print:hidden">
+                            {hasLines ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleRow(rowKey)}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                title={isExpanded ? 'Collapse transaction details' : 'Expand full transaction details'}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              className="font-mono text-xs text-primary hover:underline font-semibold"
+                              onClick={() => {
+                                if (row.journal_voucher_id) {
+                                  navigateToDocument(`/accounts/journal-vouchers/${row.journal_voucher_id}`)
+                                } else {
+                                  navigateToDocument(`/accounts/journal-vouchers?search=${row.voucher_number}`)
+                                }
+                              }}
+                              title="View full Journal Voucher"
+                            >
+                              {row.voucher_number}
+                            </button>
+                            {row.voucher_type && (
+                              <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                {VOUCHER_TYPE_LABELS[row.voucher_type] || row.voucher_type.replace(/_/g, ' ')}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-sm whitespace-nowrap">{formatDate(row.voucher_date)}</td>
+                          <td className="px-3 py-2.5 text-sm">
+                            {row.source_document ? (
+                              <div>
+                                {row.source_document.url ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => navigateToDocument(row.source_document!.url!)}
+                                    className="font-mono text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1"
+                                    title={`View ${row.source_document.type_label}`}
+                                  >
+                                    <span>{row.source_document.number}</span>
+                                    <ExternalLink className="h-3 w-3 opacity-70 shrink-0" />
+                                  </button>
+                                ) : (
+                                  <span className="font-mono text-xs font-medium text-foreground">
+                                    {row.source_document.number}
+                                  </span>
+                                )}
+                                <span className="block text-[10px] text-muted-foreground">
+                                  {row.source_document.type_label}
+                                </span>
+                              </div>
+                            ) : row.reference ? (
+                              <span className="font-mono text-xs text-muted-foreground font-medium">
+                                {row.reference}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          {!params.account_id && (
+                            <td className="px-3 py-2.5 text-sm">
+                              <span className="font-mono text-xs text-muted-foreground mr-1.5">
+                                {row.account_code}
+                              </span>
+                              <span className="font-medium">{row.account_name}</span>
+                            </td>
+                          )}
+                          <td className="px-3 py-2.5 text-muted-foreground text-sm max-w-xs">
+                            <div>{row.narration ?? '—'}</div>
+                            {row.line_narration && row.line_narration !== row.narration && (
+                              <div className="text-xs text-muted-foreground/70 mt-0.5">
+                                {row.line_narration}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-sm">
+                            {row.debit > 0 ? fmt(row.debit) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-sm">
+                            {row.credit > 0 ? fmt(row.credit) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className={`px-3 py-2.5 text-right font-mono text-sm font-medium ${row.balance < 0 ? 'text-red-600' : 'text-foreground'}`}>
+                            {fmt(Math.abs(row.balance))}
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                              {row.balance < 0 ? 'Cr' : 'Dr'}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {/* Expandable Transaction Details panel */}
+                        {isExpanded && (
+                          <tr className="bg-muted/10 border-t border-b print:hidden">
+                            <td colSpan={params.account_id ? 8 : 9} className="px-6 py-4">
+                              <div className="space-y-3 rounded-lg border bg-card p-4 shadow-xs">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+                                  <div className="flex items-center gap-3">
+                                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                                    <div>
+                                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                                        Transaction Details: {row.voucher_number}
+                                      </h4>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        Date: {formatDate(row.voucher_date)} · Type:{' '}
+                                        {row.voucher_type
+                                          ? VOUCHER_TYPE_LABELS[row.voucher_type] || row.voucher_type.replace(/_/g, ' ')
+                                          : 'General Journal'}
+                                        {row.reference ? ` · Reference: ${row.reference}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {row.source_document?.url && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs gap-1"
+                                        onClick={() => navigateToDocument(row.source_document!.url!)}
+                                      >
+                                        <span>View {row.source_document.type_label}</span>
+                                        <ExternalLink className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {row.journal_voucher_id && (
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-7 text-xs gap-1"
+                                        onClick={() => navigateToDocument(`/accounts/journal-vouchers/${row.journal_voucher_id}`)}
+                                      >
+                                        <span>Open Journal Voucher</span>
+                                        <ExternalLink className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {row.narration && (
+                                  <div className="text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
+                                    <span className="font-semibold text-foreground">Narration: </span>
+                                    {row.narration}
+                                  </div>
+                                )}
+
+                                {/* Complete lines table for this JV */}
+                                {hasLines && (
+                                  <div className="space-y-1">
+                                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                      All Journal Voucher Lines
+                                    </span>
+                                    <div className="rounded-md border overflow-hidden">
+                                      <table className="w-full text-xs">
+                                        <thead className="bg-muted/40 text-muted-foreground">
+                                          <tr>
+                                            <th className="px-3 py-1.5 text-left font-medium">Account</th>
+                                            <th className="px-3 py-1.5 text-left font-medium">Line Narration</th>
+                                            <th className="px-3 py-1.5 text-right font-medium">Debit</th>
+                                            <th className="px-3 py-1.5 text-right font-medium">Credit</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                          {row.voucher_lines!.map((vl, idx) => {
+                                            const isCurrentAccount =
+                                              params.account_id && String(vl.account_id) === String(params.account_id)
+
+                                            return (
+                                              <tr
+                                                key={vl.id || idx}
+                                                className={isCurrentAccount ? 'bg-primary/5 font-medium' : 'hover:bg-muted/20'}
+                                              >
+                                                <td className="px-3 py-1.5">
+                                                  <span className="font-mono text-primary font-bold mr-1.5">
+                                                    {vl.account_code}
+                                                  </span>
+                                                  <span>{vl.account_name}</span>
+                                                  {isCurrentAccount && (
+                                                    <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1">
+                                                      Current
+                                                    </Badge>
+                                                  )}
+                                                </td>
+                                                <td className="px-3 py-1.5 text-muted-foreground">
+                                                  {vl.narration ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-1.5 text-right font-mono">
+                                                  {vl.debit > 0 ? fmt(vl.debit) : '—'}
+                                                </td>
+                                                <td className="px-3 py-1.5 text-right font-mono">
+                                                  {vl.credit > 0 ? fmt(vl.credit) : '—'}
+                                                </td>
+                                              </tr>
+                                            )
+                                          })}
+                                        </tbody>
+                                        <tfoot className="bg-muted/30 font-semibold border-t">
+                                          <tr>
+                                            <td colSpan={2} className="px-3 py-1.5 text-right">
+                                              Total
+                                            </td>
+                                            <td className="px-3 py-1.5 text-right font-mono">
+                                              {fmt(row.voucher_lines!.reduce((s, l) => s + l.debit, 0))}
+                                            </td>
+                                            <td className="px-3 py-1.5 text-right font-mono">
+                                              {fmt(row.voucher_lines!.reduce((s, l) => s + l.credit, 0))}
+                                            </td>
+                                          </tr>
+                                        </tfoot>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-sm">
-                        {row.debit > 0 ? fmt(row.debit) : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-sm">
-                        {row.credit > 0 ? fmt(row.credit) : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className={`px-4 py-2.5 text-right font-mono text-sm font-medium ${row.balance < 0 ? 'text-red-600' : 'text-foreground'}`}>
-                        {fmt(Math.abs(row.balance))}
-                        <span className="ml-1 text-xs font-normal text-muted-foreground">
-                          {row.balance < 0 ? 'Cr' : 'Dr'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
                 <tfoot className="bg-muted/40 border-t-2 font-semibold">
                   <tr>
-                    <td colSpan={params.account_id ? 3 : 4} className="px-4 py-2.5 text-right text-sm">
+                    <td className="print:hidden"></td>
+                    <td colSpan={params.account_id ? 4 : 5} className="px-3 py-2.5 text-right text-sm">
                       Page Totals
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(totalDebit)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-sm">{fmt(totalCredit)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-sm">
+                    <td className="px-3 py-2.5 text-right font-mono text-sm">{fmt(totalDebit)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-sm">{fmt(totalCredit)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-sm">
                       {fmt(Math.abs(totalDebit - totalCredit))}
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
                         {totalDebit >= totalCredit ? 'Dr' : 'Cr'}

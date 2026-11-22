@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { canAccessSection, canWrite, canApprove, canSubmitForApproval } from './permissions'
+import {
+  canAccessSection,
+  canWrite,
+  canApprove,
+  canSubmitForApproval,
+  canManageUoms,
+  canManageItemTypes,
+  canManageItemCategories,
+} from './permissions'
 import type { UserRole } from '@/store/authStore'
 
 describe('canAccessSection', () => {
@@ -102,6 +110,26 @@ describe('canSubmitForApproval', () => {
   submitterRoles.forEach((role) => {
     it(`${role} can submit for approval`, () => {
       expect(canSubmitForApproval(role)).toBe(true)
+    })
+  })
+})
+
+describe('inventory master data permissions', () => {
+  it('tenant_admin and inventory_manager can manage UOMs, Types, and Categories', () => {
+    expect(canManageUoms('tenant_admin')).toBe(true)
+    expect(canManageUoms('inventory_manager')).toBe(true)
+    expect(canManageItemTypes('tenant_admin')).toBe(true)
+    expect(canManageItemTypes('inventory_manager')).toBe(true)
+    expect(canManageItemCategories('tenant_admin')).toBe(true)
+    expect(canManageItemCategories('inventory_manager')).toBe(true)
+  })
+
+  it('viewer, accountant, and sales_person cannot manage inventory master data by default', () => {
+    const roles: UserRole[] = ['viewer', 'accountant', 'sales_person']
+    roles.forEach((r) => {
+      expect(canManageUoms(r)).toBe(false)
+      expect(canManageItemTypes(r)).toBe(false)
+      expect(canManageItemCategories(r)).toBe(false)
     })
   })
 })

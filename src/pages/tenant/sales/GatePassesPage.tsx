@@ -106,7 +106,13 @@ export default function GatePassesPage() {
   })
 
   const { register, handleSubmit, reset, setValue, watch, control, formState: { errors, isSubmitting } } =
-    useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { lines: [] } })
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: {
+        dispatch_date: new Date().toISOString().slice(0, 10),
+        lines: [],
+      },
+    })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' })
 

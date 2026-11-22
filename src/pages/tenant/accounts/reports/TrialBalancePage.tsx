@@ -5,13 +5,7 @@ import { Printer, ArrowRight, X } from 'lucide-react'
 import { fetchFiscalPeriods, fetchTrialBalance } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { ReportPagination } from '@/components/ReportPagination'
 
 type TBRow = {
@@ -101,26 +95,23 @@ export default function TrialBalancePage() {
       <div className="flex flex-wrap gap-3 items-end p-4 rounded-lg border bg-muted/30 print:hidden">
         <div className="space-y-1 flex-1 min-w-52">
           <Label>Fiscal Period</Label>
-          <Select
+          <SearchableSelect
             value={periodId || 'all'}
             onValueChange={(v) => {
               setPeriodId(v === 'all' ? '' : v)
               setPage(1)
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Periods" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Periods (Cumulative)</SelectItem>
-              {periods.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                  <span className="ml-2 text-xs text-muted-foreground capitalize">({p.status})</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="All Periods"
+            searchPlaceholder="Search fiscal period…"
+            options={[
+              { value: 'all', label: 'All Periods (Cumulative)' },
+              ...periods.map((p) => ({
+                value: String(p.id),
+                label: p.name,
+                badge: p.status,
+              })),
+            ]}
+          />
         </div>
         <div className="flex gap-2">
           {periodId && (
