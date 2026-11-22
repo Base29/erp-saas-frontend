@@ -4,14 +4,52 @@ export interface WorkCenter {
   id: string
   code: string
   name: string
-  type: string
-  hourly_capacity: number | string
-  daily_capacity: number | string
-  standard_availability_hours: number | string
+  location?: string | null
+  type?: string
+  hourly_capacity?: number | string
+  daily_capacity?: number | string
+  standard_availability_hours?: number | string
   status: 'active' | 'maintenance' | 'inactive'
   notes?: string | null
-  created_at: string
-  updated_at: string
+  machines_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Machine {
+  id: string
+  work_center_id?: string | null
+  code: string
+  name: string
+  model_number?: string | null
+  serial_number?: string | null
+  manufacturer?: string | null
+  hourly_capacity?: number | string
+  daily_capacity?: number | string
+  standard_availability_hours?: number | string
+  status: 'active' | 'maintenance' | 'inactive'
+  notes?: string | null
+  work_center?: WorkCenter | null
+  created_at?: string
+  updated_at?: string
+}
+
+export type OperatorShift = 'general' | 'day' | 'night'
+export type OperatorWageType = 'per_hour' | 'per_piece'
+
+export interface Operator {
+  id: string
+  operator_code?: string | null
+  name: string
+  shift: OperatorShift
+  wage_type: OperatorWageType
+  wage_rate: number | string
+  speciality?: string | null
+  phone?: string | null
+  status: 'active' | 'inactive'
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
 }
 
 export type ComponentType = 'raw_material' | 'sub_assembly' | 'hardware' | 'packaging'
@@ -394,6 +432,32 @@ export const updateWorkCenter = (id: string, data: Partial<WorkCenter>) =>
 
 export const deleteWorkCenter = (id: string) =>
   apiClient.delete(`/v1/manufacturing/work-centers/${id}`)
+
+// Machines
+export const fetchMachines = (params?: any) =>
+  apiClient.get<{ data: Machine[] }>('/v1/manufacturing/machines', { params })
+
+export const createMachine = (data: Partial<Machine>) =>
+  apiClient.post<{ data: Machine }>('/v1/manufacturing/machines', data)
+
+export const updateMachine = (id: string, data: Partial<Machine>) =>
+  apiClient.put<{ data: Machine }>(`/v1/manufacturing/machines/${id}`, data)
+
+export const deleteMachine = (id: string) =>
+  apiClient.delete(`/v1/manufacturing/machines/${id}`)
+
+// Operators
+export const fetchOperators = (params?: any) =>
+  apiClient.get<{ data: Operator[] }>('/v1/manufacturing/operators', { params })
+
+export const createOperator = (data: Partial<Operator>) =>
+  apiClient.post<{ data: Operator }>('/v1/manufacturing/operators', data)
+
+export const updateOperator = (id: string, data: Partial<Operator>) =>
+  apiClient.put<{ data: Operator }>(`/v1/manufacturing/operators/${id}`, data)
+
+export const deleteOperator = (id: string) =>
+  apiClient.delete(`/v1/manufacturing/operators/${id}`)
 
 // BOMs
 export const fetchBoms = (params?: any) =>

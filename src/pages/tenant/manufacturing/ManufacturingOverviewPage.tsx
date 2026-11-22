@@ -274,11 +274,11 @@ export default function ManufacturingOverviewPage() {
       {/* Navigation Quick Tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <Link
-          to="/manufacturing/work-centers"
+          to="/manufacturing/resources"
           className="p-4 rounded-xl border border-border/70 bg-card hover:bg-accent/40 transition-colors flex flex-col items-center text-center gap-2"
         >
           <Cpu className="h-6 w-6 text-primary" />
-          <span className="text-xs font-semibold">Work Centers</span>
+          <span className="text-xs font-semibold">Resources</span>
         </Link>
         <Link
           to="/manufacturing/boms"

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/authStore'
+import { hasPermission, canWrite } from '@/utils/permissions'
 import {
   fetchBomSections,
   createBomSection,
@@ -40,6 +42,12 @@ export function BomSectionManagerDialog({
   onSectionCreated,
 }: BomSectionManagerDialogProps) {
   const queryClient = useQueryClient()
+  const role = useAuthStore((s) => s.role)
+  const canManage =
+    hasPermission('manufacturing.sections.manage') ||
+    hasPermission('manufacturing.write') ||
+    canWrite(role, 'manufacturing')
+
   const [search, setSearch] = useState('')
   const [editingSection, setEditingSection] = useState<BomSection | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -124,7 +132,7 @@ export function BomSectionManagerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <FolderTree className="h-5 w-5 text-primary" />
@@ -148,10 +156,16 @@ export function BomSectionManagerDialog({
               />
             </div>
 
-            <Button size="sm" onClick={handleOpenAdd} className="h-8 text-xs">
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add Section
-            </Button>
+            {canManage ? (
+              <Button size="sm" onClick={handleOpenAdd} className="h-8 text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add Section
+              </Button>
+            ) : (
+              <Badge variant="outline" className="text-xs font-normal text-muted-foreground border-border/80 px-2.5 py-1">
+                Read-Only (Requires Section Management Permission)
+              </Badge>
+            )}
           </div>
 
           {/* Form for Add/Edit Inline */}
@@ -249,18 +263,18 @@ export function BomSectionManagerDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">Seq</TableHead>
-                  <TableHead>Section Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Items Linked</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-56 font-semibold">Section Name</TableHead>
+                  <TableHead className="w-24">Code</TableHead>
+                  <TableHead className="min-w-[200px]">Description</TableHead>
+                  <TableHead className="text-center w-28">Items Linked</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
+                  {canManage && <TableHead className="text-right w-24">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-xs text-muted-foreground">
+                    <TableCell colSpan={canManage ? 7 : 6} className="text-center py-6 text-xs text-muted-foreground">
                       Loading sections...
                     </TableCell>
                   </TableRow>
@@ -280,7 +294,7 @@ export function BomSectionManagerDialog({
                           '—'
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                      <TableCell className="text-xs text-muted-foreground">
                         {sec.description || '—'}
                       </TableCell>
                       <TableCell className="text-center text-xs font-mono">
@@ -291,37 +305,39 @@ export function BomSectionManagerDialog({
                           {sec.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleOpenEdit(sec)}
-                            title="Edit Section"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              if (confirm(`Delete section "${sec.name}"?`)) {
-                                deleteMutation.mutate(sec.id)
-                              }
-                            }}
-                            title="Delete Section"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {canManage && (
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleOpenEdit(sec)}
+                              title="Edit Section"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Delete section "${sec.name}"?`)) {
+                                  deleteMutation.mutate(sec.id)
+                                }
+                              }}
+                              title="Delete Section"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-xs text-muted-foreground">
+                    <TableCell colSpan={canManage ? 7 : 6} className="text-center py-8 text-xs text-muted-foreground">
                       No BOM sections configured. Click &quot;Add Section&quot; to define your factory processes.
                     </TableCell>
                   </TableRow>

@@ -41,6 +41,7 @@ import {
   Clock,
   Megaphone,
   Factory,
+  Cpu,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { tenantLogout, tenantMe } from '@/api/tenant'
@@ -157,7 +158,7 @@ const navSections: NavSection[] = [
     moduleKey: 'manufacturing',
     items: [
       { to: '/manufacturing', label: 'Overview', icon: LayoutDashboard },
-      { to: '/manufacturing/work-centers', label: 'Work Centers', icon: Building2 },
+      { to: '/manufacturing/resources', label: 'Resources', icon: Cpu },
       { to: '/manufacturing/boms', label: 'Bills of Materials', icon: Layers },
       { to: '/manufacturing/plans', label: 'Production Plans', icon: ClipboardList },
       { to: '/manufacturing/orders', label: 'Work Orders', icon: ListOrdered },

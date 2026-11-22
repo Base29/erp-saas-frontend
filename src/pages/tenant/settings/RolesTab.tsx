@@ -454,6 +454,17 @@ export default function RolesTab() {
                       <Shield className="h-3.5 w-3.5 text-emerald-500" />
                       Read-Only Preset
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => initMutation.mutate()}
+                      disabled={initMutation.isPending}
+                      className="h-7 text-xs gap-1"
+                      title="Sync system permissions catalog from registered modules"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      Sync Catalog
+                    </Button>
                   </div>
 
                   <div className="w-64">

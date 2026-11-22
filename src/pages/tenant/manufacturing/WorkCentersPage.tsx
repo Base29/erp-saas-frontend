@@ -82,7 +82,7 @@ export default function WorkCentersPage() {
       setFormData({
         code: center.code,
         name: center.name,
-        type: center.type,
+        type: center.type || 'assembly',
         hourly_capacity: Number(center.hourly_capacity),
         daily_capacity: Number(center.daily_capacity),
         standard_availability_hours: Number(center.standard_availability_hours),
@@ -168,7 +168,7 @@ export default function WorkCentersPage() {
                   <TableRow key={center.id}>
                     <TableCell className="font-mono text-xs font-semibold">{center.code}</TableCell>
                     <TableCell className="font-medium text-sm">{center.name}</TableCell>
-                    <TableCell className="capitalize text-xs text-muted-foreground">{center.type.replace('_', ' ')}</TableCell>
+                    <TableCell className="capitalize text-xs text-muted-foreground">{(center.type || 'assembly').replace('_', ' ')}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{Number(center.hourly_capacity).toLocaleString()}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{Number(center.daily_capacity).toLocaleString()}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{center.standard_availability_hours} hrs</TableCell>
@@ -226,7 +226,7 @@ export default function WorkCentersPage() {
 
       {/* Modal Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCenter ? 'Edit Work Center' : 'Add Work Center'}</DialogTitle>
           </DialogHeader>

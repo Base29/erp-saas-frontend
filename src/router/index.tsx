@@ -80,7 +80,7 @@ import RfqDetailPage from '@/pages/tenant/procurement/RfqDetailPage'
 
 // Manufacturing & Plastics Molding Extension
 import ManufacturingOverviewPage from '@/pages/tenant/manufacturing/ManufacturingOverviewPage'
-import WorkCentersPage from '@/pages/tenant/manufacturing/WorkCentersPage'
+import ResourcesPage from '@/pages/tenant/manufacturing/ResourcesPage'
 import BomBuilderPage from '@/pages/tenant/manufacturing/BomBuilderPage'
 import BomFormPage from '@/pages/tenant/manufacturing/BomFormPage'
 import ProductionPlansPage from '@/pages/tenant/manufacturing/ProductionPlansPage'
@@ -349,7 +349,8 @@ export const router = createBrowserRouter([
             element: <ModuleGuard moduleKey="manufacturing" />,
             children: [
               { index: true, element: <ManufacturingOverviewPage /> },
-              { path: 'work-centers', element: <WorkCentersPage /> },
+              { path: 'resources', element: <ResourcesPage /> },
+              { path: 'work-centers', element: <Navigate to="/manufacturing/resources" replace /> },
               { path: 'boms', element: <BomBuilderPage /> },
               { path: 'boms/create', element: <BomFormPage /> },
               { path: 'boms/:id/edit', element: <BomFormPage /> },
