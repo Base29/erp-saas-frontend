@@ -1,18 +1,17 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchBoms,
   fetchBomTree,
   fetchBomExploded,
-  createBom,
-  updateBom,
   deleteBom,
   type BillOfMaterial,
   type BomItem,
   type BomTreeNode,
   type ComponentType,
 } from '@/api/manufacturing'
-import apiClient from '@/api/client'
+import { BomSectionManagerDialog } from '@/components/manufacturing/BomSectionManagerDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +43,8 @@ import {
   ChevronRight,
   Boxes,
   Workflow,
+  FolderTree,
+  Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -117,6 +118,13 @@ function BomTreeNodeRow({
                 Lvl {node.level} • {node.component_type.replace('_', ' ')}
               </span>
 
+              {node.section_name && (
+                <Badge variant="outline" className="text-[10px] font-medium border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10">
+                  <FolderTree className="h-2.5 w-2.5 mr-1" />
+                  {node.section_name}
+                </Badge>
+              )}
+
               {node.has_child_bom && (
                 <Badge variant="outline" className="text-[10px] font-mono border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10">
                   <Workflow className="h-2.5 w-2.5 mr-1" />
@@ -162,10 +170,9 @@ function BomTreeNodeRow({
 }
 
 export default function BomBuilderPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingBom, setEditingBom] = useState<BillOfMaterial | null>(null)
 
   // Multi-Level Tree Modal State
   const [treeModalOpen, setTreeModalOpen] = useState(false)
@@ -177,39 +184,9 @@ export default function BomBuilderPage() {
   const [selectedBomForExplosion, setSelectedBomForExplosion] = useState<BillOfMaterial | null>(null)
   const [explosionSimulationQty, setExplosionSimulationQty] = useState<number>(500)
 
-  // Items for dropdown
-  const { data: inventoryItems } = useQuery({
-    queryKey: ['inventory-items-all'],
-    queryFn: () => apiClient.get('/v1/inventory/items?all=true').then((r) => r.data.data),
-  })
-
-  // All active BOMs for child_bom dropdown
-  const { data: allBoms } = useQuery({
-    queryKey: ['boms-all-list'],
-    queryFn: () => fetchBoms({ all: true }).then((r) => r.data.data),
-  })
-
-  const [formData, setFormData] = useState({
-    bom_number: '',
-    item_id: '',
-    batch_size: 1,
-    cycle_time_sec: 60,
-    units_per_carton: 12,
-    is_active: true,
-    notes: '',
-    items: [
-      {
-        component_item_id: '',
-        component_type: 'raw_material' as ComponentType,
-        child_bom_id: null as string | null,
-        level: 1,
-        sequence: 1,
-        quantity_per_parent: 1,
-        scrap_percentage: 0,
-        notes: '',
-      },
-    ],
-  })
+  // BOM Sections Management & Visual Detail States
+  const [sectionsDialogOpen, setSectionsDialogOpen] = useState(false)
+  const [detailsBom, setDetailsBom] = useState<BillOfMaterial | null>(null)
 
   const { data: boms, isLoading } = useQuery({
     queryKey: ['boms', search],
@@ -230,21 +207,6 @@ export default function BomBuilderPage() {
     enabled: Boolean(selectedBomForExplosion && explodedModalOpen),
   })
 
-  const saveMutation = useMutation({
-    mutationFn: (payload: any) =>
-      editingBom ? updateBom(editingBom.id, payload) : createBom(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['boms'] })
-      queryClient.invalidateQueries({ queryKey: ['boms-all-list'] })
-      setModalOpen(false)
-      setEditingBom(null)
-      toast.success(editingBom ? 'BOM updated successfully' : 'BOM created successfully')
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to save BOM')
-    },
-  })
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteBom(id),
     onSuccess: () => {
@@ -255,55 +217,6 @@ export default function BomBuilderPage() {
     onError: () => toast.error('Failed to delete BOM'),
   })
 
-  const handleOpenModal = (bom?: BillOfMaterial) => {
-    if (bom) {
-      setEditingBom(bom)
-      setFormData({
-        bom_number: bom.bom_number,
-        item_id: bom.item_id,
-        batch_size: Number(bom.batch_size),
-        cycle_time_sec: Number(bom.cycle_time_sec),
-        units_per_carton: Number(bom.units_per_carton),
-        is_active: bom.is_active,
-        notes: bom.notes || '',
-        items: bom.items.map((i: BomItem, index: number) => ({
-          component_item_id: i.component_item_id,
-          component_type: (i.component_type || 'raw_material') as ComponentType,
-          child_bom_id: i.child_bom_id || null,
-          level: Number(i.level || 1),
-          sequence: Number(i.sequence || index + 1),
-          quantity_per_parent: Number(i.quantity_per_parent),
-          scrap_percentage: Number(i.scrap_percentage),
-          notes: i.notes || '',
-        })),
-      })
-    } else {
-      setEditingBom(null)
-      setFormData({
-        bom_number: `BOM-${Date.now().toString().slice(-6)}`,
-        item_id: '',
-        batch_size: 1,
-        cycle_time_sec: 60,
-        units_per_carton: 12,
-        is_active: true,
-        notes: '',
-        items: [
-          {
-            component_item_id: '',
-            component_type: 'raw_material',
-            child_bom_id: null,
-            level: 1,
-            sequence: 1,
-            quantity_per_parent: 1,
-            scrap_percentage: 0,
-            notes: '',
-          },
-        ],
-      })
-    }
-    setModalOpen(true)
-  }
-
   const handleOpenTreeModal = (bom: BillOfMaterial) => {
     setSelectedBomForTree(bom)
     setTreeModalOpen(true)
@@ -312,58 +225,6 @@ export default function BomBuilderPage() {
   const handleOpenExplodedModal = (bom: BillOfMaterial) => {
     setSelectedBomForExplosion(bom)
     setExplodedModalOpen(true)
-  }
-
-  const addComponentRow = () => {
-    setFormData({
-      ...formData,
-      items: [
-        ...formData.items,
-        {
-          component_item_id: '',
-          component_type: 'raw_material',
-          child_bom_id: null,
-          level: 1,
-          sequence: formData.items.length + 1,
-          quantity_per_parent: 1,
-          scrap_percentage: 0,
-          notes: '',
-        },
-      ],
-    })
-  }
-
-  const removeComponentRow = (index: number) => {
-    if (formData.items.length <= 1) return
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index),
-    })
-  }
-
-  const handleRowChange = (index: number, field: string, val: any) => {
-    const updated = [...formData.items]
-    updated[index] = { ...updated[index], [field]: val }
-
-    // If changing to non-sub_assembly, clear child_bom_id
-    if (field === 'component_type' && val !== 'sub_assembly') {
-      updated[index].child_bom_id = null
-    }
-
-    setFormData({ ...formData, items: updated })
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.item_id) {
-      toast.error('Please select the parent finished item')
-      return
-    }
-    if (formData.items.some((i) => !i.component_item_id)) {
-      toast.error('Please select a component item for each row')
-      return
-    }
-    saveMutation.mutate(formData)
   }
 
   return (
@@ -380,10 +241,22 @@ export default function BomBuilderPage() {
           </p>
         </div>
 
-        <Button onClick={() => handleOpenModal()} size="sm" className="shadow-xs">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Create New BOM
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSectionsDialogOpen(true)}
+            className="shadow-xs text-xs gap-1.5 border-border/80"
+          >
+            <FolderTree className="h-4 w-4 text-primary" />
+            Manage Sections
+          </Button>
+
+          <Button onClick={() => navigate('/manufacturing/boms/create')} size="sm" className="shadow-xs text-xs">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Create New BOM
+          </Button>
+        </div>
       </div>
 
       {/* Registry Table */}
@@ -453,6 +326,18 @@ export default function BomBuilderPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* View Sections & Materials Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+                            onClick={() => setDetailsBom(bom)}
+                            title="View Materials by Manufacturing Section"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Sections</span>
+                          </Button>
+
                           {/* Indented Tree Button */}
                           <Button
                             variant="outline"
@@ -482,7 +367,7 @@ export default function BomBuilderPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleOpenModal(bom)}
+                            onClick={() => navigate(`/manufacturing/boms/${bom.id}/edit`)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -711,230 +596,207 @@ export default function BomBuilderPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── 3. BOM Builder Form Modal ───────────────────────────────────────── */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+
+
+      {/* ── 4. Process Sections & Materials Breakdown Modal ───────────────── */}
+      <Dialog open={!!detailsBom} onOpenChange={(open) => !open && setDetailsBom(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingBom ? 'Edit Multi-Level Bill of Materials' : 'Create Multi-Level Bill of Materials'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <FolderTree className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              Process Sections & Materials — {detailsBom?.bom_number}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="bom_number" className="text-xs">BOM Reference Code *</Label>
-                <Input
-                  id="bom_number"
-                  required
-                  value={formData.bom_number}
-                  onChange={(e) => setFormData({ ...formData, bom_number: e.target.value })}
-                  placeholder="e.g. BOM-BLENDER-JUG-01"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="item_id" className="text-xs">Parent Finished / Assembly Item *</Label>
-                <select
-                  id="item_id"
-                  required
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                  value={formData.item_id}
-                  onChange={(e) => setFormData({ ...formData, item_id: e.target.value })}
-                >
-                  <option value="">Select finished item or assembly...</option>
-                  {inventoryItems?.map((item: any) => (
-                    <option key={item.id} value={item.id}>
-                      {item.item_name} ({item.item_code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cycle" className="text-xs">Cycle Time (sec / unit)</Label>
-                <Input
-                  id="cycle"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={formData.cycle_time_sec}
-                  onChange={(e) => setFormData({ ...formData, cycle_time_sec: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="carton" className="text-xs">Units / Master Carton</Label>
-                <Input
-                  id="carton"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={formData.units_per_carton}
-                  onChange={(e) => setFormData({ ...formData, units_per_carton: parseInt(e.target.value, 10) || 1 })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="batch" className="text-xs">Standard Batch Size</Label>
-                <Input
-                  id="batch"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={formData.batch_size}
-                  onChange={(e) => setFormData({ ...formData, batch_size: parseFloat(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-
-            {/* Component Line Items */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
+          {detailsBom && (
+            <div className="space-y-4 pt-2">
+              <div className="p-3.5 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Assembly Components, Sub-Assemblies & Materials
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    Classify components as Raw Material, Sub-Assembly (with optional linked BOM), Hardware, or Packaging.
-                  </p>
+                  <div className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                    Finished Assembly
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {detailsBom.item?.item_name}
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">({detailsBom.item?.item_code})</span>
+                  </div>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addComponentRow} className="h-7 text-xs">
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Add Component Line
+                <div className="flex items-center gap-4 text-xs font-mono">
+                  <span>Cycle: {detailsBom.cycle_time_sec}s</span>
+                  <span>Batch: {detailsBom.batch_size}</span>
+                  <span>Master Carton: {detailsBom.units_per_carton} units</span>
+                </div>
+              </div>
+
+              {/* Group items by section */}
+              {(() => {
+                const sectionMap = new Map<string, { name: string; code?: string; items: BomItem[] }>()
+                const unassignedItems: BomItem[] = []
+
+                detailsBom.items.forEach((item) => {
+                  if (item.bom_section_id && item.section) {
+                    if (!sectionMap.has(item.bom_section_id)) {
+                      sectionMap.set(item.bom_section_id, {
+                        name: item.section.name,
+                        code: item.section.code || undefined,
+                        items: [],
+                      })
+                    }
+                    sectionMap.get(item.bom_section_id)!.items.push(item)
+                  } else {
+                    unassignedItems.push(item)
+                  }
+                })
+
+                return (
+                  <div className="space-y-4">
+                    {Array.from(sectionMap.entries()).map(([secId, secData]) => (
+                      <div key={secId} className="rounded-xl border border-border overflow-hidden bg-card">
+                        <div className="p-3 bg-muted/40 border-b border-border flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FolderTree className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            <span className="font-semibold text-xs text-foreground">{secData.name}</span>
+                            {secData.code && (
+                              <Badge variant="outline" className="text-[10px] font-mono uppercase">
+                                {secData.code}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {secData.items.length} component{secData.items.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Component Item</TableHead>
+                              <TableHead>Classification</TableHead>
+                              <TableHead className="text-right">Qty / Parent</TableHead>
+                              <TableHead className="text-right">Scrap %</TableHead>
+                              <TableHead>Sub-BOM</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {secData.items.map((item) => (
+                              <TableRow key={item.id} className="text-xs">
+                                <TableCell className="font-medium">
+                                  {item.component_item?.item_name || 'Component'}
+                                  <span className="block font-mono text-[10px] text-muted-foreground">
+                                    {item.component_item?.item_code}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-[10px] capitalize">
+                                    {(item.component_type || 'raw_material').replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-medium">
+                                  {item.quantity_per_parent} {item.component_item?.uom?.code || 'PCS'}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-muted-foreground">
+                                  {item.scrap_percentage > 0 ? `+${item.scrap_percentage}%` : '0%'}
+                                </TableCell>
+                                <TableCell>
+                                  {item.child_bom ? (
+                                    <Badge variant="outline" className="border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 text-[10px] font-mono">
+                                      {item.child_bom.bom_number}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-[10px]">—</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+
+                    {unassignedItems.length > 0 && (
+                      <div className="rounded-xl border border-border overflow-hidden bg-card">
+                        <div className="p-3 bg-muted/40 border-b border-border flex items-center justify-between">
+                          <span className="font-semibold text-xs text-muted-foreground">
+                            General / Direct Materials (No Section Assigned)
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {unassignedItems.length} component{unassignedItems.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Component Item</TableHead>
+                              <TableHead>Classification</TableHead>
+                              <TableHead className="text-right">Qty / Parent</TableHead>
+                              <TableHead className="text-right">Scrap %</TableHead>
+                              <TableHead>Sub-BOM</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {unassignedItems.map((item) => (
+                              <TableRow key={item.id} className="text-xs">
+                                <TableCell className="font-medium">
+                                  {item.component_item?.item_name || 'Component'}
+                                  <span className="block font-mono text-[10px] text-muted-foreground">
+                                    {item.component_item?.item_code}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-[10px] capitalize">
+                                    {(item.component_type || 'raw_material').replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-medium">
+                                  {item.quantity_per_parent} {item.component_item?.uom?.code || 'PCS'}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-muted-foreground">
+                                  {item.scrap_percentage > 0 ? `+${item.scrap_percentage}%` : '0%'}
+                                </TableCell>
+                                <TableCell>
+                                  {item.child_bom ? (
+                                    <Badge variant="outline" className="border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 text-[10px] font-mono">
+                                      {item.child_bom.bom_number}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-[10px]">—</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setDetailsBom(null)}>
+                  Close
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const targetId = detailsBom?.id
+                    setDetailsBom(null)
+                    if (targetId) navigate(`/manufacturing/boms/${targetId}/edit`)
+                  }}
+                >
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                  Edit This BOM
                 </Button>
               </div>
-
-              <div className="space-y-2">
-                {formData.items.map((row, idx) => {
-                  const isSubAssembly = row.component_type === 'sub_assembly'
-
-                  return (
-                    <div key={idx} className="p-3 rounded-lg border border-border/70 bg-card space-y-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                        {/* Component Item Select */}
-                        <div className="sm:col-span-5">
-                          <Label className="text-[10px] text-muted-foreground mb-1 block">Component Item *</Label>
-                          <select
-                            required
-                            className="w-full h-9 px-2.5 rounded-md border border-input bg-background text-xs"
-                            value={row.component_item_id}
-                            onChange={(e) => handleRowChange(idx, 'component_item_id', e.target.value)}
-                          >
-                            <option value="">Select item...</option>
-                            {inventoryItems?.map((item: any) => (
-                              <option key={item.id} value={item.id}>
-                                {item.item_name} ({item.item_code})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Classification */}
-                        <div className="sm:col-span-3">
-                          <Label className="text-[10px] text-muted-foreground mb-1 block">Classification</Label>
-                          <select
-                            className="w-full h-9 px-2.5 rounded-md border border-input bg-background text-xs"
-                            value={row.component_type}
-                            onChange={(e) => handleRowChange(idx, 'component_type', e.target.value)}
-                          >
-                            <option value="raw_material">Raw Material</option>
-                            <option value="sub_assembly">Sub-Assembly</option>
-                            <option value="hardware">Hardware / Bought-out</option>
-                            <option value="packaging">Packaging Material</option>
-                          </select>
-                        </div>
-
-                        {/* Qty per parent */}
-                        <div className="sm:col-span-2">
-                          <Label className="text-[10px] text-muted-foreground mb-1 block">Qty / Parent *</Label>
-                          <Input
-                            type="number"
-                            min="0.0001"
-                            step="0.0001"
-                            placeholder="Qty"
-                            className="h-9 text-xs"
-                            value={row.quantity_per_parent}
-                            onChange={(e) => handleRowChange(idx, 'quantity_per_parent', parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-
-                        {/* Scrap % */}
-                        <div className="sm:col-span-1">
-                          <Label className="text-[10px] text-muted-foreground mb-1 block">Scrap %</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            placeholder="%"
-                            className="h-9 text-xs"
-                            value={row.scrap_percentage}
-                            onChange={(e) => handleRowChange(idx, 'scrap_percentage', parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-
-                        {/* Delete action */}
-                        <div className="sm:col-span-1 flex justify-end pt-4 sm:pt-0">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeComponentRow(idx)}
-                            disabled={formData.items.length <= 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* If Sub-Assembly: Linked Child BOM Selector */}
-                      {isSubAssembly && (
-                        <div className="pt-2 border-t border-dashed border-border flex flex-col sm:flex-row sm:items-center gap-2 bg-purple-500/5 p-2 rounded-md">
-                          <span className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 shrink-0 flex items-center gap-1">
-                            <Workflow className="h-3.5 w-3.5" />
-                            Linked Sub-BOM:
-                          </span>
-                          <select
-                            className="flex-1 h-8 px-2 rounded-md border border-purple-500/30 bg-background text-xs"
-                            value={row.child_bom_id || ''}
-                            onChange={(e) => handleRowChange(idx, 'child_bom_id', e.target.value || null)}
-                          >
-                            <option value="">Auto-resolve active BOM for this item</option>
-                            {allBoms
-                              ?.filter((b) => b.id !== editingBom?.id) // Prevent self-linking
-                              .map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {b.bom_number} — {b.item?.item_name}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
             </div>
-
-            <div className="space-y-1.5 pt-2">
-              <Label htmlFor="notes" className="text-xs">Manufacturing Engineering Notes</Label>
-              <Input
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Optional assembly instructions, tolerances, or quality checkpoints..."
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? 'Saving...' : 'Save BOM'}
-              </Button>
-            </div>
-          </form>
+          )}
         </DialogContent>
       </Dialog>
+
+      {/* ── 5. BOM Section Management Dialog for Tenant Admins ──────────────── */}
+      <BomSectionManagerDialog
+        open={sectionsDialogOpen}
+        onOpenChange={setSectionsDialogOpen}
+      />
     </div>
   )
 }

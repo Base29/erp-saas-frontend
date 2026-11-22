@@ -82,6 +82,7 @@ import RfqDetailPage from '@/pages/tenant/procurement/RfqDetailPage'
 import ManufacturingOverviewPage from '@/pages/tenant/manufacturing/ManufacturingOverviewPage'
 import WorkCentersPage from '@/pages/tenant/manufacturing/WorkCentersPage'
 import BomBuilderPage from '@/pages/tenant/manufacturing/BomBuilderPage'
+import BomFormPage from '@/pages/tenant/manufacturing/BomFormPage'
 import ProductionPlansPage from '@/pages/tenant/manufacturing/ProductionPlansPage'
 import ProductionOrdersPage from '@/pages/tenant/manufacturing/ProductionOrdersPage'
 import DailyProductionPage from '@/pages/tenant/manufacturing/DailyProductionPage'
@@ -350,6 +351,8 @@ export const router = createBrowserRouter([
               { index: true, element: <ManufacturingOverviewPage /> },
               { path: 'work-centers', element: <WorkCentersPage /> },
               { path: 'boms', element: <BomBuilderPage /> },
+              { path: 'boms/create', element: <BomFormPage /> },
+              { path: 'boms/:id/edit', element: <BomFormPage /> },
               { path: 'plans', element: <ProductionPlansPage /> },
               { path: 'orders', element: <ProductionOrdersPage /> },
               { path: 'daily-production', element: <DailyProductionPage /> },

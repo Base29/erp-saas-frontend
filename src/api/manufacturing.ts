@@ -20,6 +20,7 @@ export interface BomItem {
   id?: string
   bill_of_material_id?: string
   child_bom_id?: string | null
+  bom_section_id?: string | null
   component_item_id: string
   variant_id?: string | null
   component_type?: ComponentType
@@ -32,6 +33,7 @@ export interface BomItem {
     id: string
     bom_number: string
   } | null
+  section?: BomSection | null
   component_item?: {
     id: string
     item_code: string
@@ -43,6 +45,35 @@ export interface BomItem {
   }
 }
 
+export interface BomSection {
+  id: string
+  company_id?: string
+  name: string
+  code?: string | null
+  description?: string | null
+  sequence: number
+  is_active: boolean
+  bom_items_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateBomSectionPayload {
+  name: string
+  code?: string
+  description?: string
+  sequence?: number
+  is_active?: boolean
+}
+
+export interface UpdateBomSectionPayload {
+  name?: string
+  code?: string
+  description?: string
+  sequence?: number
+  is_active?: boolean
+}
+
 export interface BomTreeNode {
   bom_item_id?: string
   component_item_id: string
@@ -50,6 +81,9 @@ export interface BomTreeNode {
   component_name: string
   uom: string
   component_type: ComponentType
+  bom_section_id?: string | null
+  section_name?: string | null
+  section_code?: string | null
   level: number
   sequence: number
   quantity_per_parent: number
@@ -387,6 +421,22 @@ export const updateBom = (id: string, data: any) =>
 
 export const deleteBom = (id: string) =>
   apiClient.delete(`/v1/manufacturing/boms/${id}`)
+
+// BOM Sections
+export const fetchBomSections = (params?: { is_active?: boolean; search?: string }) =>
+  apiClient.get<{ data: BomSection[] }>('/v1/manufacturing/bom-sections', { params })
+
+export const createBomSection = (payload: CreateBomSectionPayload) =>
+  apiClient.post<{ data: BomSection }>('/v1/manufacturing/bom-sections', payload)
+
+export const updateBomSection = (id: string, payload: UpdateBomSectionPayload) =>
+  apiClient.put<{ data: BomSection }>(`/v1/manufacturing/bom-sections/${id}`, payload)
+
+export const deleteBomSection = (id: string) =>
+  apiClient.delete(`/v1/manufacturing/bom-sections/${id}`)
+
+export const reorderBomSections = (orders: { id: string; sequence: number }[]) =>
+  apiClient.post('/v1/manufacturing/bom-sections/reorder', { orders })
 
 // Plans
 export const fetchPlans = (params?: any) =>

@@ -8,6 +8,7 @@ import {
   Clock,
   Loader2,
   Puzzle,
+  Blocks,
   Ban,
   Activity,
   CreditCard,
@@ -27,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TenantSubscriptionTab } from '@/components/platform/TenantSubscriptionTab'
+import { TenantExtensionsSection } from '@/components/platform/TenantExtensionsSection'
 
 function statusVariant(status: string) {
   switch (status) {
@@ -51,9 +53,12 @@ export default function TenantDetailPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'overview' | 'subscription'>(() => 
-    searchParams.get('tab') === 'subscription' ? 'subscription' : 'overview'
-  )
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscription' | 'extensions'>(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'subscription') return 'subscription'
+    if (tabParam === 'extensions') return 'extensions'
+    return 'overview'
+  })
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['platform', 'tenants', id],
@@ -224,6 +229,12 @@ export default function TenantDetailPage() {
               Modules
             </Link>
           </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/platform/tenants/${id}/modules?tab=extensions`}>
+              <Blocks className="h-4 w-4 mr-2 text-purple-600 dark:text-purple-400" />
+              Extensions
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -236,6 +247,15 @@ export default function TenantDetailPage() {
         >
           <Activity className="h-3.5 w-3.5 mr-1.5" />
           Overview & Logs
+        </Button>
+        <Button
+          variant={activeTab === 'extensions' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('extensions')}
+          className="rounded-xl text-xs h-8.5"
+        >
+          <Blocks className="h-3.5 w-3.5 mr-1.5 text-purple-600 dark:text-purple-400" />
+          Extensions
         </Button>
         <Button
           variant={activeTab === 'subscription' ? 'default' : 'ghost'}
@@ -253,6 +273,12 @@ export default function TenantDetailPage() {
           tenantId={id!}
           tenantName={tenant.name}
           tenantStatus={tenant.status}
+        />
+      ) : activeTab === 'extensions' ? (
+        <TenantExtensionsSection
+          tenantId={id!}
+          tenantName={tenant.name}
+          compact={false}
         />
       ) : (
         <>
@@ -302,6 +328,13 @@ export default function TenantDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Industry Extensions Summary Section */}
+          <TenantExtensionsSection
+            tenantId={id!}
+            tenantName={tenant.name}
+            compact={true}
+          />
 
           {/* Provisioning Log Timeline */}
           <Card className="w-full bg-card/85 backdrop-blur-xl border-border/70 shadow-elevated">

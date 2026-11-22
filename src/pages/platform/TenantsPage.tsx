@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Eye, Puzzle, MoreHorizontal, Ban, CheckCircle2, Loader2, CreditCard } from 'lucide-react'
+import { Plus, Eye, Puzzle, Blocks, MoreHorizontal, Ban, CheckCircle2, Loader2, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { fetchTenants, suspendTenant, reactivateTenant, type Tenant } from '@/api/platform'
 import { Button } from '@/components/ui/button'
@@ -153,6 +153,10 @@ export default function TenantsPage() {
                 <DropdownMenuItem onClick={() => navigate(`/platform/tenants/${tenant.id}/modules`)}>
                   <Puzzle className="mr-2 h-4 w-4 text-muted-foreground" />
                   Manage Modules
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/platform/tenants/${tenant.id}/modules?tab=extensions`)}>
+                  <Blocks className="mr-2 h-4 w-4 text-purple-500" />
+                  Manage Extensions
                 </DropdownMenuItem>
                 {tenant.status === 'active' && (
                   <DropdownMenuItem
