@@ -3,11 +3,19 @@ import { render, screen } from '@testing-library/react'
 import PlatformLayout from './PlatformLayout'
 import { useAuthStore } from '@/store/authStore'
 import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { APP_VERSION } from '@/utils/version'
 
 describe('PlatformLayout', () => {
+  let queryClient: QueryClient
+
   beforeEach(() => {
     vi.clearAllMocks()
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    })
     useAuthStore.setState({
       user: { id: 1, name: 'Super Admin', email: 'admin@platform.com' },
       isPlatform: true,
@@ -17,9 +25,11 @@ describe('PlatformLayout', () => {
 
   it('renders platform layout correctly', () => {
     render(
-      <BrowserRouter>
-        <PlatformLayout />
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <PlatformLayout />
+        </BrowserRouter>
+      </QueryClientProvider>
     )
 
     expect(screen.getByText('Platform Admin')).toBeInTheDocument()

@@ -9,6 +9,7 @@ export interface TenantInfo {
   name: string
   subdomain: string
   status: string
+  version?: string
 }
 
 export default function TenantResolutionGuard() {

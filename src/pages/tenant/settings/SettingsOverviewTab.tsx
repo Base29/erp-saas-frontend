@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { ROLE_LABELS } from '@/utils/permissions'
 import { useTheme } from '@/components/ThemeProvider'
-import { APP_VERSION } from '@/utils/version'
+import { useAppVersion } from '@/utils/version'
 import {
   fetchCompanies,
   fetchFiscalPeriods,
@@ -336,6 +336,7 @@ export default function SettingsOverviewTab() {
   const { theme, setTheme } = useTheme()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<SettingCategoryKey>('all')
+  const appVersion = useAppVersion()
 
   // Live summary queries for badges
   const { data: companiesData } = useQuery({
@@ -512,7 +513,7 @@ export default function SettingsOverviewTab() {
               <Sparkles className="h-4 w-4 text-primary" />
               <div className="text-left">
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">System Version</p>
-                <p className="text-xs font-semibold font-mono text-foreground">{APP_VERSION}</p>
+                <p className="text-xs font-semibold font-mono text-foreground">{appVersion}</p>
               </div>
             </div>
           </div>

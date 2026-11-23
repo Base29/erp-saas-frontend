@@ -63,7 +63,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { GenieHeaderButton, GenieFloatingTrigger } from '@/components/genie/GenieTrigger'
 import { GenieAssistantDrawer } from '@/components/genie/GenieAssistantDrawer'
 import { useGenieStore } from '@/store/genieStore'
-import { APP_VERSION } from '@/utils/version'
+import { useAppVersion } from '@/utils/version'
 
 interface NavItem {
   to: string
@@ -262,6 +262,8 @@ function SidebarContent({
   expandedGroup,
   onToggleGroup,
 }: SidebarContentProps) {
+  const appVersion = useAppVersion()
+
   return (
     <>
       <div className={cn('h-16 px-4 border-b border-border/70 shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
@@ -274,13 +276,13 @@ function SidebarContent({
               </span>
             </span>
             <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 shrink-0">
-              {APP_VERSION}
+              {appVersion}
             </span>
           </div>
         ) : (
           <div
             className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-base shadow-subtle select-none"
-            title={`Genie Cloud ${APP_VERSION}`}
+            title={`Genie Cloud ${appVersion}`}
           >
             G
           </div>
@@ -397,7 +399,7 @@ function SidebarContent({
             </div>
             <div className="flex items-center justify-between text-[10px] text-muted-foreground/70 px-0.5 pt-1.5 border-t border-border/40 font-mono">
               <span>Genie Cloud</span>
-              <span className="font-semibold text-muted-foreground/90">{APP_VERSION}</span>
+              <span className="font-semibold text-muted-foreground/90">{appVersion}</span>
             </div>
           </div>
         ) : (
@@ -405,7 +407,7 @@ function SidebarContent({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            title={`Logout (${APP_VERSION})`}
+            title={`Logout (${appVersion})`}
             onClick={onLogout}
           >
             <LogOut className="h-4 w-4" />

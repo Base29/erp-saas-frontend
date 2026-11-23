@@ -46,6 +46,7 @@ import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Link } from 'react-router-dom'
 import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive, isExtensionActive } from '@/utils/permissions'
+import { useAppVersion } from '@/utils/version'
 import type { UserRole } from '@/store/authStore'
 
 type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
@@ -545,6 +546,7 @@ export default function TenantDashboardPage() {
   const [tileSearch, setTileSearch] = useState('')
   const [happeningsFilter, setHappeningsFilter] = useState<'all' | 'sales' | 'finance' | 'inventory'>('all')
   const [happeningsSearch, setHappeningsSearch] = useState('')
+  const appVersion = useAppVersion()
 
   const { data: summary, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['dashboard-summary'],
@@ -712,6 +714,12 @@ export default function TenantDashboardPage() {
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Tenant Live
+            </span>
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-primary/10 text-primary border border-primary/20 shadow-2xs"
+              title={`Latest Release Tag: ${appVersion}`}
+            >
+              {appVersion}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
