@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -27,6 +27,9 @@ import GenerateBillModal from './components/GenerateBillModal'
 export default function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const returnTo = location.state?.returnTo || searchParams.get('return_to')
   const qc = useQueryClient()
   const role = useAuthStore((s) => s.role)
 
@@ -99,8 +102,9 @@ export default function PurchaseOrderDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/procurement/orders')}
+            onClick={() => navigate(returnTo || '/procurement/orders')}
             className="h-9 w-9 text-muted-foreground"
+            title={returnTo ? 'Back to previous page' : 'Back to Purchase Orders'}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -144,6 +148,48 @@ export default function PurchaseOrderDetailPage() {
               >
                 {po.posting_status === 'posted' ? 'POSTED' : 'UNPOSTED'}
               </Badge>
+
+              {(() => {
+                const grns = po.goods_receipts || po.goodsReceipts || []
+                const hasPendingApprovalGrn = grns.some((gr: any) => gr.approval_status === 'pending_approval' || gr.approval_status === 'draft')
+                const hasUnpostedGrn = grns.some((gr: any) => (gr.approval_status === 'approved' || gr.posting_status !== 'posted') && gr.posting_status !== 'posted')
+                const isFullyReceivedBadge = po.status === 'fully_received' ||
+                  (po.lines && po.lines.length > 0 && po.lines.every((l) => {
+                    const directRec = Number(l.received_quantity) || 0
+                    const grnRec = grns.reduce((acc: number, gr: any) => {
+                      if (gr.approval_status === 'rejected') return acc
+                      const matchingLines = (gr.lines || []).filter((gl: any) => gl.purchase_order_line_id === l.id)
+                      return acc + matchingLines.reduce((s: number, gl: any) => s + (Number(gl.accepted_quantity ?? gl.received_quantity ?? gl.quantity) || 0), 0)
+                    }, 0)
+                    return Math.max(directRec, grnRec) >= (Number(l.quantity) || 0)
+                  }))
+                const isFullyBilledBadge = po.lines && po.lines.length > 0 && po.lines.every((l) => (Number(l.billed_quantity) || 0) >= (Number(l.quantity) || 0))
+
+                return (
+                  <>
+                    {hasPendingApprovalGrn && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-500/40 bg-amber-500/10 text-xs">
+                        GRN Pending Approval
+                      </Badge>
+                    )}
+                    {!hasPendingApprovalGrn && hasUnpostedGrn && (
+                      <Badge variant="outline" className="text-blue-600 border-blue-500/40 bg-blue-500/10 text-xs">
+                        GRN Pending Post
+                      </Badge>
+                    )}
+                    {isFullyReceivedBadge && (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/40 bg-emerald-500/10 text-xs">
+                        Fully Received
+                      </Badge>
+                    )}
+                    {isFullyBilledBadge && (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/40 bg-emerald-500/10 text-xs">
+                        Fully Billed
+                      </Badge>
+                    )}
+                  </>
+                )
+              })()}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               Issued on {formatDate(po.order_date)} to <span className="font-semibold">{po.supplier?.name}</span>
@@ -185,16 +231,23 @@ export default function PurchaseOrderDetailPage() {
 
           {po.approval_status === 'approved' && po.status !== 'cancelled' && (
             <>
-              {po.status === 'fully_received' ||
-              (po.lines && po.lines.length > 0 && po.lines.every((l) => (Number(l.received_quantity) || 0) >= (Number(l.quantity) || 0))) ? (
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1.5 py-1 px-2.5 text-xs font-medium"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Fully Received
-                </Badge>
-              ) : (
-                <div className="flex items-center gap-2">
+              {/* Step 1: Receiving Goods - show Receive Goods button ONLY if not fully received */}
+              {(() => {
+                const grns = po.goods_receipts || po.goodsReceipts || []
+                const isFullyReceived = po.status === 'fully_received' ||
+                  (po.lines && po.lines.length > 0 && po.lines.every((l) => {
+                    const directRec = Number(l.received_quantity) || 0
+                    const grnRec = grns.reduce((acc: number, gr: any) => {
+                      if (gr.approval_status === 'rejected') return acc
+                      const matchingLines = (gr.lines || []).filter((gl: any) => gl.purchase_order_line_id === l.id)
+                      return acc + matchingLines.reduce((s: number, gl: any) => s + (Number(gl.accepted_quantity ?? gl.received_quantity ?? gl.quantity) || 0), 0)
+                    }, 0)
+                    return Math.max(directRec, grnRec) >= (Number(l.quantity) || 0)
+                  }))
+
+                if (isFullyReceived) return null
+
+                return (
                   <Button
                     size="sm"
                     className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm"
@@ -202,52 +255,50 @@ export default function PurchaseOrderDetailPage() {
                   >
                     <PackageCheck className="h-4 w-4" /> Receive Goods
                   </Button>
-                  {(po.goods_receipts || po.goodsReceipts || []).some((gr: any) => gr.posting_status !== 'posted') && (
-                    <Badge
-                      variant="outline"
-                      className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[11px] py-1"
-                    >
-                      GRN Pending Post
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                )
+              })()}
 
-          {po.approval_status === 'approved' && po.status !== 'cancelled' && (
-            <>
-              {po.lines &&
-              po.lines.length > 0 &&
-              po.lines.every((l) => (Number(l.billed_quantity) || 0) >= (Number(l.quantity) || 0)) ? (
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1.5 py-1 px-2.5 text-xs font-medium"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Fully Billed
-                </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 gap-1.5 shadow-sm"
-                  onClick={() => setBillModalOpen(true)}
-                >
-                  <FileText className="h-4 w-4" /> Create Bill
-                </Button>
-              )}
-            </>
-          )}
+              {/* Step 2: Vendor Bill - show Create Bill ONLY when an approved GRN exists and lines are not fully billed */}
+              {(() => {
+                const grns = po.goods_receipts || po.goodsReceipts || []
+                const hasApprovedGrn = grns.some((gr: any) => gr.approval_status === 'approved' || gr.posting_status === 'posted')
+                const isFullyBilled = po.lines && po.lines.length > 0 && po.lines.every((l) => (Number(l.billed_quantity) || 0) >= (Number(l.quantity) || 0))
 
-          {po.approval_status === 'approved' && po.posting_status === 'unposted' && (
-            <Button
-              size="sm"
-              variant="default"
-              className="text-xs bg-primary text-primary-foreground gap-1.5 shadow-sm"
-              onClick={() => handleAction('post')}
-            >
-              Post to Ledger
-            </Button>
+                if (!hasApprovedGrn || isFullyBilled) return null
+
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 gap-1.5 shadow-sm"
+                    onClick={() => setBillModalOpen(true)}
+                  >
+                    <FileText className="h-4 w-4" /> Create Bill
+                  </Button>
+                )
+              })()}
+
+              {/* Step 3: Posting Order - show Post to Ledger only when order has bills AND is fully billed */}
+              {(() => {
+                const bills = po.purchase_invoices || po.purchaseInvoices || []
+                const isFullyBilled = po.lines && po.lines.length > 0 && po.lines.every((l) => (Number(l.billed_quantity) || 0) >= (Number(l.quantity) || 0))
+
+                if (po.posting_status !== 'unposted' || bills.length === 0 || !isFullyBilled) {
+                  return null
+                }
+
+                return (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="text-xs bg-primary text-primary-foreground gap-1.5 shadow-sm"
+                    onClick={() => handleAction('post')}
+                  >
+                    Post to Ledger
+                  </Button>
+                )
+              })()}
+            </>
           )}
 
           {po.status !== 'cancelled' &&
@@ -545,7 +596,21 @@ export default function PurchaseOrderDetailPage() {
                 <tbody className="divide-y divide-border">
                   {(po.purchase_invoices || po.purchaseInvoices || []).map((bill: any) => (
                     <tr key={bill.id} className="hover:bg-muted/30">
-                      <td className="p-3 font-mono font-medium text-foreground">{bill.invoice_number}</td>
+                      <td className="p-3 font-mono font-medium">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/accounts/purchase-invoices?id=${bill.id}&return_to=${encodeURIComponent(
+                                location.pathname + location.search
+                              )}`
+                            )
+                          }
+                          className="text-primary hover:underline font-semibold"
+                        >
+                          {bill.invoice_number}
+                        </button>
+                      </td>
                       <td className="p-3 text-muted-foreground">{formatDate(bill.invoice_date)}</td>
                       <td className="p-3 text-right font-mono font-bold text-foreground">
                         {formatCurrency(Number(bill.total_amount) || 0)}
@@ -612,7 +677,21 @@ export default function PurchaseOrderDetailPage() {
                 <tbody className="divide-y divide-border">
                   {(po.goods_receipts || po.goodsReceipts || []).map((grn: any) => (
                     <tr key={grn.id} className="hover:bg-muted/30">
-                      <td className="p-3 font-mono font-medium text-foreground">{grn.grn_number}</td>
+                      <td className="p-3 font-mono font-medium">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/inventory/goods-receipts?id=${grn.id}&return_to=${encodeURIComponent(
+                                location.pathname + location.search
+                              )}`
+                            )
+                          }
+                          className="text-primary hover:underline font-semibold"
+                        >
+                          {grn.grn_number}
+                        </button>
+                      </td>
                       <td className="p-3 text-muted-foreground">{formatDate(grn.receipt_date)}</td>
                       <td className="p-3 text-foreground">{grn.warehouse?.name || 'Default Warehouse'}</td>
                       <td className="p-3 text-center">

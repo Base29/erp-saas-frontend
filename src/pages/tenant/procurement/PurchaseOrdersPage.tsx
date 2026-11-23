@@ -216,7 +216,9 @@ export default function PurchaseOrdersPage() {
                   Approve
                 </Button>
               )}
-              {po.approval_status === 'approved' && po.posting_status === 'unposted' && (
+              {po.approval_status === 'approved' &&
+                po.posting_status === 'unposted' &&
+                po.status === 'completed' && (
                 <Button
                   size="sm"
                   variant="outline"

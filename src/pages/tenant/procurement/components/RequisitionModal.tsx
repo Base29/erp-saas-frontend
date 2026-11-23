@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/select'
 import { fetchItems } from '@/api/tenant'
 import { procurementApi, type PurchaseRequisition } from '@/api/procurement'
-import { formatCurrency } from '@/utils/format'
 
 interface RequisitionModalProps {
   open: boolean
@@ -34,8 +33,6 @@ interface DraftLine {
   item_id: string
   item_description: string
   quantity: number
-  estimated_unit_cost: number
-  estimated_total_cost: number
   unit_of_measure_id?: string
   notes?: string
 }
@@ -55,8 +52,6 @@ export default function RequisitionModal({
       item_id: '',
       item_description: '',
       quantity: 1,
-      estimated_unit_cost: 0,
-      estimated_total_cost: 0,
     },
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -82,8 +77,6 @@ export default function RequisitionModal({
             item_id: l.item_id || '',
             item_description: l.item_description,
             quantity: Math.round(Number(l.quantity)) || 1,
-            estimated_unit_cost: Number(l.estimated_unit_cost),
-            estimated_total_cost: Number(l.estimated_total_cost),
             unit_of_measure_id: l.unit_of_measure_id || undefined,
             notes: l.notes || '',
           }))
@@ -99,8 +92,6 @@ export default function RequisitionModal({
           item_id: '',
           item_description: '',
           quantity: 1,
-          estimated_unit_cost: 0,
-          estimated_total_cost: 0,
         },
       ])
     }
@@ -121,13 +112,8 @@ export default function RequisitionModal({
   const handleLineChange = (index: number, field: keyof DraftLine, value: any) => {
     const newLines = [...lines]
     newLines[index] = { ...newLines[index], [field]: value }
-    if (field === 'quantity' || field === 'estimated_unit_cost') {
-      const q = field === 'quantity' ? (parseInt(String(value), 10) || 0) : (Number(newLines[index].quantity) || 0)
-      if (field === 'quantity') {
-        newLines[index].quantity = q
-      }
-      const c = Number(newLines[index].estimated_unit_cost) || 0
-      newLines[index].estimated_total_cost = q * c
+    if (field === 'quantity') {
+      newLines[index].quantity = parseInt(String(value), 10) || 0
     }
     setLines(newLines)
   }
@@ -139,8 +125,6 @@ export default function RequisitionModal({
         item_id: '',
         item_description: '',
         quantity: 1,
-        estimated_unit_cost: 0,
-        estimated_total_cost: 0,
       },
     ])
   }
@@ -149,8 +133,6 @@ export default function RequisitionModal({
     if (lines.length === 1) return
     setLines(lines.filter((_, i) => i !== index))
   }
-
-  const grandTotal = lines.reduce((acc, curr) => acc + (Number(curr.estimated_total_cost) || 0), 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,8 +155,8 @@ export default function RequisitionModal({
           item_description: l.item_description,
           quantity: parseInt(String(l.quantity), 10) || 1,
           unit_of_measure_id: l.unit_of_measure_id || null,
-          estimated_unit_cost: Number(l.estimated_unit_cost),
-          estimated_total_cost: Number(l.estimated_total_cost),
+          estimated_unit_cost: 0,
+          estimated_total_cost: 0,
           notes: l.notes || null,
         })),
       }
@@ -260,11 +242,9 @@ export default function RequisitionModal({
               <table className="w-full text-xs">
                 <thead className="bg-muted text-muted-foreground font-medium border-b">
                   <tr>
-                    <th className="p-2 text-left w-1/4">Inventory Item</th>
+                    <th className="p-2 text-left w-1/3">Inventory Item</th>
                     <th className="p-2 text-left">Description</th>
-                    <th className="p-2 text-right w-20">Qty</th>
-                    <th className="p-2 text-right w-28">Est. Unit Cost</th>
-                    <th className="p-2 text-right w-28">Est. Total</th>
+                    <th className="p-2 text-right w-24">Requested Qty</th>
                     <th className="p-2 w-10"></th>
                   </tr>
                 </thead>
@@ -312,19 +292,6 @@ export default function RequisitionModal({
                           required
                         />
                       </td>
-                      <td className="p-2">
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={line.estimated_unit_cost}
-                          onChange={(e) => handleLineChange(idx, 'estimated_unit_cost', parseFloat(e.target.value) || 0)}
-                          className="h-8 text-xs text-right"
-                        />
-                      </td>
-                      <td className="p-2 text-right font-medium text-foreground">
-                        {formatCurrency(line.estimated_total_cost)}
-                      </td>
                       <td className="p-2 text-center">
                         <Button
                           type="button"
@@ -341,11 +308,6 @@ export default function RequisitionModal({
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            <div className="flex justify-end pr-2 pt-2 text-sm font-semibold text-foreground">
-              <span>Total Estimated:</span>
-              <span className="ml-4 font-mono text-primary">{formatCurrency(grandTotal)}</span>
             </div>
           </div>
 

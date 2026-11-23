@@ -8,6 +8,11 @@ export const apiClient = axios.create({
 
 // Attach JWT Bearer token and tenant subdomain header
 apiClient.interceptors.request.use(async (config) => {
+  // Let browser / Axios set the proper multipart boundary for FormData
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

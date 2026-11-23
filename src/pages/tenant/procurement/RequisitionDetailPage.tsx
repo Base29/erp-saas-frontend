@@ -260,10 +260,10 @@ export default function RequisitionDetailPage() {
                         {remaining.toLocaleString()}
                       </td>
                       <td className="p-3 text-right font-mono">
-                        {formatCurrency(Number(line.estimated_unit_cost) || 0)}
+                        {Number(line.estimated_unit_cost) > 0 ? formatCurrency(Number(line.estimated_unit_cost)) : '-'}
                       </td>
                       <td className="p-3 text-right font-mono font-medium text-foreground">
-                        {formatCurrency(Number(line.estimated_total_cost) || 0)}
+                        {Number(line.estimated_total_cost) > 0 ? formatCurrency(Number(line.estimated_total_cost)) : '-'}
                       </td>
                     </tr>
                   )

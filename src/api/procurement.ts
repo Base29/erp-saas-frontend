@@ -368,8 +368,21 @@ export const procurementApi = {
     const response = await apiClient.get(`/v1/procurement/orders/${id}/reconciliation`)
     return response.data
   },
-  generateBillFromOrder: async (id: string, data?: { invoice_number?: string; invoice_date?: string; due_date?: string; lines?: any[] }) => {
-    const response = await apiClient.post(`/v1/procurement/orders/${id}/generate-bill`, data)
+  generateBillFromOrder: async (id: string, data?: { invoice_number?: string; invoice_date?: string; due_date?: string; lines?: any[]; attachment?: File }) => {
+    let payload: any = data
+
+    if (data?.attachment) {
+      const formData = new FormData()
+      if (data.invoice_number) formData.append('invoice_number', data.invoice_number)
+      if (data.invoice_date) formData.append('invoice_date', data.invoice_date)
+      if (data.due_date) formData.append('due_date', data.due_date)
+      if (data.lines) formData.append('lines', JSON.stringify(data.lines))
+      formData.append('attachment', data.attachment)
+      formData.append('file', data.attachment)
+      payload = formData
+    }
+
+    const response = await apiClient.post(`/v1/procurement/orders/${id}/generate-bill`, payload)
     return response.data
   },
   validateInvoiceMatch: async (invoiceId: string) => {

@@ -193,9 +193,7 @@ export const uploadAttachment = (
   form.append('file', file)
   form.append('attachable_type', attachableType)
   form.append('attachable_id', String(attachableId))
-  return apiClient.post<{ data: Attachment }>('/v1/attachments', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  return apiClient.post<{ data: Attachment }>('/v1/attachments', form)
 }
 
 export const deleteAttachment = (id: string) =>
@@ -1267,6 +1265,8 @@ export interface Supplier {
 export interface PurchaseInvoice {
   id: string
   supplier_id: string
+  purchase_order_id?: string | null
+  goods_receipt_id?: string | null
   invoice_number: string
   invoice_date: string
   due_date: string | null
@@ -1281,6 +1281,9 @@ export interface PurchaseInvoice {
   created_by: string
   supplier?: Supplier
   journal_voucher?: JournalVoucher
+  purchaseOrder?: any
+  goodsReceipt?: any
+  lines?: any[]
   allocations?: SupplierPaymentAllocation[]
 }
 

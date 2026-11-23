@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { FileText, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { FileText, AlertTriangle, CheckCircle2, Paperclip, Upload, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { procurementApi, type PurchaseOrder } from '@/api/procurement'
-import { formatCurrency } from '@/utils/format'
+import { uploadAttachment } from '@/api/tenant'
+import { formatCurrency, formatQuantity } from '@/utils/format'
 
 interface GenerateBillModalProps {
   open: boolean
@@ -23,6 +24,7 @@ interface GenerateBillModalProps {
 
 interface BillLineInput {
   purchase_order_line_id: string
+  item_id?: string | null
   item_description: string
   item_code?: string
   ordered_quantity: number
@@ -48,6 +50,8 @@ export default function GenerateBillModal({
     return d.toISOString().slice(0, 10)
   })
   const [lines, setLines] = useState<BillLineInput[]>([])
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [matchResult, setMatchResult] = useState<any | null>(null)
@@ -56,6 +60,7 @@ export default function GenerateBillModal({
     if (!open || !order) return
 
     setInvoiceNumber(`INV-${order.supplier?.supplier_code || 'SUP'}-${Math.floor(1000 + Math.random() * 9000)}`)
+    setAttachmentFile(null)
     setErrorMsg('')
     setMatchResult(null)
 
@@ -81,8 +86,9 @@ export default function GenerateBillModal({
 
       return {
         purchase_order_line_id: poLine.id,
-        item_description: poLine.item_description,
+        item_description: poLine.item_description || poLine.item?.item_name || 'Line item',
         item_code: poLine.item?.item_code,
+        item_id: poLine.item_id,
         ordered_quantity: Number(poLine.quantity) || 0,
         accepted_quantity: acceptedTotal,
         previously_billed_quantity: previouslyBilled,
@@ -135,11 +141,27 @@ export default function GenerateBillModal({
           purchase_order_line_id: l.purchase_order_line_id,
           quantity: l.quantity,
           unit_price: l.unit_price,
+          item_description: l.item_description,
+          item_id: l.item_id,
         })),
+        attachment: attachmentFile || undefined,
       }
 
       const res = await procurementApi.generateBillFromOrder(order.id, payload)
-      const billData = res.data
+      const billData = res?.data || res
+      const billId = billData?.id
+
+      // Upload attachment if not already handled by backend multipart
+      if (attachmentFile && billId) {
+        const hasAttachment = Array.isArray(billData?.attachments) && billData.attachments.length > 0
+        if (!hasAttachment) {
+          try {
+            await uploadAttachment('PurchaseInvoice', billId, attachmentFile)
+          } catch (uploadErr) {
+            console.error('Invoice attachment upload error:', uploadErr)
+          }
+        }
+      }
 
       // If matching report shows variance, inform user
       if (billData?.matching_status === 'variance') {
@@ -218,6 +240,54 @@ export default function GenerateBillModal({
           </div>
         </div>
 
+        {/* Invoice File Attachment */}
+        <div className="space-y-1.5 pt-1">
+          <Label className="text-xs">Attach Supplier Invoice (PDF, Image, etc.)</Label>
+          {attachmentFile ? (
+            <div className="flex items-center justify-between rounded-md border p-2.5 bg-muted/20">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-medium truncate">{attachmentFile.name}</span>
+                <span className="text-[11px] text-muted-foreground shrink-0">
+                  ({(attachmentFile.size / 1024).toFixed(1)} KB)
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                onClick={() => setAttachmentFile(null)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.xlsx,.csv"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAttachmentFile(e.target.files[0])
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 border-dashed py-3.5 text-xs h-auto text-muted-foreground hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Upload vendor invoice document (PDF, PNG, JPG)</span>
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Line Items Table */}
         <div className="border rounded-md overflow-hidden mt-4">
           <table className="w-full text-xs">
@@ -239,9 +309,9 @@ export default function GenerateBillModal({
                     <div className="font-medium text-foreground">{line.item_description}</div>
                     {line.item_code && <div className="text-[11px] text-muted-foreground font-mono">{line.item_code}</div>}
                   </td>
-                  <td className="p-2.5 text-right font-mono">{line.ordered_quantity}</td>
-                  <td className="p-2.5 text-right font-mono text-emerald-600 font-semibold">{line.accepted_quantity}</td>
-                  <td className="p-2.5 text-right font-mono text-muted-foreground">{line.previously_billed_quantity}</td>
+                  <td className="p-2.5 text-right font-mono">{formatQuantity(line.ordered_quantity)}</td>
+                  <td className="p-2.5 text-right font-mono text-emerald-600 font-semibold">{formatQuantity(line.accepted_quantity)}</td>
+                  <td className="p-2.5 text-right font-mono text-muted-foreground">{formatQuantity(line.previously_billed_quantity)}</td>
                   <td className="p-2.5 text-right">
                     <Input
                       type="number"

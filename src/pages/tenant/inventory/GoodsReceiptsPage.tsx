@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Eye, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Eye, ArrowLeft, FileText, ExternalLink } from 'lucide-react'
 import {
   fetchGoodsReceipts, fetchGoodsReceipt, createGoodsReceipt,
   submitGoodsReceiptForApproval, approveGoodsReceipt, rejectGoodsReceipt, postGoodsReceipt,
@@ -56,7 +56,11 @@ export default function GoodsReceiptsPage() {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const returnTo = location.state?.returnTo || searchParams.get('return_to')
-  const backLabel = returnTo?.includes('general-ledger')
+  const backLabel = returnTo?.includes('purchase-invoices')
+    ? 'Back to Purchase Invoice'
+    : returnTo?.includes('orders')
+    ? 'Back to Purchase Order'
+    : returnTo?.includes('general-ledger')
     ? 'Back to General Ledger'
     : returnTo?.includes('statement')
     ? 'Back to Statement'
@@ -341,6 +345,34 @@ export default function GoodsReceiptsPage() {
                 <div><span className="text-muted-foreground">Date:</span> {formatDate(detail.receipt_date)}</div>
                 <div><span className="text-muted-foreground">Reference:</span> {detail.reference ?? '—'}</div>
                 <div><span className="text-muted-foreground">Posting:</span> <Badge variant={detail.posting_status === 'posted' ? 'success' : 'secondary'}>{detail.posting_status}</Badge></div>
+                {Boolean((detail as any).purchaseOrder || (detail as any).purchase_order || (detail as any).purchase_order_id) && (
+                  <div className="col-span-2 flex items-center gap-2">
+                    <span className="text-muted-foreground">Purchase Order:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const poId =
+                          (detail as any).purchase_order_id ||
+                          (detail as any).purchaseOrder?.id ||
+                          (detail as any).purchase_order?.id
+                        navigate(
+                          `/procurement/orders/${poId}?return_to=${encodeURIComponent(
+                            `/inventory/goods-receipts?id=${detail.id}`
+                          )}`
+                        )
+                      }}
+                      className="text-primary hover:underline font-mono text-xs inline-flex items-center gap-1 font-semibold"
+                    >
+                      <FileText className="h-3.5 w-3.5 opacity-70" />
+                      <span>
+                        {(detail as any).purchaseOrder?.po_number ||
+                          (detail as any).purchase_order?.po_number ||
+                          'View PO'}
+                      </span>
+                      <ExternalLink className="h-3 w-3 opacity-70" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <table className="w-full text-sm border rounded-md overflow-hidden">

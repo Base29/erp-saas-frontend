@@ -9,9 +9,11 @@ import {
 } from '@/api/tenant'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Eye, Plus, Send, CheckCircle2, Pencil, RotateCcw, ExternalLink, ArrowLeft } from 'lucide-react'
+import { Eye, Plus, Send, CheckCircle2, Pencil, RotateCcw, ExternalLink, ArrowLeft, Package, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { toast } from 'sonner'
+import { formatQuantity } from '@/utils/format'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import AttachmentUpload from '@/components/AttachmentUpload'
 import DataTable from '@/components/DataTable'
@@ -28,7 +30,13 @@ export default function PurchaseInvoicesPage() {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const returnTo = location.state?.returnTo || searchParams.get('return_to')
-  const backLabel = returnTo?.includes('general-ledger')
+  const backLabel = returnTo?.includes('purchase-invoices')
+    ? 'Back to Purchase Invoice'
+    : returnTo?.includes('orders')
+    ? 'Back to Purchase Order'
+    : returnTo?.includes('goods-receipts')
+    ? 'Back to Goods Receipt'
+    : returnTo?.includes('general-ledger')
     ? 'Back to General Ledger'
     : returnTo?.includes('statement')
     ? 'Back to Statement'
@@ -99,6 +107,10 @@ export default function PurchaseInvoicesPage() {
       if (selectedInvoice && res.data?.data) {
         setSelectedInvoice(res.data.data)
       }
+      toast.success('Invoice posted to ledger successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to post invoice')
     },
   })
 
@@ -112,6 +124,10 @@ export default function PurchaseInvoicesPage() {
       if (selectedInvoice && res.data?.data) {
         setSelectedInvoice(res.data.data)
       }
+      toast.success('Invoice unposted successfully')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to unpost invoice')
     },
   })
 
@@ -359,6 +375,102 @@ export default function PurchaseInvoicesPage() {
                   <span className="text-xs text-muted-foreground block">Payment Status</span>
                   <span className="capitalize font-medium">{selectedInvoice.status ? selectedInvoice.status.replace('_', ' ') : 'Approved'}</span>
                 </div>
+                {(() => {
+                  const grns: any[] = []
+                  if ((selectedInvoice as any).goodsReceipt) grns.push((selectedInvoice as any).goodsReceipt)
+                  if ((selectedInvoice as any).goods_receipt) grns.push((selectedInvoice as any).goods_receipt)
+                  const poGrns = (selectedInvoice as any).purchaseOrder?.goodsReceipts || (selectedInvoice as any).purchase_order?.goods_receipts || []
+                  poGrns.forEach((pg: any) => {
+                    if (!grns.some((g) => g.id === pg.id)) grns.push(pg)
+                  })
+
+                  const lines = (selectedInvoice as any).lines || []
+                  lines.forEach((ln: any) => {
+                    const gr = ln.goodsReceiptLine?.goodsReceipt || ln.goods_receipt_line?.goods_receipt || ln.goodsReceiptLine?.goods_receipt || ln.goods_receipt
+                    if (gr && !grns.some((g) => g.id === gr.id)) {
+                      grns.push(gr)
+                    } else if (ln.goods_receipt_id && !grns.some((g) => g.id === ln.goods_receipt_id)) {
+                      grns.push({ id: ln.goods_receipt_id, grn_number: 'View GRN' })
+                    }
+                  })
+
+                  if (grns.length === 0 && selectedInvoice.goods_receipt_id) {
+                    grns.push({ id: selectedInvoice.goods_receipt_id, grn_number: 'View GRN' })
+                  }
+
+                  if (grns.length === 0) return null
+
+                  return (
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Goods Receipt (GRN)</span>
+                      <div className="flex flex-wrap gap-2 pt-0.5">
+                        {grns.map((grn) => (
+                          <button
+                            key={grn.id}
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/inventory/goods-receipts?id=${grn.id}&return_to=${encodeURIComponent(
+                                  `/accounts/purchase-invoices?id=${selectedInvoice.id}`
+                                )}`
+                              )
+                            }
+                            className="text-primary hover:underline font-mono text-xs inline-flex items-center gap-1 font-semibold"
+                          >
+                            <Package className="h-3 w-3 opacity-70" />
+                            <span>{grn.grn_number || 'View GRN'}</span>
+                            <ExternalLink className="h-3 w-3 opacity-70" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {(() => {
+                  const po = (selectedInvoice as any).purchaseOrder || (selectedInvoice as any).purchase_order
+                  let poId = selectedInvoice.purchase_order_id || po?.id
+                  let poNumber = po?.po_number
+
+                  if (!poId) {
+                    const lines = (selectedInvoice as any).lines || []
+                    for (const ln of lines) {
+                      const lPo = ln.purchaseOrder || ln.purchase_order || ln.purchaseOrderLine?.order || ln.purchase_order_line?.order
+                      if (lPo?.id) {
+                        poId = lPo.id
+                        poNumber = lPo.po_number
+                        break
+                      } else if (ln.purchase_order_id) {
+                        poId = ln.purchase_order_id
+                        break
+                      }
+                    }
+                  }
+
+                  if (!poId && !po) return null
+                  poNumber = poNumber || 'View PO'
+                  return (
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Purchase Order</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/procurement/orders/${poId}?return_to=${encodeURIComponent(
+                              `/accounts/purchase-invoices?id=${selectedInvoice.id}`
+                            )}`
+                          )
+                        }
+                        className="text-primary hover:underline font-mono text-xs inline-flex items-center gap-1 font-semibold"
+                      >
+                        <FileText className="h-3 w-3 opacity-70" />
+                        <span>{poNumber}</span>
+                        <ExternalLink className="h-3 w-3 opacity-70" />
+                      </button>
+                    </div>
+                  )
+                })()}
+
                 {selectedInvoice.journal_voucher_id && (
                   <div>
                     <span className="text-xs text-muted-foreground block">Journal Voucher</span>
@@ -388,18 +500,51 @@ export default function PurchaseInvoicesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {(selectedInvoice as any).lines.map((ln: any, idx: number) => (
-                          <tr key={ln.id ?? idx}>
-                            <td className="px-3 py-1.5 font-medium">{ln.item?.name ?? ln.description ?? '—'}</td>
-                            <td className="px-3 py-1.5 text-right font-mono">{ln.quantity}</td>
-                            <td className="px-3 py-1.5 text-right font-mono">
-                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ln.unit_price)}
-                            </td>
-                            <td className="px-3 py-1.5 text-right font-mono font-medium">
-                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(ln.quantity) * Number(ln.unit_price))}
-                            </td>
-                          </tr>
-                        ))}
+                        {(selectedInvoice as any).lines.map((ln: any, idx: number) => {
+                          const itemName =
+                            ln.item?.item_name ||
+                            ln.item_name ||
+                            ln.item_description ||
+                            ln.description ||
+                            ln.purchaseOrderLine?.item_description ||
+                            ln.purchase_order_line?.item_description ||
+                            ln.purchaseOrderLine?.item?.item_name ||
+                            ln.purchase_order_line?.item?.item_name ||
+                            ln.purchaseOrderLine?.description ||
+                            ln.purchase_order_line?.description ||
+                            ln.goodsReceiptLine?.item_description ||
+                            ln.goods_receipt_line?.item_description ||
+                            ln.goodsReceiptLine?.item?.item_name ||
+                            ln.goods_receipt_line?.item?.item_name ||
+                            ln.item?.name ||
+                            ln.name ||
+                            ln.title ||
+                            '—'
+                          const itemCode =
+                            ln.item?.item_code ||
+                            ln.item_code ||
+                            ln.purchaseOrderLine?.item?.item_code ||
+                            ln.purchase_order_line?.item?.item_code ||
+                            ln.goodsReceiptLine?.item?.item_code ||
+                            ln.goods_receipt_line?.item?.item_code
+                          return (
+                            <tr key={ln.id ?? idx}>
+                              <td className="px-3 py-1.5 font-medium">
+                                <div>{itemName}</div>
+                                {itemCode && (
+                                  <div className="text-[10px] text-muted-foreground font-mono">{itemCode}</div>
+                                )}
+                              </td>
+                              <td className="px-3 py-1.5 text-right font-mono">{formatQuantity(ln.quantity)}</td>
+                              <td className="px-3 py-1.5 text-right font-mono">
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ln.unit_price)}
+                              </td>
+                              <td className="px-3 py-1.5 text-right font-mono font-medium">
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(ln.quantity) * Number(ln.unit_price))}
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
