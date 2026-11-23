@@ -4,7 +4,6 @@ import PlatformLayout from './PlatformLayout'
 import { useAuthStore } from '@/store/authStore'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { APP_VERSION } from '@/utils/version'
 
 describe('PlatformLayout', () => {
   let queryClient: QueryClient
@@ -33,7 +32,6 @@ describe('PlatformLayout', () => {
     )
 
     expect(screen.getByText('Platform Admin')).toBeInTheDocument()
-    expect(screen.getByText(APP_VERSION)).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Tenants')).toBeInTheDocument()
   })
