@@ -26,7 +26,7 @@ import {
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   code: z.string().max(50).optional().default(''),
-  nature: z.enum(['stock', 'service', 'bundle']),
+  nature: z.enum(['stock', 'non_stock', 'service', 'bundle']),
   description: z.string().nullable().default(''),
   is_active: z.boolean().default(true),
 })
@@ -127,7 +127,7 @@ export default function QuickAddTypeModal({ open, onOpenChange, onSuccess }: Pro
             <Label>Inventory Behavior (Nature)</Label>
             <Select
               value={nature}
-              onValueChange={(val: 'stock' | 'service' | 'bundle') => setValue('nature', val)}
+              onValueChange={(val: 'stock' | 'non_stock' | 'service' | 'bundle') => setValue('nature', val)}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -135,6 +135,9 @@ export default function QuickAddTypeModal({ open, onOpenChange, onSuccess }: Pro
               <SelectContent>
                 <SelectItem value="stock">
                   Stock Item — Physical inventory with stock tracking & movements
+                </SelectItem>
+                <SelectItem value="non_stock">
+                  Non-Stock / Expense — Consumables, supplies, or expenses with no stock ledger impact
                 </SelectItem>
                 <SelectItem value="service">
                   Service — Labor or non-physical items without inventory tracking

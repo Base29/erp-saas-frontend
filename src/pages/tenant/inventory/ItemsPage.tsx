@@ -10,12 +10,14 @@ import {
   fetchItemCategories,
   fetchUoms,
   fetchItemTypes,
+  fetchAccounts,
   createItem,
   updateItem,
   type Item,
   type ItemCategory,
   type UnitOfMeasure,
   type ItemType,
+  type Account,
 } from '@/api/tenant'
 import DataTable from '@/components/DataTable'
 import { Button } from '@/components/ui/button'
@@ -49,6 +51,7 @@ import QuickAddTypeModal from '@/components/inventory/QuickAddTypeModal'
 import ManageUomsModal from '@/components/inventory/ManageUomsModal'
 import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal'
 import ManageItemTypesModal, { DEFAULT_SYSTEM_ITEM_TYPES } from '@/components/inventory/ManageItemTypesModal'
+import AccountCombobox from '@/components/accounts/AccountCombobox'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const variantSchema = z.object({
@@ -66,9 +69,12 @@ const schema = z.object({
   item_code: z.string().max(50, 'Max 50 characters').optional().default(''),
   item_name: z.string().min(1, 'Required'),
   item_type: z.string().min(1, 'Required'),
+  is_stock_tracked: z.boolean().default(true),
   category_id: z.string().nullable().default(null),
   base_unit_of_measure_id: z.string().min(1, 'Required'),
   reorder_level: z.coerce.number().int('Must be a whole number').min(0).default(0),
+  inventory_account_id: z.string().nullable().default(null),
+  expense_account_id: z.string().nullable().default(null),
   is_batch_tracked: z.boolean().default(false),
   is_serial_tracked: z.boolean().default(false),
   is_expiry_tracked: z.boolean().default(false),
@@ -141,6 +147,11 @@ export default function ItemsPage() {
     return list
   }, [itemTypes])
 
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts-all'],
+    queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data.data ?? []),
+  })
+
   const { data: allItems = [] } = useQuery({
     queryKey: ['items-all'],
     queryFn: () => fetchItems({ per_page: 200 }).then((r) => r.data.data),
@@ -152,6 +163,8 @@ export default function ItemsPage() {
         ...v,
         category_id: v.category_id || null,
         base_unit_of_measure_id: v.base_unit_of_measure_id,
+        inventory_account_id: v.inventory_account_id || null,
+        expense_account_id: v.expense_account_id || null,
         variants: v.variants.map((variant) => ({
           ...variant,
           variant_attributes: null,
@@ -184,7 +197,7 @@ export default function ItemsPage() {
 
   const itemType = watch('item_type')
   const currentTypeObj = effectiveItemTypes.find((t) => t.code === itemType)
-  const currentNature = currentTypeObj?.nature ?? (itemType === 'service' ? 'service' : itemType === 'bundle' ? 'bundle' : 'stock')
+  const currentNature = currentTypeObj?.nature ?? (itemType === 'service' ? 'service' : itemType === 'bundle' ? 'bundle' : itemType === 'non_stock' ? 'non_stock' : 'stock')
 
   const openCreate = () => {
     setEditing(null)
@@ -192,9 +205,12 @@ export default function ItemsPage() {
       item_code: '',
       item_name: '',
       item_type: 'stock',
+      is_stock_tracked: true,
       category_id: null,
       base_unit_of_measure_id: '',
       reorder_level: 0,
+      inventory_account_id: null,
+      expense_account_id: null,
       is_batch_tracked: false,
       is_serial_tracked: false,
       is_expiry_tracked: false,
@@ -218,9 +234,12 @@ export default function ItemsPage() {
       item_code: item.item_code,
       item_name: item.item_name,
       item_type: item.item_type,
+      is_stock_tracked: item.is_stock_tracked ?? (item.item_type === 'stock'),
       category_id: item.category_id ? String(item.category_id) : null,
       base_unit_of_measure_id: String(item.base_unit_of_measure_id),
       reorder_level: item.reorder_level,
+      inventory_account_id: item.inventory_account_id ? String(item.inventory_account_id) : null,
+      expense_account_id: item.expense_account_id ? String(item.expense_account_id) : null,
       is_batch_tracked: item.is_batch_tracked,
       is_serial_tracked: item.is_serial_tracked,
       is_expiry_tracked: item.is_expiry_tracked,
@@ -244,7 +263,75 @@ export default function ItemsPage() {
       cell: ({ row }) => {
         const typeCode = row.original.item_type
         const matched = effectiveItemTypes.find((t) => t.code === typeCode)
-        return <Badge variant="outline">{matched?.name ?? typeCode}</Badge>
+        const isNonStock = row.original.is_stock_tracked === false || matched?.is_stock_tracked === false || matched?.nature === 'non_stock' || matched?.nature === 'service'
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge variant="outline">{matched?.name ?? typeCode}</Badge>
+            {isNonStock && (
+              <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                Non-Stock
+              </Badge>
+            )}
+          </div>
+        )
+      },
+    },
+    { id: 'category', header: 'Category', cell: ({ row }) => row.original.category?.name ?? '—' },
+    { id: 'uom', header: 'UOM', cell: ({ row }) => row.original.base_uom?.abbreviation ?? '—' },
+    {
+      id: 'stock_quantity',
+      header: 'Stock Qty',
+      cell: ({ row }) => {
+        const item = row.original
+        const typeCode = item.item_type
+        const matched = effectiveItemTypes.find((t) => t.code === typeCode)
+        const isStock = item.is_stock_tracked !== false && matched?.is_stock_tracked !== false && matched?.nature !== 'non_stock' && matched?.nature !== 'service'
+
+        if (!isStock) {
+          return <span className="text-muted-foreground text-xs italic">N/A (Non-stock)</span>
+        }
+
+        const qty = Number(item.stock_quantity ?? 0)
+        const reorder = item.reorder_level ?? 0
+        const isLow = reorder > 0 && qty <= reorder
+
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className={`font-semibold tabular-nums ${qty <= 0 ? 'text-destructive' : isLow ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
+              {qty.toLocaleString()}
+            </span>
+            <span className="text-xs text-muted-foreground">{item.base_uom?.abbreviation}</span>
+            {qty <= 0 ? (
+              <Badge variant="destructive" className="text-[10px] py-0 px-1">Out of stock</Badge>
+            ) : isLow ? (
+              <Badge variant="outline" className="text-[10px] py-0 px-1 border-amber-400 text-amber-600 dark:text-amber-400">Low</Badge>
+            ) : null}
+          </div>
+        )
+      },
+    },
+    {
+      id: 'account_mapping',
+      header: 'COA Account',
+      cell: ({ row }) => {
+        const item = row.original
+        if (item.expense_account) {
+          return (
+            <div className="text-xs leading-tight">
+              <span className="text-muted-foreground font-mono">{item.expense_account.account_code}</span>
+              <div className="truncate max-w-[140px]">{item.expense_account.account_name}</div>
+            </div>
+          )
+        }
+        if (item.inventory_account) {
+          return (
+            <div className="text-xs leading-tight">
+              <span className="text-muted-foreground font-mono">{item.inventory_account.account_code}</span>
+              <div className="truncate max-w-[140px]">{item.inventory_account.account_name}</div>
+            </div>
+          )
+        }
+        return <span className="text-muted-foreground text-xs">—</span>
       },
     },
     { id: 'category', header: 'Category', cell: ({ row }) => row.original.category?.name ?? '—' },
@@ -470,6 +557,9 @@ export default function ItemsPage() {
                   disabled={Boolean(editing)}
                   onValueChange={(v) => {
                     setValue('item_type', v, { shouldValidate: true })
+                    const matched = effectiveItemTypes.find((t) => t.code === v)
+                    const isStockNature = matched ? matched.nature === 'stock' && matched.is_stock_tracked !== false : v === 'stock'
+                    setValue('is_stock_tracked', isStockNature)
                     if (!editing) {
                       fetchNextItemCode(v)
                         .then((r) => {
@@ -566,13 +656,100 @@ export default function ItemsPage() {
               </div>
             </div>
 
+            {/* Stock Behavior & Inventory Tracking Notice */}
+            <div className={`p-4 rounded-xl border ${!watch('is_stock_tracked') ? 'bg-amber-500/10 border-amber-500/30' : 'bg-muted/20'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-semibold">Inventory Stock Behavior</Label>
+                    <Badge variant={watch('is_stock_tracked') ? 'outline' : 'secondary'}>
+                      {watch('is_stock_tracked') ? 'Stock Item (Maintains Warehouse Count)' : 'Non-Stock / Expense Item (No Stock Ledger)'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {watch('is_stock_tracked')
+                      ? 'This item is tracked in physical inventory. Receipts increment available stock, dispatches decrement stock, and purchases hit the Inventory Asset account.'
+                      : 'This item is a consumable, office supply, or expense (e.g. pens for office use). It does NOT affect the stock ledger or inventory on-hand balances. When purchased, it debits directly to the mapped Expense account.'}
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border"
+                    checked={Boolean(watch('is_stock_tracked'))}
+                    onChange={(e) => setValue('is_stock_tracked', e.target.checked)}
+                  />
+                  Track Stock
+                </label>
+              </div>
+            </div>
+
+            {/* Chart of Accounts (COA) Mapping */}
+            <div className="p-4 rounded-xl border bg-muted/20 space-y-3">
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Chart of Accounts (COA) Mapping
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Map this item to an account in your Chart of Accounts for automated financial posting when buying or expensing.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Inventory Asset Account */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Inventory Asset Account</Label>
+                  <AccountCombobox
+                    value={watch('inventory_account_id') ?? ''}
+                    onChange={(val) => setValue('inventory_account_id', val || null)}
+                    accounts={accounts as Account[]}
+                    filterType="asset"
+                    allowAll={true}
+                    allLabel="System Default (1131 - Inventory Asset)"
+                    placeholder="Search or select Inventory Asset account…"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Debited on stock receipt for inventory-tracked items. Type to search by code or name.
+                  </p>
+                </div>
+
+                {/* Expense Account */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    {watch('is_stock_tracked') ? 'Expense / COGS Account (Optional)' : 'Expense Account (Office Supplies / General Expense)'}
+                  </Label>
+                  <AccountCombobox
+                    value={watch('expense_account_id') ?? ''}
+                    onChange={(val) => setValue('expense_account_id', val || null)}
+                    accounts={accounts as Account[]}
+                    filterType="expense"
+                    allowAll={true}
+                    allLabel={watch('is_stock_tracked') ? 'System Default (COGS / Expense)' : 'System Default (Expense Account)'}
+                    placeholder="Search or select Expense account…"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Debited directly when purchasing non-stock items (e.g. pens for office use). Type to search.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Inventory Reorder Level & Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Reorder Level (Alert Threshold)</Label>
-                <Input type="number" step="1" min="0" {...register('reorder_level')} />
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  disabled={!watch('is_stock_tracked')}
+                  {...register('reorder_level')}
+                  className={!watch('is_stock_tracked') ? 'bg-muted cursor-not-allowed opacity-60' : ''}
+                />
                 <p className="text-[11px] text-muted-foreground">
-                  Triggers low-stock alerts when available quantity falls at or below this level.
+                  {watch('is_stock_tracked')
+                    ? 'Triggers low-stock alerts when available quantity falls at or below this level.'
+                    : 'Reorder alerts are disabled for non-stock items.'}
                 </p>
               </div>
 
@@ -585,7 +762,7 @@ export default function ItemsPage() {
             </div>
 
             {/* Tracking flags (shown for stock nature) */}
-            {currentNature === 'stock' && (
+            {watch('is_stock_tracked') && (
               <div className="p-4 rounded-xl border bg-muted/10 space-y-2">
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Stock Tracking Features

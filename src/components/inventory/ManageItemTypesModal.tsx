@@ -39,7 +39,18 @@ export const DEFAULT_SYSTEM_ITEM_TYPES: ItemType[] = [
     name: 'Stock Item',
     code: 'stock',
     nature: 'stock',
+    is_stock_tracked: true,
     description: 'Physical goods tracked in inventory with warehouse stock levels.',
+    is_active: true,
+    is_system: true,
+  },
+  {
+    id: 'system-non-stock',
+    name: 'Non-Stock / Expense',
+    code: 'non_stock',
+    nature: 'non_stock',
+    is_stock_tracked: false,
+    description: 'Consumables, office supplies, or expenses not tracked in inventory stock.',
     is_active: true,
     is_system: true,
   },
@@ -48,6 +59,7 @@ export const DEFAULT_SYSTEM_ITEM_TYPES: ItemType[] = [
     name: 'Service',
     code: 'service',
     nature: 'service',
+    is_stock_tracked: false,
     description: 'Non-physical services or labor with no inventory stock tracking.',
     is_active: true,
     is_system: true,
@@ -57,6 +69,7 @@ export const DEFAULT_SYSTEM_ITEM_TYPES: ItemType[] = [
     name: 'Bundle / Kit',
     code: 'bundle',
     nature: 'bundle',
+    is_stock_tracked: false,
     description: 'Composite item made up of multiple component items.',
     is_active: true,
     is_system: true,
@@ -66,7 +79,7 @@ export const DEFAULT_SYSTEM_ITEM_TYPES: ItemType[] = [
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   code: z.string().max(50).optional().default(''),
-  nature: z.enum(['stock', 'service', 'bundle']),
+  nature: z.enum(['stock', 'non_stock', 'service', 'bundle']),
   description: z.string().nullable().default(''),
   is_active: z.boolean().default(true),
 })
@@ -190,14 +203,18 @@ export default function ManageItemTypesModal({ open, onOpenChange }: Props) {
     setIsFormOpen(true)
   }
 
-  const getNatureBadge = (nat: 'stock' | 'service' | 'bundle') => {
+  const getNatureBadge = (nat: 'stock' | 'non_stock' | 'service' | 'bundle' | string) => {
     switch (nat) {
       case 'stock':
         return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200">Stock</Badge>
+      case 'non_stock':
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200">Non-Stock</Badge>
       case 'service':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200">Service</Badge>
       case 'bundle':
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200">Bundle</Badge>
+      default:
+        return <Badge variant="outline">{nat}</Badge>
     }
   }
 
@@ -353,13 +370,14 @@ export default function ManageItemTypesModal({ open, onOpenChange }: Props) {
               <Select
                 disabled={Boolean(editing?.is_system)}
                 value={nature}
-                onValueChange={(val: 'stock' | 'service' | 'bundle') => setValue('nature', val)}
+                onValueChange={(val: 'stock' | 'non_stock' | 'service' | 'bundle') => setValue('nature', val)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="stock">Stock Item (Tracks inventory & stock movements)</SelectItem>
+                  <SelectItem value="non_stock">Non-Stock / Expense (No stock tracking, no ledger impact)</SelectItem>
                   <SelectItem value="service">Service (Non-stock / labor services)</SelectItem>
                   <SelectItem value="bundle">Bundle / Kit (Composite component bundle)</SelectItem>
                 </SelectContent>

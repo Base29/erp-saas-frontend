@@ -138,6 +138,7 @@ export default function AccountCombobox({
           catName.includes('cost') ||
           catName.includes('operating') ||
           catName.includes('overhead') ||
+          catName.includes('supplies') ||
           code.startsWith('5') ||
           code.startsWith('6') ||
           code.startsWith('2')
@@ -148,7 +149,13 @@ export default function AccountCombobox({
       return safeAccounts.filter((a) => {
         const catName = a.account_category?.name?.toLowerCase() || ''
         const code = a.account_code || ''
-        return catName.includes('asset') || code.startsWith('1') || code.startsWith('3')
+        return (
+          catName.includes('asset') ||
+          catName.includes('stock') ||
+          catName.includes('inventory') ||
+          code.startsWith('1') ||
+          code.startsWith('3')
+        )
       })
     }
     if (filterType === 'bank_cash') {
@@ -160,13 +167,23 @@ export default function AccountCombobox({
   const filteredAccounts = useMemo(() => {
     if (!search.trim()) return baseAccounts
     const q = search.toLowerCase().trim()
-    return baseAccounts.filter((a) => {
+    const matches = baseAccounts.filter((a) => {
       const code = (a.account_code || '').toLowerCase()
       const name = (a.account_name || '').toLowerCase()
       const cat = (a.account_category?.name || '').toLowerCase()
       return code.includes(q) || name.includes(q) || cat.includes(q)
     })
-  }, [baseAccounts, search])
+    // If no matches found in filtered baseAccounts, search across all active accounts
+    if (matches.length === 0 && filterType !== 'all') {
+      return safeAccounts.filter((a) => {
+        const code = (a.account_code || '').toLowerCase()
+        const name = (a.account_name || '').toLowerCase()
+        const cat = (a.account_category?.name || '').toLowerCase()
+        return code.includes(q) || name.includes(q) || cat.includes(q)
+      })
+    }
+    return matches
+  }, [baseAccounts, safeAccounts, search, filterType])
 
   const showAllOption = useMemo(() => {
     if (!allowAll) return false
@@ -265,7 +282,23 @@ export default function AccountCombobox({
               <span>{placeholder}</span>
             )}
           </div>
-          <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0 ml-2" />
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            {selectedAccount && !disabled && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onChange('')
+                }}
+                className="p-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                title="Clear selection"
+              >
+                <X className="h-3.5 w-3.5" />
+              </span>
+            )}
+            <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
+          </div>
         </button>
       </DropdownMenuTrigger>
 

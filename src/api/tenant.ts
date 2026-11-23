@@ -545,7 +545,8 @@ export interface ItemType {
   company_id?: string
   name: string
   code: string
-  nature: 'stock' | 'service' | 'bundle'
+  nature: 'stock' | 'non_stock' | 'service' | 'bundle'
+  is_stock_tracked?: boolean
   description?: string | null
   is_active: boolean
   is_system?: boolean
@@ -558,10 +559,22 @@ export interface Item {
   id: string
   item_code: string
   item_name: string
-  item_type: 'stock' | 'service' | 'bundle' | string
+  item_type: 'stock' | 'non_stock' | 'service' | 'bundle' | string
+  is_stock_tracked?: boolean
   category_id: string | null
   base_unit_of_measure_id: string
   reorder_level: number
+  inventory_account_id?: string | null
+  expense_account_id?: string | null
+  inventory_account?: { id: string; account_code: string; account_name: string } | null
+  expense_account?: { id: string; account_code: string; account_name: string } | null
+  stock_quantity?: number | null
+  warehouse_stock?: Array<{
+    warehouse_id: string
+    warehouse_name: string
+    warehouse_code: string
+    balance: number
+  }>
   is_batch_tracked: boolean
   is_serial_tracked: boolean
   is_expiry_tracked: boolean
@@ -610,7 +623,8 @@ export const fetchItemTypes = (params?: Record<string, string | number | boolean
 export const createItemType = (payload: {
   name: string
   code?: string
-  nature: 'stock' | 'service' | 'bundle'
+  nature: 'stock' | 'non_stock' | 'service' | 'bundle'
+  is_stock_tracked?: boolean
   description?: string | null
   is_active?: boolean
 }) =>
