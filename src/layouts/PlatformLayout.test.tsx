@@ -32,6 +32,7 @@ describe('PlatformLayout', () => {
     )
 
     expect(screen.getByText('Platform Admin')).toBeInTheDocument()
+    expect(screen.getByText('v0.2.9')).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Tenants')).toBeInTheDocument()
   })

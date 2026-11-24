@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useAppVersion } from '@/utils/version'
 import { cn } from '@/lib/utils'
 
 export type SettingCategoryKey = 'all' | 'organization' | 'finance' | 'master_data' | 'data_management' | 'administration' | 'system'
@@ -332,6 +333,7 @@ const CATEGORY_TABS: { key: SettingCategoryKey; label: string }[] = [
 
 export default function SettingsOverviewTab() {
   const { user, role, activeModules } = useAuthStore()
+  const version = useAppVersion()
   const { theme, setTheme } = useTheme()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<SettingCategoryKey>('all')
@@ -504,6 +506,14 @@ export default function SettingsOverviewTab() {
               <div className="text-left">
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Total Settings</p>
                 <p className="text-xs font-semibold text-foreground">{SETTING_TILES.length} Modules</p>
+              </div>
+            </div>
+
+            <div className="px-3.5 py-2.5 rounded-xl bg-background/70 border border-border/80 backdrop-blur-md shadow-subtle flex items-center gap-3">
+              <span className="h-4 w-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-mono text-[10px] font-bold">v</span>
+              <div className="text-left">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">System Version</p>
+                <p className="text-xs font-semibold font-mono text-foreground">{version}</p>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { getSubdomain } from '@/utils/subdomain'
 import { apiClient } from '@/api/client'
+import { setAppVersion } from '@/utils/version'
 import TenantNotFoundPage from '@/pages/tenant/TenantNotFoundPage'
 
 export interface TenantInfo {
@@ -9,6 +10,7 @@ export interface TenantInfo {
   name: string
   subdomain: string
   status: string
+  version?: string
 }
 
 export default function TenantResolutionGuard() {
@@ -34,6 +36,9 @@ export default function TenantResolutionGuard() {
       .then((res) => {
         if (!isMounted) return
         setTenantInfo(res.data)
+        if (res.data?.version) {
+          setAppVersion(res.data.version)
+        }
         setResolution('valid')
       })
       .catch((err) => {

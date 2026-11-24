@@ -57,6 +57,8 @@ describe('SettingsOverviewTab', () => {
     expect(screen.getByText('Platform Settings & Quick Access')).toBeInTheDocument()
     expect(screen.getByText('Platform Status')).toBeInTheDocument()
     expect(screen.getByText('Operational')).toBeInTheDocument()
+    expect(screen.getByText('System Version')).toBeInTheDocument()
+    expect(screen.getByText('v0.2.9')).toBeInTheDocument()
     expect(screen.getByText(`${SETTING_TILES.length} Modules`)).toBeInTheDocument()
   })
 

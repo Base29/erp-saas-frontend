@@ -63,6 +63,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { GenieHeaderButton, GenieFloatingTrigger } from '@/components/genie/GenieTrigger'
 import { GenieAssistantDrawer } from '@/components/genie/GenieAssistantDrawer'
 import { useGenieStore } from '@/store/genieStore'
+import { useAppVersion } from '@/utils/version'
 
 interface NavItem {
   to: string
@@ -261,6 +262,8 @@ function SidebarContent({
   expandedGroup,
   onToggleGroup,
 }: SidebarContentProps) {
+  const version = useAppVersion()
+
   return (
     <>
       <div className={cn('h-16 px-4 border-b border-border/70 shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
@@ -272,9 +275,15 @@ function SidebarContent({
                 Cloud
               </span>
             </span>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+              {version}
+            </span>
           </div>
         ) : (
-          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-base shadow-subtle select-none">
+          <div
+            title={`Genie Cloud ${version}`}
+            className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-base shadow-subtle select-none"
+          >
             G
           </div>
         )}
@@ -374,7 +383,10 @@ function SidebarContent({
               </div>
               <div className="overflow-hidden min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{role ? ROLE_LABELS[role] : user?.email}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-muted-foreground truncate">{role ? ROLE_LABELS[role] : user?.email}</p>
+                  <span className="text-[9px] text-muted-foreground/70 font-mono">({version})</span>
+                </div>
               </div>
             </div>
             <Button

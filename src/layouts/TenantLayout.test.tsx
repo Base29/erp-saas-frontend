@@ -43,6 +43,7 @@ describe('TenantLayout', () => {
     expect(screen.getAllByText('Admin User').length).toBeGreaterThan(0)
     expect(screen.getByText('Bulk Upload')).toBeInTheDocument()
     expect(screen.getByText('Genie AI')).toBeInTheDocument()
+    expect(screen.getAllByText('v0.2.9').length).toBeGreaterThan(0)
   })
 
   it('renders all report links under Reports menu head', () => {

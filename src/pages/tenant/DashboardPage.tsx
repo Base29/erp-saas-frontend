@@ -46,6 +46,7 @@ import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Link } from 'react-router-dom'
 import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive, isExtensionActive } from '@/utils/permissions'
+import { useAppVersion } from '@/utils/version'
 import type { UserRole } from '@/store/authStore'
 
 type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
@@ -540,6 +541,7 @@ const QUICK_ACCESS_TILES: QuickAccessTile[] = [
 
 export default function TenantDashboardPage() {
   const { user, role, activeModules } = useAuthStore()
+  const version = useAppVersion()
 
   const [tileCategory, setTileCategory] = useState<TileCategory>('all')
   const [tileSearch, setTileSearch] = useState('')
@@ -712,6 +714,9 @@ export default function TenantDashboardPage() {
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Tenant Live
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+              {version}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">

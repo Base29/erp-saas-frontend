@@ -106,6 +106,7 @@ describe('TenantDashboardPage', () => {
 
     // Wait for the main heading to appear (meaning loading is done)
     expect(await screen.findByText(/Welcome back, Admin/)).toBeInTheDocument()
+    expect(screen.getByText('v0.2.9')).toBeInTheDocument()
 
     // Check financial stats
     expect(screen.getAllByText(/50,000/).length).toBeGreaterThan(0)
