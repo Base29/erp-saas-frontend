@@ -4,6 +4,7 @@ import TenantDashboardPage from './DashboardPage'
 import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { DEFAULT_VERSION } from '@/utils/version'
 
 // Mock the API call
 vi.mock('@/api/tenant', () => ({
@@ -106,7 +107,7 @@ describe('TenantDashboardPage', () => {
 
     // Wait for the main heading to appear (meaning loading is done)
     expect(await screen.findByText(/Welcome back, Admin/)).toBeInTheDocument()
-    expect(screen.getByText('v0.2.9')).toBeInTheDocument()
+    expect(screen.getByText(DEFAULT_VERSION)).toBeInTheDocument()
 
     // Check financial stats
     expect(screen.getAllByText(/50,000/).length).toBeGreaterThan(0)

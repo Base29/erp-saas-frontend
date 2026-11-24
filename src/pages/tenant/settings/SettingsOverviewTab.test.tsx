@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { DEFAULT_VERSION } from '@/utils/version'
 
 // Mock the API calls
 vi.mock('@/api/tenant', () => ({
@@ -58,7 +59,7 @@ describe('SettingsOverviewTab', () => {
     expect(screen.getByText('Platform Status')).toBeInTheDocument()
     expect(screen.getByText('Operational')).toBeInTheDocument()
     expect(screen.getByText('System Version')).toBeInTheDocument()
-    expect(screen.getByText('v0.2.9')).toBeInTheDocument()
+    expect(screen.getByText(DEFAULT_VERSION)).toBeInTheDocument()
     expect(screen.getByText(`${SETTING_TILES.length} Modules`)).toBeInTheDocument()
   })
 

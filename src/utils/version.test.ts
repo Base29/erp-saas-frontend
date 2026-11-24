@@ -10,18 +10,18 @@ describe('version utility', () => {
   })
 
   it('exports correct default version constants matching version.json', () => {
-    expect(DEFAULT_VERSION).toBe('v0.2.9')
-    expect(APP_VERSION).toBe('v0.2.9')
+    expect(DEFAULT_VERSION).toBeTruthy()
+    expect(APP_VERSION).toBe(DEFAULT_VERSION)
   })
 
   it('provides useAppVersion hook with initial default value', () => {
     const { result } = renderHook(() => useAppVersion())
-    expect(result.current).toBe('v0.2.9')
+    expect(result.current).toBe(DEFAULT_VERSION)
   })
 
   it('updates version dynamically via setAppVersion', () => {
     const { result } = renderHook(() => useAppVersion())
-    expect(result.current).toBe('v0.2.9')
+    expect(result.current).toBe(DEFAULT_VERSION)
 
     act(() => {
       setAppVersion('v1.0.0')

@@ -4,6 +4,7 @@ import TenantLayout from './TenantLayout'
 import { useAuthStore } from '@/store/authStore'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, MemoryRouter } from 'react-router-dom'
+import { DEFAULT_VERSION } from '@/utils/version'
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -43,7 +44,7 @@ describe('TenantLayout', () => {
     expect(screen.getAllByText('Admin User').length).toBeGreaterThan(0)
     expect(screen.getByText('Bulk Upload')).toBeInTheDocument()
     expect(screen.getByText('Genie AI')).toBeInTheDocument()
-    expect(screen.getAllByText('v0.2.9').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(DEFAULT_VERSION).length).toBeGreaterThan(0)
   })
 
   it('renders all report links under Reports menu head', () => {
