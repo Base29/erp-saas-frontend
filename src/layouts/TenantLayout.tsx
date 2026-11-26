@@ -95,9 +95,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/accounts/chart-of-accounts', label: 'Chart of Accounts', icon: BookOpen },
       { to: '/accounts/journal-vouchers', label: 'Journal Vouchers', icon: BookOpen },
-      { to: '/accounts/suppliers', label: 'Suppliers', icon: Users },
-      { to: '/accounts/purchase-invoices', label: 'Purchase Invoices', icon: FileText },
-      { to: '/accounts/supplier-payments', label: 'Supplier Payments', icon: CreditCard },
       { to: '/accounts/cost-centers', label: 'Cost Centers', icon: Target },
       { to: '/accounts/bank-reconciliation', label: 'Bank Reconciliation', icon: RefreshCcw },
       { to: '/accounts/budgets', label: 'Budgeting', icon: PieChart },
@@ -147,9 +144,12 @@ const navSections: NavSection[] = [
     section: 'procurement',
     moduleKey: 'procurement',
     items: [
+      { to: '/procurement/suppliers', label: 'Suppliers', icon: Users },
       { to: '/procurement/requisitions', label: 'Requisitions', icon: ClipboardList },
       { to: '/procurement/rfqs', label: 'Sourcing & RFQs', icon: Layers },
       { to: '/procurement/orders', label: 'Purchase Orders', icon: ShoppingBag },
+      { to: '/procurement/purchase-invoices', label: 'Purchase Invoices', icon: FileText },
+      { to: '/procurement/supplier-payments', label: 'Supplier Payments', icon: CreditCard },
     ],
     groupLabel: 'Procurement',
     icon: ShoppingBag,

@@ -227,7 +227,7 @@ export default function PurchaseInvoicesPage() {
                 size="sm"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                 title="Edit Invoice"
-                onClick={() => navigate(`/accounts/purchase-invoices/${inv.id}/edit`)}
+                onClick={() => navigate(`/procurement/purchase-invoices/${inv.id}/edit`)}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -274,7 +274,7 @@ export default function PurchaseInvoicesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Purchase Invoices</h1>
           <p className="text-muted-foreground">Track bills received from suppliers and post them to ledgers.</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => navigate('/accounts/purchase-invoices/new')}>
+        <Button size="sm" className="gap-1.5" onClick={() => navigate('/procurement/purchase-invoices/new')}>
           <Plus className="h-4 w-4" />
           New Invoice
         </Button>
@@ -326,7 +326,7 @@ export default function PurchaseInvoicesPage() {
                   variant="outline"
                   className="gap-1.5 h-7 text-xs"
                   onClick={() => {
-                    navigate(`/accounts/purchase-invoices/${selectedInvoice.id}/edit`)
+                    navigate(`/procurement/purchase-invoices/${selectedInvoice.id}/edit`)
                   }}
                 >
                   <Pencil className="h-3.5 w-3.5" /> Edit
@@ -411,7 +411,7 @@ export default function PurchaseInvoicesPage() {
                             onClick={() =>
                               navigate(
                                 `/inventory/goods-receipts?id=${grn.id}&return_to=${encodeURIComponent(
-                                  `/accounts/purchase-invoices?id=${selectedInvoice.id}`
+                                  `/procurement/purchase-invoices?id=${selectedInvoice.id}`
                                 )}`
                               )
                             }
@@ -457,7 +457,7 @@ export default function PurchaseInvoicesPage() {
                         onClick={() =>
                           navigate(
                             `/procurement/orders/${poId}?return_to=${encodeURIComponent(
-                              `/accounts/purchase-invoices?id=${selectedInvoice.id}`
+                              `/procurement/purchase-invoices?id=${selectedInvoice.id}`
                             )}`
                           )
                         }

@@ -156,7 +156,7 @@ export default function SupplierPaymentFormPage() {
       qc.invalidateQueries({ queryKey: ['supplier-payments'] })
       qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
       qc.invalidateQueries({ queryKey: ['suppliers'] })
-      navigate('/accounts/supplier-payments')
+      navigate('/procurement/supplier-payments')
     },
   })
 
@@ -173,7 +173,7 @@ export default function SupplierPaymentFormPage() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/accounts/supplier-payments')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/procurement/supplier-payments')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -388,7 +388,7 @@ export default function SupplierPaymentFormPage() {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/accounts/supplier-payments')}>
+          <Button type="button" variant="outline" onClick={() => navigate('/procurement/supplier-payments')}>
             Cancel
           </Button>
           <Button type="submit" className="gap-2" disabled={isSubmitting || save.isPending}>

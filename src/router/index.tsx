@@ -254,13 +254,10 @@ export const router = createBrowserRouter([
               { path: 'journal-vouchers/:id', element: <JournalVoucherDetailPage /> },
               { path: 'journal-vouchers/:id/edit', element: <JournalVoucherFormPage /> },
               
-              // Accounts Payable
-              { path: 'suppliers', element: <SuppliersPage /> },
-              { path: 'purchase-invoices', element: <PurchaseInvoicesPage /> },
-              { path: 'purchase-invoices/new', element: <PurchaseInvoiceFormPage /> },
-              { path: 'purchase-invoices/:id/edit', element: <PurchaseInvoiceFormPage /> },
-              { path: 'supplier-payments', element: <SupplierPaymentsPage /> },
-              { path: 'supplier-payments/new', element: <SupplierPaymentFormPage /> },
+              // Accounts Payable (moved to Procurement)
+              { path: 'suppliers', element: <Navigate to="/procurement/suppliers" replace /> },
+              { path: 'purchase-invoices', element: <Navigate to="/procurement/purchase-invoices" replace /> },
+              { path: 'supplier-payments', element: <Navigate to="/procurement/supplier-payments" replace /> },
               
               // Cost Centers
               { path: 'cost-centers', element: <CostCentersPage /> },
@@ -333,6 +330,7 @@ export const router = createBrowserRouter([
             element: <ModuleGuard moduleKey="procurement" />,
             children: [
               { index: true, element: <Navigate to="/procurement/orders" replace /> },
+              { path: 'suppliers', element: <SuppliersPage /> },
               { path: 'requisitions', element: <RequisitionsPage /> },
               { path: 'requisitions/:id', element: <RequisitionDetailPage /> },
               { path: 'rfqs', element: <RfqsPage /> },
@@ -341,6 +339,11 @@ export const router = createBrowserRouter([
               { path: 'orders/new', element: <PurchaseOrderFormPage /> },
               { path: 'orders/:id', element: <PurchaseOrderDetailPage /> },
               { path: 'orders/:id/edit', element: <PurchaseOrderFormPage /> },
+              { path: 'purchase-invoices', element: <PurchaseInvoicesPage /> },
+              { path: 'purchase-invoices/new', element: <PurchaseInvoiceFormPage /> },
+              { path: 'purchase-invoices/:id/edit', element: <PurchaseInvoiceFormPage /> },
+              { path: 'supplier-payments', element: <SupplierPaymentsPage /> },
+              { path: 'supplier-payments/new', element: <SupplierPaymentFormPage /> },
             ],
           },
           // Manufacturing module & Plastics Extension

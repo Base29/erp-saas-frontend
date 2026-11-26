@@ -270,8 +270,8 @@ export default function SupplierStatementPage() {
                                 const targetUrl =
                                   (r as any).document_url ||
                                   (r.type === 'invoice'
-                                    ? (docId ? `/accounts/purchase-invoices?id=${docId}` : `/accounts/purchase-invoices?search=${encodeURIComponent(r.reference)}`)
-                                    : (docId ? `/accounts/supplier-payments?id=${docId}` : `/accounts/supplier-payments?search=${encodeURIComponent(r.reference)}`))
+                                    ? (docId ? `/procurement/purchase-invoices?id=${docId}` : `/procurement/purchase-invoices?search=${encodeURIComponent(r.reference)}`)
+                                    : (docId ? `/procurement/supplier-payments?id=${docId}` : `/procurement/supplier-payments?search=${encodeURIComponent(r.reference)}`))
                                 const currentPath = location.pathname + location.search
                                 const sep = targetUrl.includes('?') ? '&' : '?'
                                 navigate(`${targetUrl}${sep}return_to=${encodeURIComponent(currentPath)}`, {

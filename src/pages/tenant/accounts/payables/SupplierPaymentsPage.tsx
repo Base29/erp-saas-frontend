@@ -181,7 +181,7 @@ export default function SupplierPaymentsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Supplier Payments</h1>
           <p className="text-muted-foreground">Record, allocate, and post payments made to vendors.</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => navigate('/accounts/supplier-payments/new')}>
+        <Button size="sm" className="gap-1.5" onClick={() => navigate('/procurement/supplier-payments/new')}>
           <Plus className="h-4 w-4" />
           Record Payment
         </Button>
@@ -303,7 +303,7 @@ export default function SupplierPaymentsPage() {
                               {alloc.invoice ? (
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/accounts/purchase-invoices?id=${alloc.purchase_invoice_id}`)}
+                                  onClick={() => navigate(`/procurement/purchase-invoices?id=${alloc.purchase_invoice_id}`)}
                                   className="text-primary hover:underline font-mono inline-flex items-center gap-1"
                                 >
                                   <span>{alloc.invoice.invoice_number}</span>

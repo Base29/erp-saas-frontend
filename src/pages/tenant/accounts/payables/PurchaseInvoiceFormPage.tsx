@@ -151,7 +151,7 @@ export default function PurchaseInvoiceFormPage() {
       if (id) {
         qc.invalidateQueries({ queryKey: ['purchase-invoice', id] })
       }
-      navigate('/accounts/purchase-invoices')
+      navigate('/procurement/purchase-invoices')
     },
   })
 
@@ -161,7 +161,7 @@ export default function PurchaseInvoiceFormPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/accounts/purchase-invoices'))}
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/procurement/purchase-invoices'))}
           title="Back"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -378,7 +378,7 @@ export default function PurchaseInvoiceFormPage() {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/accounts/purchase-invoices')}>
+          <Button type="button" variant="outline" onClick={() => navigate('/procurement/purchase-invoices')}>
             Cancel
           </Button>
           <Button type="submit" className="gap-2" disabled={isSubmitting || save.isPending}>

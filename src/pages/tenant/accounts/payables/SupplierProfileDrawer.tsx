@@ -158,7 +158,7 @@ export default function SupplierProfileDrawer({
               className="gap-1.5 text-xs"
               onClick={() => {
                 onOpenChange(false)
-                navigate('/accounts/supplier-payments/new')
+                navigate('/procurement/supplier-payments/new')
               }}
             >
               <CreditCard className="h-3.5 w-3.5" />
@@ -170,7 +170,7 @@ export default function SupplierProfileDrawer({
               className="gap-1.5 text-xs"
               onClick={() => {
                 onOpenChange(false)
-                navigate('/accounts/purchase-invoices/new')
+                navigate('/procurement/purchase-invoices/new')
               }}
             >
               <Plus className="h-3.5 w-3.5" />

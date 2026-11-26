@@ -601,7 +601,7 @@ export default function PurchaseOrderDetailPage() {
                           type="button"
                           onClick={() =>
                             navigate(
-                              `/accounts/purchase-invoices?id=${bill.id}&return_to=${encodeURIComponent(
+                              `/procurement/purchase-invoices?id=${bill.id}&return_to=${encodeURIComponent(
                                 location.pathname + location.search
                               )}`
                             )

@@ -49,7 +49,7 @@ import { ROLE_LABELS, canAccessSection, canWrite, hasPermission, isModuleActive,
 import { useAppVersion } from '@/utils/version'
 import type { UserRole } from '@/store/authStore'
 
-type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
+type TileCategory = 'all' | 'accounts' | 'sales' | 'inventory' | 'procurement' | 'manufacturing' | 'projects' | 'settings'
 
 interface QuickAccessTile {
   id: string
@@ -61,7 +61,7 @@ interface QuickAccessTile {
   requiredPermission?: string
   moduleKey?: string
   extensionKey?: string
-  category: 'accounts' | 'sales' | 'inventory' | 'manufacturing' | 'projects' | 'settings'
+  category: 'accounts' | 'sales' | 'inventory' | 'procurement' | 'manufacturing' | 'projects' | 'settings'
   icon: React.ComponentType<{ className?: string }>
   colorScheme: {
     bg: string
@@ -124,10 +124,10 @@ const QUICK_ACCESS_TILES: QuickAccessTile[] = [
     id: 'suppliers-payables',
     title: 'Suppliers & Payables',
     description: 'Vendor statements & payment orders',
-    to: '/accounts/suppliers',
+    to: '/procurement/suppliers',
     actionLabel: 'Bills',
-    actionTo: '/accounts/purchase-invoices',
-    category: 'accounts',
+    actionTo: '/procurement/purchase-invoices',
+    category: 'procurement',
     icon: Users,
     colorScheme: {
       bg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
@@ -566,6 +566,7 @@ export default function TenantDashboardPage() {
       { id: 'accounts', label: 'Finance & Accounts', section: 'accounts', moduleKey: 'accounts' },
       { id: 'sales', label: 'Sales & Orders', section: 'sales', moduleKey: 'sales' },
       { id: 'inventory', label: 'Inventory & Stock', section: 'inventory', moduleKey: 'inventory' },
+      { id: 'procurement', label: 'Procurement', section: 'procurement', moduleKey: 'procurement' },
       { id: 'manufacturing', label: 'Manufacturing', section: 'manufacturing', moduleKey: 'manufacturing' },
       { id: 'projects', label: 'Projects', section: 'projects', moduleKey: 'projects' },
       { id: 'settings', label: 'Settings & Admin', section: 'settings' },
