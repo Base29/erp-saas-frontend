@@ -5,6 +5,7 @@ import {
   Plus,
   ExternalLink,
   Search,
+  Pencil,
 } from 'lucide-react'
 import { procurementApi, type PurchaseOrder } from '@/api/procurement'
 import DataTable from '@/components/DataTable'
@@ -226,6 +227,17 @@ export default function PurchaseOrdersPage() {
                   onClick={() => handleOpenAction(po, 'post')}
                 >
                   Post Order
+                </Button>
+              )}
+              {po.approval_status === 'draft' && po.status !== 'cancelled' && po.posting_status !== 'posted' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                  title="Edit PO"
+                  onClick={() => navigate(`/procurement/orders/${po.id}/edit`)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
               )}
               <Button

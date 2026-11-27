@@ -344,6 +344,10 @@ export const procurementApi = {
     const response = await apiClient.post('/v1/procurement/orders', data)
     return response.data
   },
+  updateOrder: async (id: string, data: Partial<PurchaseOrder>) => {
+    const response = await apiClient.put(`/v1/procurement/orders/${id}`, data)
+    return response.data
+  },
   submitOrderForApproval: async (id: string) => {
     const response = await apiClient.post(`/v1/procurement/orders/${id}/submit-for-approval`)
     return response.data

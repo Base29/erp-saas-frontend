@@ -7,6 +7,7 @@ import {
   createSupplier,
   updateSupplier,
   fetchAccounts,
+  fetchNextSupplierCode,
   type Supplier,
   type Account,
 } from '@/api/tenant'
@@ -25,7 +26,7 @@ import AccountCombobox from '@/components/accounts/AccountCombobox'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  supplier_code: z.string().min(1, 'Code is required'),
+  supplier_code: z.string().optional().default(''),
   tax_number: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -50,6 +51,12 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
     queryKey: ['accounts-all'],
     queryFn: () => fetchAccounts({ per_page: -1 }).then((r) => r.data),
     enabled: open,
+  })
+
+  const { data: nextSupplierCode } = useQuery({
+    queryKey: ['supplier-next-code'],
+    queryFn: () => fetchNextSupplierCode().then((r) => r.data.supplier_code),
+    enabled: open && !isEdit,
   })
 
   const accounts: Account[] = useMemo(() => {
@@ -88,7 +95,7 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
     } else {
       reset({
         name: '',
-        supplier_code: '',
+        supplier_code: nextSupplierCode || '',
         tax_number: '',
         email: '',
         phone: '',
@@ -97,7 +104,7 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
         is_active: true,
       })
     }
-  }, [supplier, reset, open])
+  }, [supplier, reset, open, nextSupplierCode])
 
   const save = useMutation({
     mutationFn: (v: FormValues) => {
@@ -106,6 +113,7 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['suppliers'] })
+      qc.invalidateQueries({ queryKey: ['supplier-next-code'] })
       onOpenChange(false)
     },
   })
@@ -121,7 +129,14 @@ export default function SupplierModal({ supplier, open, onOpenChange }: Supplier
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="supplier_code">Supplier Code</Label>
-              <Input id="supplier_code" {...register('supplier_code')} placeholder="SUP-001" />
+              <Input
+                id="supplier_code"
+                {...register('supplier_code')}
+                readOnly
+                disabled
+                className="bg-muted font-mono cursor-not-allowed"
+                placeholder="Auto-generated (e.g. SUP-00001)"
+              />
               {errors.supplier_code && <p className="text-xs text-destructive">{errors.supplier_code.message}</p>}
             </div>
             <div className="space-y-2">

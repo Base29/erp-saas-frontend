@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, ArrowLeft, ShoppingCart, FileText, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,12 +35,16 @@ interface DraftPOLine {
 }
 
 export default function PurchaseOrderFormPage() {
+  const { id } = useParams<{ id: string }>()
+  const isEdit = Boolean(id)
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const urlRequisitionId = searchParams.get('requisition_id') || ''
 
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>(urlRequisitionId)
   const lastPopulatedPrId = useRef<string>('')
+  const loadedOrderIdRef = useRef<string>('')
 
   const [supplierId, setSupplierId] = useState('')
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -68,6 +72,57 @@ export default function PurchaseOrderFormPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Load existing PO in edit mode
+  const { data: existingOrderResponse, isLoading: isLoadingOrder } = useQuery({
+    queryKey: ['procurement-order', id],
+    queryFn: () => procurementApi.getOrder(id!),
+    enabled: isEdit,
+  })
+  const existingOrder = existingOrderResponse?.data
+  const isOrderLocked = Boolean(
+    isEdit &&
+      existingOrder &&
+      (existingOrder.approval_status !== 'draft' ||
+        existingOrder.posting_status === 'posted' ||
+        existingOrder.status === 'cancelled')
+  )
+
+  useEffect(() => {
+    if (!isEdit || !existingOrder || loadedOrderIdRef.current === existingOrder.id) return
+    loadedOrderIdRef.current = existingOrder.id
+    setSupplierId(existingOrder.supplier_id || '')
+    setOrderDate(existingOrder.order_date ? String(existingOrder.order_date).slice(0, 10) : new Date().toISOString().slice(0, 10))
+    setExpectedDeliveryDate(existingOrder.expected_delivery_date ? String(existingOrder.expected_delivery_date).slice(0, 10) : '')
+    setCurrencyCode(existingOrder.currency_code || 'USD')
+    setExchangeRate(Number(existingOrder.exchange_rate) || 1.0)
+    setPaymentTerms(existingOrder.payment_terms || 'Net 30')
+    setDeliveryAddress(existingOrder.delivery_address || '')
+    setNotes(existingOrder.notes || '')
+    setTerms(existingOrder.terms_and_conditions || '')
+    if (existingOrder.purchase_requisition_id) {
+      lastPopulatedPrId.current = existingOrder.purchase_requisition_id
+      setSelectedRequisitionId(existingOrder.purchase_requisition_id)
+    }
+    if (Array.isArray(existingOrder.lines) && existingOrder.lines.length > 0) {
+      setLines(
+        existingOrder.lines.map((l: any) => ({
+          purchase_requisition_line_id: l.purchase_requisition_line_id || null,
+          item_id: l.item_id || '',
+          item_description: l.item_description || '',
+          quantity: Number(l.quantity) || 1,
+          unit_of_measure_id: l.unit_of_measure_id || undefined,
+          unit_price: Number(l.unit_price) || 0,
+          discount_percent: Number(l.discount_percent) || 0,
+          discount_amount: Number(l.discount_amount) || 0,
+          tax_rate: Number(l.tax_rate) || 0,
+          tax_amount: Number(l.tax_amount) || 0,
+          line_total: Number(l.line_total) || 0,
+          notes: l.notes || undefined,
+        }))
+      )
+    }
+  }, [isEdit, existingOrder])
 
   // Load suppliers
   const { data: suppliersData } = useQuery({
@@ -345,10 +400,16 @@ export default function PurchaseOrderFormPage() {
         })),
       }
 
-      const res = await procurementApi.createOrder(payload)
+      const res = isEdit
+        ? await procurementApi.updateOrder(id!, payload)
+        : await procurementApi.createOrder(payload)
+      qc.invalidateQueries({ queryKey: ['procurement-orders'] })
+      if (id) {
+        qc.invalidateQueries({ queryKey: ['procurement-order', id] })
+      }
       navigate(`/procurement/orders/${res.data.id}`)
     } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || 'Failed to create purchase order.')
+      setErrorMsg(err?.response?.data?.message || `Failed to ${isEdit ? 'update' : 'create'} purchase order.`)
     } finally {
       setIsSubmitting(false)
     }
@@ -367,16 +428,28 @@ export default function PurchaseOrderFormPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Purchase Order</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {isEdit ? `Edit Purchase Order${existingOrder?.po_number ? ` #${existingOrder.po_number}` : ''}` : 'Create Purchase Order'}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            {activeRequisition
+            {isEdit
+              ? 'Update purchase order details before approval.'
+              : activeRequisition
               ? `Linked to Requisition #${activeRequisition.requisition_number}`
               : 'Issue a new supplier purchase agreement directly or from an approved requisition.'}
           </p>
         </div>
       </div>
 
+      {isEdit && isLoadingOrder ? (
+        <div className="p-8 text-center text-sm text-muted-foreground">Loading purchase order...</div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-6">
+        {isOrderLocked && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+            This purchase order has already been submitted for approval, approved, posted, or cancelled and cannot be edited.
+          </div>
+        )}
         {errorMsg && (
           <div className="p-3 text-sm rounded-md bg-destructive/15 text-destructive font-medium">
             {errorMsg}
@@ -726,14 +799,16 @@ export default function PurchaseOrderFormPage() {
 
         {/* Submit Actions */}
         <div className="flex items-center justify-end gap-3 pt-4">
-          <Button type="button" variant="outline" onClick={() => navigate('/procurement/orders')} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={() => navigate(isEdit ? `/procurement/orders/${id}` : '/procurement/orders')} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="gap-2">
-            <ShoppingCart className="h-4 w-4" /> {isSubmitting ? 'Saving Order...' : 'Generate Purchase Order'}
+          <Button type="submit" disabled={isSubmitting || isOrderLocked} className="gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            {isSubmitting ? 'Saving Order...' : isEdit ? 'Save Changes' : 'Generate Purchase Order'}
           </Button>
         </div>
       </form>
+      )}
     </div>
   )
 }

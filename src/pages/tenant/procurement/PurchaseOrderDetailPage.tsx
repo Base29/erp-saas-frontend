@@ -12,6 +12,7 @@ import {
   ExternalLink,
   FileText,
   ShieldCheck,
+  Pencil,
 } from 'lucide-react'
 import { procurementApi, type PurchaseOrder } from '@/api/procurement'
 import { Button } from '@/components/ui/button'
@@ -202,6 +203,17 @@ export default function PurchaseOrderDetailPage() {
           <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> Print PO
           </Button>
+
+          {po.approval_status === 'draft' && po.status !== 'cancelled' && po.posting_status !== 'posted' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/procurement/orders/${po.id}/edit`)}
+              className="gap-1.5 text-xs"
+            >
+              <Pencil className="h-4 w-4" /> Edit PO
+            </Button>
+          )}
 
           {po.approval_status === 'draft' && (
             <Button size="sm" onClick={() => handleAction('submit')} className="gap-1.5 shadow-sm text-xs">

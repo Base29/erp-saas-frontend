@@ -1313,10 +1313,13 @@ export interface SupplierPayment {
 export const fetchSuppliers = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<Supplier>>('/v1/accounts/suppliers', { params })
 
+export const fetchNextSupplierCode = () =>
+  apiClient.get<{ supplier_code: string }>('/v1/accounts/suppliers/next-code')
+
 export const fetchSupplier = (id: string) =>
   apiClient.get<{ data: Supplier }>(`/v1/accounts/suppliers/${id}`)
 
-export const createSupplier = (payload: Omit<Supplier, 'id' | 'default_payable_account'>) =>
+export const createSupplier = (payload: Omit<Supplier, 'id' | 'supplier_code' | 'default_payable_account'> & { supplier_code?: string }) =>
   apiClient.post<{ data: Supplier }>('/v1/accounts/suppliers', payload)
 
 export const updateSupplier = (id: string, payload: Partial<Supplier>) =>
@@ -1328,11 +1331,14 @@ export const deleteSupplier = (id: string) =>
 export const fetchPurchaseInvoices = (params?: Record<string, string | number | boolean>) =>
   apiClient.get<PaginatedResponse<PurchaseInvoice>>('/v1/accounts/purchase-invoices', { params })
 
+export const fetchNextPurchaseInvoiceNumber = () =>
+  apiClient.get<{ invoice_number: string }>('/v1/accounts/purchase-invoices/next-number')
+
 export const fetchPurchaseInvoice = (id: string) =>
   apiClient.get<{ data: PurchaseInvoice }>(`/v1/accounts/purchase-invoices/${id}`)
 
 export const createPurchaseInvoice = (payload: {
-  supplier_id: string; invoice_number: string; invoice_date: string; due_date?: string | null;
+  supplier_id: string; invoice_number?: string; invoice_date: string; due_date?: string | null;
   total_amount: number; tax_amount?: number; expense_account_id: string; tax_account_id?: string | null; cost_center_id?: string | null;
 }) => apiClient.post<{ data: PurchaseInvoice }>('/v1/accounts/purchase-invoices', payload)
 

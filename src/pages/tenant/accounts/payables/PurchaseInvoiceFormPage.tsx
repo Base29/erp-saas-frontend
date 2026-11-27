@@ -9,6 +9,7 @@ import {
   fetchSuppliers,
   fetchAccounts,
   fetchCostCenters,
+  fetchNextPurchaseInvoiceNumber,
   fetchPurchaseInvoice,
   createPurchaseInvoice,
   updatePurchaseInvoice,
@@ -26,7 +27,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect'
 
 const schema = z.object({
   supplier_id: z.string().min(1, 'Supplier is required'),
-  invoice_number: z.string().min(1, 'Invoice number is required'),
+  invoice_number: z.string().optional().default(''),
   invoice_date: z.string().min(1, 'Date is required'),
   due_date: z.string().optional().nullable(),
   expense_account_id: z.string().min(1, 'Expense account is required'),
@@ -82,14 +83,27 @@ export default function PurchaseInvoiceFormPage() {
     enabled: isEdit,
   })
 
-  const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { data: nextInvoiceNumber } = useQuery({
+    queryKey: ['purchase-invoice-next-number'],
+    queryFn: () => fetchNextPurchaseInvoiceNumber().then((r) => r.data.invoice_number),
+    enabled: !isEdit,
+  })
+
+  const { register, control, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      invoice_number: '',
       invoice_date: new Date().toISOString().split('T')[0],
       total_amount: '0',
       tax_amount: '0',
     },
   })
+
+  useEffect(() => {
+    if (!isEdit && nextInvoiceNumber) {
+      setValue('invoice_number', nextInvoiceNumber)
+    }
+  }, [isEdit, nextInvoiceNumber, setValue])
 
   const watchedTaxAmount = parseFloat(watch('tax_amount') || '0')
 
@@ -148,6 +162,7 @@ export default function PurchaseInvoiceFormPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
+      qc.invalidateQueries({ queryKey: ['purchase-invoice-next-number'] })
       if (id) {
         qc.invalidateQueries({ queryKey: ['purchase-invoice', id] })
       }
@@ -196,7 +211,13 @@ export default function PurchaseInvoiceFormPage() {
 
             <div className="space-y-2">
               <Label>Invoice Number</Label>
-              <Input {...register('invoice_number')} placeholder="e.g. INV-2024-001" />
+              <Input
+                {...register('invoice_number')}
+                readOnly
+                disabled
+                className="bg-muted font-mono cursor-not-allowed"
+                placeholder="Auto-generated (e.g. PI-00001)"
+              />
               {errors.invoice_number && <p className="text-xs text-destructive">{errors.invoice_number.message}</p>}
             </div>
 
